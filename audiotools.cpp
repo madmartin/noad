@@ -87,7 +87,9 @@ void initAVCodec()
 	  return;
   // init libavcodec(ffmpeg)
   /* must be called before using avcodec lib */
+#if (LIBAVCODEC_VERSION_MAJOR < 53)
   avcodec_init();
+#endif
 
   av_log_set_callback(my_av_dolog);
   /* register all the codecs (you can also register only the codec
@@ -102,7 +104,11 @@ void initAVCodec()
     fprintf(stdout, "codec not found\n");
   }
 
+#if (LIBAVCODEC_VERSION_MAJOR < 53)
   codecContext = avcodec_alloc_context();
+#else
+  codecContext = avcodec_alloc_context3(codec);
+#endif
 
   /* open it */
   if (avcodec_open(codecContext, codec) < 0)
@@ -167,9 +173,18 @@ int scan_audio_stream_0(unsigned char *mbuf, int count)
   while (size > 0) 
   {
     out_size = AVCODEC_MAX_AUDIO_FRAME_SIZE;
+#if (LIBAVCODEC_VERSION_MAJOR < 53)
     len = avcodec_decode_audio2(codecContext, (short *)outbuf, &out_size,
                                   inbuf_ptr, 576/*size*/);
-    if (len < 0) 
+#else
+    AVPacket p;
+    av_init_packet(&p);
+    p.data = inbuf_ptr;
+    p.size = 576;
+    len = avcodec_decode_audio3(codecContext, (short *)outbuf,
+                         &out_size, &p);
+#endif
+    if (len < 0)
     {
       //fprintf(stderr, "Error while decoding audio\n\n");
 		esyslog("Error while decoding audio (ignored)");

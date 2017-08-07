@@ -10,7 +10,7 @@ dnl ---------------------------------------------------------------------------
 dnll initialisation
 dnl ---------------------------------------------------------------------------
 AC_PREREQ(2.57)
-AC_INIT(noad, 0.7.2, theNoad@ulmail.net)
+AC_INIT(noad, 0.7.3, theNoad@ulmail.net)
 AM_INIT_AUTOMAKE(dist-bzip2)
 AC_CONFIG_SRCDIR([cchecklogo.cpp])
 AC_CONFIG_HEADER([config.h])
@@ -116,6 +116,7 @@ AC_SUBST(pkgffmpeginc)
 AC_SUBST(pkgffmpeglibdir)
 AC_SUBST(pkgffmpeglib)
 AC_SUBST(pkgffmpegconfigured,0)
+CPPFLAGS="-D__STDC_CONSTANT_MACROS $CPPFLAGS"
 AC_MSG_CHECKING(for libavcodec with pkg-config)
 if ( ( pkg-config --exists libavcodec ) > /dev/null 2>&1 ); then
   AC_MSG_RESULT(configure from pkg-config)
@@ -258,7 +259,6 @@ dnl ---------------------------------------------------------------------------
 # Checks for library functions.
 dnl ---------------------------------------------------------------------------
 AC_FUNC_CLOSEDIR_VOID
-AC_FUNC_FORK
 #AC_FUNC_MALLOC
 #AC_FUNC_REALLOC
 AC_FUNC_SELECT_ARGTYPES
@@ -369,7 +369,7 @@ else
       if test $pkgffmpegconfigured -eq 1; then
         echo " --libavcodec configuration taken from pkg-config"
       fi
-      echo " --using libavcodec.h from $avcincpath"
+      echo " --using avcodec.h from $avcincpath"
       echo " --using libavcodec from $ffmpeglibdir"
     else
       echo " ffmpeg-support not configured"

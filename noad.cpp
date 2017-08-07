@@ -48,7 +48,7 @@ bool bOnMarksOnly = false;
 
 extern "C"
 {
-  static const char *VERSIONSTRING = "0.7.2";
+  static const char *VERSIONSTRING = "0.7.3";
 }
 
 #ifdef VNOAD

@@ -1,5 +1,5 @@
 /***************************************************************************
-                          noaddata.h  -  description
+                          noad.h  -  description
                              -------------------
     begin                : Sun Mar 10 2002
     copyright            : (C) 2002/2004 by theNoad #709GRW

@@ -1,3 +1,6 @@
+Version 0.7.3
+- adjustments for current ffmpeg-version
+
 Version 0.7.2
 - exit noad if a hdtv-recording is found
 - change MAXFRAMESIZE to KILOBYTE(1024) as in vdr
