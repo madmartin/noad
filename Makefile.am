@@ -10,7 +10,7 @@ noad_SOURCES=audiotools.cpp cchecklogo.cpp ccontrol.cpp cgetlogo.cpp ctoolbox.cp
 	        main.cpp \
 	    	audiotools.h cchecklogo.h ccontrol.h cgetlogo.h ctoolbox.h \
 		noad.h tnoad.h noaddata.h videodir.h \
-		ffmpeg_decoder.h libmpeg2_decoder.h mpeg2wrap_ffmpeg.h mpeg_decoder.h 
+		ffmpeg_decoder.h libmpeg2_decoder.h mpeg2wrap_ffmpeg.h mpeg_decoder.h yuvbuf.h
 
 
 noad_LDADD=libnoad.a
