@@ -73,9 +73,9 @@ private:
   /** pointer to the document */
 //  MyNoadDoc* m_pDoc;
   noadData* m_pData;
+  #ifdef VNOAD
   /**  temp buffer of data to show */
   char* m_chAnalyseData;
-  #ifdef VNOAD
   char* m_chAnalyseData2;
   char* m_chAnalyseData3;
   #endif

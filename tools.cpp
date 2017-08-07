@@ -20,6 +20,202 @@
 
 extern int SysLogLevel;
 
+#ifdef AVOID_TRASHING
+
+struct tUsageRange {
+  off_t begin;
+  off_t end;
+  off_t ahead;
+  ssize_t written;
+};
+
+#define MAX_STREAM_FD (256)
+struct tUsageRange StreamRanges[MAX_STREAM_FD];
+
+#define READ_AHEAD MEGABYTE(5)
+#define WRITE_BUFFER MEGABYTE(10)
+
+void RegisterStream(int fd)
+{
+  if (fd < 0 || fd >= MAX_STREAM_FD) {
+     return;
+     }
+  isyslog(LOG_INFO, "Open stream: %d", fd);
+  StreamRanges[fd].begin = -1;
+  StreamRanges[fd].end = -1;
+  StreamRanges[fd].ahead = -1;
+  StreamRanges[fd].written = 0;
+}
+
+int OpenStream(const char* PathName, int Flags, mode_t Mode)
+{
+  int retVal=open(PathName, Flags, Mode);
+  RegisterStream(retVal);
+  return retVal;
+}
+
+int OpenStream(const char* PathName, int Flags)
+{
+  int retVal=open(PathName, Flags);
+  RegisterStream(retVal);
+  return retVal;
+}
+
+ssize_t ReadStream(int fd, void* Buffer, size_t Size)
+{
+  if (fd >=0 && fd < MAX_STREAM_FD) {
+     off_t pos=lseek(fd, 0, SEEK_CUR);
+     off_t begin=StreamRanges[fd].begin;
+     off_t end=StreamRanges[fd].end;
+     off_t ahead=StreamRanges[fd].ahead;
+     if (pos > end) {
+        end = pos;
+        }
+     if (end > ahead) {
+        end = ahead;
+        }
+     if (begin >= 0 && end > begin) {
+        posix_fadvise(fd, begin-KILOBYTE(200), end-begin+KILOBYTE(200), POSIX_FADV_DONTNEED);
+        }
+     StreamRanges[fd].begin = pos;
+     ssize_t bytesRead = safe_read(fd, Buffer, Size);
+     if (bytesRead > 0) {
+        pos += bytesRead;
+        StreamRanges[fd].end = pos;
+        posix_fadvise(fd, pos, READ_AHEAD, POSIX_FADV_WILLNEED);
+        StreamRanges[fd].ahead = pos + READ_AHEAD;
+        }
+     else {
+        StreamRanges[fd].end = pos;
+        }
+     return bytesRead;
+     }
+  return safe_read(fd, Buffer, Size);
+}
+
+ssize_t WriteStream(int fd, const void* Buffer, size_t Size)
+{
+  if (fd >=0 && fd < MAX_STREAM_FD) {
+     off_t pos=lseek(fd, 0, SEEK_CUR);
+     ssize_t bytesWritten = safe_write(fd, Buffer, Size);
+     if (bytesWritten >= 0) {
+        StreamRanges[fd].written += bytesWritten;
+        off_t begin=StreamRanges[fd].begin;
+        off_t end=StreamRanges[fd].end;
+        ssize_t written=StreamRanges[fd].written;
+        if (begin >= 0) {
+           if (pos < begin) {
+              begin = pos;
+              }
+           }
+        else {
+           begin = pos;
+           }
+        if (pos + bytesWritten > end) {
+           end = pos + bytesWritten;
+           }
+        if (written > WRITE_BUFFER) {
+           isyslog(LOG_INFO, "flush buffer: %d (%d bytes, %d-%d)", fd, written, begin, end);
+           fdatasync(fd);
+           if (begin >= 0 && end > begin) {
+              posix_fadvise(fd, begin, end-begin, POSIX_FADV_DONTNEED);
+              }
+           begin = -1;
+           end = -1;
+           written = 0;
+           }
+        StreamRanges[fd].begin = begin;
+        StreamRanges[fd].end = end;
+        StreamRanges[fd].written = written;
+        }
+     return bytesWritten;
+     }
+  return safe_write(fd, Buffer, Size);
+}
+
+int CloseStream(int fd)
+{
+  if (fd >=0 && fd < MAX_STREAM_FD) {
+     off_t begin=StreamRanges[fd].begin;
+     off_t end=StreamRanges[fd].end;
+     off_t ahead=StreamRanges[fd].ahead;
+     if (ahead > end) {
+        end = ahead;
+        }
+     if (begin >= 0 && end > begin) {
+        ssize_t written=StreamRanges[fd].written;
+        isyslog(LOG_INFO, "close buffer: %d (flush: %d bytes, %d-%d)", fd, written, begin, end);
+        if (written) {
+           fdatasync(fd);
+           }
+        posix_fadvise(fd, begin, end-begin, POSIX_FADV_DONTNEED);
+        }
+     StreamRanges[fd].begin = -1;
+     StreamRanges[fd].end = -1;
+     StreamRanges[fd].ahead = -1;
+     StreamRanges[fd].written = 0;
+  }
+  return close(fd);
+}
+
+#else
+int OpenStream(const char* PathName, int Flags, mode_t Mode)
+{
+  int retVal=open(PathName, Flags, Mode);
+  return retVal;
+}
+
+int OpenStream(const char* PathName, int Flags)
+{
+  int retVal=open(PathName, Flags);
+  return retVal;
+}
+
+ssize_t ReadStream(int filedes, void* buffer, size_t size)
+{
+  for (;;)
+  {
+    ssize_t p = read(filedes, buffer, size);
+    if (p < 0 && errno == EINTR)
+    {
+      dsyslog(LOG_INFO, "EINTR while reading from file handle %d - retrying", filedes);
+      continue;
+    }
+    return p;
+  }
+}
+
+ssize_t WriteStream(int filedes, const void* buffer, size_t size)
+{
+  ssize_t p = 0;
+  ssize_t written = size;
+  const unsigned char *ptr = (const unsigned char *)buffer;
+  while (size > 0)
+  {
+    p = write(filedes, ptr, size);
+    if (p < 0)
+    {
+      if (errno == EINTR)
+      {
+        dsyslog(LOG_INFO, "EINTR while writing to file handle %d - retrying", filedes);
+        continue;
+      }
+      break;
+    }
+    ptr  += p;
+    size -= p;
+  }
+  return p < 0 ? p : written;
+}
+
+int CloseStream(int fd)
+{
+  return close(fd);
+}
+
+#endif // AVOID_TRASHING
+
+
 ssize_t safe_read(int filedes, void *buffer, size_t size)
 {
   for (;;)
@@ -961,8 +1157,9 @@ int ReadFrame(int f, unsigned char *b, int Length, int Max)
     esyslog(LOG_ERR, "ERROR: frame larger than buffer (%d > %d)", Length, Max);
     Length = Max;
   }
+  int r = ReadStream(f,b,Length);
   //int r = safe_read(f, b, Length);
-  int r = read( f,b,Length);
+  //int r = read( f,b,Length);
   if (r < 0)
     LOG_ERROR;
   return r;

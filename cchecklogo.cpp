@@ -34,9 +34,9 @@ CCheckLogo::CCheckLogo( noadData* data ){
   m_pData = data;
 
   // allocate and set memory of view analyse data **************
+  #ifdef VNOAD
   m_chAnalyseData = new char[m_pData->m_nSizeX*m_pData->m_nSizeY];
   memset(m_chAnalyseData, 0, m_pData->m_nSizeX*m_pData->m_nSizeY);
-  #ifdef VNOAD
   m_chAnalyseData2 = new char[m_pData->m_nSizeX*m_pData->m_nSizeY];
   memset(m_chAnalyseData2, 255, m_pData->m_nSizeX*m_pData->m_nSizeY);
   m_chAnalyseData3 = new char[m_pData->m_nSizeX*m_pData->m_nSizeY];
@@ -65,10 +65,9 @@ CCheckLogo::CCheckLogo( noadData* data ){
 }
 CCheckLogo::~CCheckLogo()
 {
-
+  #ifdef VNOAD
   delete [] m_chAnalyseData;
   m_chAnalyseData=NULL;
-  #ifdef VNOAD
   delete [] m_chAnalyseData2;
   delete [] m_chAnalyseData3;
   #endif
@@ -142,9 +141,9 @@ int CCheckLogo::checkTestlines( char* chSrc, struct testlines* tl, int yoffset, 
   //syslog(LOG_INFO,"CCheckLogo::checkTestlines %p %p %d %d",chSrc, tl, yoffset, xoffset);
   int sizeY = m_pData->m_nSizeY;
   int sizeX = m_pData->m_nSizeX;
+  #ifdef VNOAD
   // ** copy picture to analyse view picture **
   memcpy( m_chAnalyseData, chSrc, sizeX*sizeY );
-  #ifdef VNOAD
   memset(m_chAnalyseData2, 255, sizeX*sizeY);
   memset(m_chAnalyseData3, 128, sizeX*sizeY);
   #endif
@@ -175,10 +174,10 @@ int CCheckLogo::checkTestlines( char* chSrc, struct testlines* tl, int yoffset, 
       if ( fTempPos >= MIN_DIFF && fTempNeg <= -MIN_DIFF ){
          // ** the considered pair is ok *************
          nRestPair++;
+         #ifdef VNOAD
          // ** set them to the view **
          m_chAnalyseData[lineOffset+xpos] = 255;
          m_chAnalyseData[lineOffset+xneg] = 255;
-         #ifdef VNOAD
          m_chAnalyseData2[lineOffset+xpos] = 0;
          m_chAnalyseData2[lineOffset+xneg] = 0;
          #endif
@@ -199,7 +198,7 @@ int CCheckLogo::checkTestlines( char* chSrc, struct testlines* tl, int yoffset, 
   }
   if( logocb != NULL )
   {
-    //m_pView->m_chPicture = m_chAnalyseData;
+    #ifdef VNOAD
     // set the views headline string
     char *buffer = NULL;
     asprintf( &buffer, " %d/%d - %d unknown ",
@@ -208,7 +207,6 @@ int CCheckLogo::checkTestlines( char* chSrc, struct testlines* tl, int yoffset, 
     //m_pView->update();
     logocb(0,buffer,m_chAnalyseData,sizeX,sizeY);
     delete buffer;
-    #ifdef VNOAD
     logocb(1,0,m_chAnalyseData2,sizeX,sizeY);
     logocb(2,0,m_chAnalyseData3,sizeX,sizeY);
     #endif
@@ -292,8 +290,10 @@ void CCheckLogo::reset(){
   m_nNoLogo = 0;
   isLogo = false;
 
+  #ifdef VNOAD
   // set the view back to black and headline to no data
   memset( m_chAnalyseData,0, m_pData->m_nSizeY*m_pData->m_nSizeX );
+  #endif
 //  m_pView->m_chPicture = m_chAnalyseData;
 //  sprintf( m_pView->m_strHeadline, "no data" );
   // update it

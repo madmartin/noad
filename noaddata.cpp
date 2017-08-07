@@ -601,11 +601,13 @@ int noadData::countvals(unsigned char *_src[3], int line, int width, int /*heigh
   for( int i = 0; i < width;i++)
     iyCount += iSet[i];
   //memset( iSet,0,width*sizeof(int));
-  src = _src[1]+iHalfOffset;
+  unsigned char *src1 = _src[1]+iHalfOffset;
+  unsigned char *src2 = _src[2]+iHalfOffset;
   for(int i = 0; i < iHalfWidth; i++)
   {
     //iSet[src[i]] = 1;
-    uSum += src[i];
+    uSum += src1[i];
+    vSum += src2[i];
     //iSet[*src] = 1;
     //uSum += *src++;
   }
@@ -613,14 +615,14 @@ int noadData::countvals(unsigned char *_src[3], int line, int width, int /*heigh
   //for( int i = 0; i < iHalfWidth;i++)
   //  iuCount += iSet[i];
   //memset( iSet,0,width*sizeof(int));
-  src = _src[2]+iHalfOffset;
-  for(int i = 0; i < iHalfWidth; i++)
-  {
+  //src = _src[2]+iHalfOffset;
+  //for(int i = 0; i < iHalfWidth; i++)
+  //{
     //iSet[src[i]] = 1;
-    vSum += src[i];
+    //vSum += src[i];
     //iSet[*src] = 1;
     //vSum += *src++;
-  }
+  //}
   //int ivCount = 0;
   #ifdef VNOAD
   //int iFaktor = ySum/width-(border) + uSum/width/2 + vSum/width/2;

@@ -53,6 +53,12 @@ template<class T> inline T min(T a, T b) { return a <= b ? a : b; }
 template<class T> inline T max(T a, T b) { return a >= b ? a : b; }
 template<class T> inline void swap(T &a, T &b) { T t = a; a = b; b = t; }
 
+int OpenStream(const char* PathName, int Flags, mode_t Mode);
+int OpenStream(const char* PathName, int Flags);
+ssize_t ReadStream(int fd, void* Buffer, size_t Size);
+ssize_t WriteStream(int fd, const void* Buffer, size_t Size);
+int CloseStream(int fd);
+
 ssize_t safe_read(int filedes, void *buffer, size_t size);
 ssize_t safe_write(int filedes, const void *buffer, size_t size);
 void writechar(int filedes, char c);

@@ -57,7 +57,7 @@ int cFileName::Open(void)
     if (record)
     {
       dsyslog(LOG_INFO, "recording to '%s'", fileName);
-      file = open(fileName, BlockingFlag, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+      file = OpenStream(fileName, BlockingFlag, DEFFILEMODE);
       //file = OpenVideoFile(fileName, O_RDWR | O_CREAT | BlockingFlag);
       if (file < 0)
         LOG_ERROR_STR(fileName);
@@ -67,7 +67,7 @@ int cFileName::Open(void)
       if (access(fileName, R_OK) == 0)
       {
         dsyslog(LOG_INFO, "playing '%s'", fileName);
-        file = open(fileName, O_RDONLY | BlockingFlag);
+        file = OpenStream(fileName, O_RDONLY | BlockingFlag);
         if (file < 0)
           LOG_ERROR_STR(fileName);
       }
@@ -83,7 +83,7 @@ void cFileName::Close(void)
   if (file >= 0)
   {
     //if ((record && CloseVideoFile(file) < 0) || (!record && close(file) < 0))
-    if( close(file) < 0 )
+    if( CloseStream(file) < 0 )
       LOG_ERROR_STR(fileName);
     file = -1;
   }
@@ -171,7 +171,7 @@ bool cResumeFile::Save(int Index)
 {
   if (fileName)
   {
-    int f = open(fileName, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    int f = open(fileName, DEFFILEMODE);
     if (f >= 0)
     {
       if (safe_write(f, &Index, sizeof(Index)) < 0)
@@ -230,10 +230,10 @@ cIndexFile::cIndexFile(const char *FileName, bool Record)
             index = new tIndex[size];
             if (index)
             {
-              f = open(fileName, O_RDONLY);
+              f = OpenStream(fileName, O_RDONLY);
               if (f >= 0)
               {
-                if ((int)safe_read(f, index, buf.st_size) != buf.st_size)
+                if ((int)ReadStream(f, index, buf.st_size) != buf.st_size)
                 {
                   esyslog(LOG_ERR, "ERROR: can't read from file '%s'", fileName);
                   delete [] index;
@@ -257,7 +257,7 @@ cIndexFile::cIndexFile(const char *FileName, bool Record)
         isyslog(LOG_INFO, "missing index file %s", fileName);
       if (Record)
       {
-        if ((f = open(fileName, O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)) >= 0)
+        if ((f = OpenStream(fileName, O_WRONLY | O_CREAT | O_APPEND, DEFFILEMODE)) >= 0)
         {
           if (delta)
           {
@@ -278,7 +278,7 @@ cIndexFile::cIndexFile(const char *FileName, bool Record)
 cIndexFile::~cIndexFile()
 {
   if (f >= 0)
-    close(f);
+    CloseStream(f);
   delete [] fileName;
   delete [] index;
 }
@@ -309,12 +309,12 @@ bool cIndexFile::CatchUp(int Index)
             int delta = (newLast - last) * sizeof(tIndex);
             if (lseek(f, offset, SEEK_SET) == offset)
             {
-              if (safe_read(f, &index[last + 1], delta) != delta)
+              if (ReadStream(f, &index[last + 1], delta) != delta)
               {
                 esyslog(LOG_ERR, "ERROR: can't read from index");
                 delete index;
                 index = NULL;
-                close(f);
+                CloseStream(f);
                 f = -1;
                 break;
               }
@@ -343,10 +343,10 @@ bool cIndexFile::Write(uchar PictureType, uchar FileNumber, int FileOffset)
   if (f >= 0)
   {
     tIndex i = { FileOffset, PictureType, FileNumber, 0 };
-    if (safe_write(f, &i, sizeof(i)) < 0)
+    if (WriteStream(f, &i, sizeof(i)) < 0)
     {
       LOG_ERROR_STR(fileName);
-      close(f);
+      CloseStream(f);
       f = -1;
       return false;
     }
@@ -481,15 +481,15 @@ cNoadIndexFile::cNoadIndexFile(const char *FileName, bool Record):cIndexFile(Fil
             indexEx = new tIndexEx[size];
             if (indexEx)
             {
-              fEx = open(fileNameEx, O_RDONLY);
+              fEx = OpenStream(fileNameEx, O_RDONLY);
               if (fEx >= 0)
               {
-                if ((int)safe_read(fEx, indexEx, buf.st_size) != buf.st_size)
+                if ((int)ReadStream(fEx, indexEx, buf.st_size) != buf.st_size)
                 {
                   esyslog(LOG_ERR, "ERROR: can't read from file '%s'", fileName);
                   delete indexEx;
                   indexEx = NULL;
-                  close(fEx);
+                  CloseStream(fEx);
                   fEx = -1;
                 }
                 // we don't close f here, see CatchUp()!
@@ -508,7 +508,7 @@ cNoadIndexFile::cNoadIndexFile(const char *FileName, bool Record):cIndexFile(Fil
         isyslog(LOG_INFO, "missing index file %s", fileNameEx);
       if (Record)
       {
-        if ((fEx = open(fileNameEx, O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)) >= 0)
+        if ((fEx = OpenStream(fileNameEx, O_WRONLY | O_CREAT | O_APPEND, DEFFILEMODE)) >= 0)
         {
           if (delta)
           {
@@ -533,7 +533,7 @@ cNoadIndexFile::cNoadIndexFile(const char *FileName, bool Record):cIndexFile(Fil
 cNoadIndexFile::~cNoadIndexFile()
 {
   if (fEx >= 0)
-    close(fEx);
+    CloseStream(fEx);
   delete [] fileNameEx;
   delete [] indexEx;
 }
@@ -660,7 +660,7 @@ void cNoadIndexFile::logIndexEx()
 
    dsyslog(LOG_INFO, "cNoadIndexFile::logIndexEx() to file %s last is %d", logFileName, Last());
 
-   if ((fLog = open(logFileName, O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)) >= 0)
+   if ((fLog = open(logFileName, O_WRONLY | O_CREAT | O_APPEND, DEFFILEMODE)) >= 0)
    {
      //dsyslog(LOG_INFO, "cNoadIndexFile::logIndexEx() fLog is %d", fLog);
      for( int i = 0; i < Last(); i++)
