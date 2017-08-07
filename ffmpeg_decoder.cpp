@@ -4,14 +4,29 @@ bool logSeeking;
 bool logReading = false;
 volatile bool ffmpegerror;
 
-extern cFileName *cfn;
-extern cNoadIndexFile *cIF;
-
-extern void my_av_dolog(void *ptr, int level, const char *fmt,va_list vl);
 extern void my_av_log(void*, int level,const char *fmt,...);
 
 static bool doSeekPos = false;
-#if (LIBAVCODEC_VERSION_MAJOR < 54)
+
+
+void my_av_dolog(void * /*ptr*/, int level, const char *fmt,va_list vl)
+{
+   if( level >= 16 /*AV_LOG_ERROR*/ )
+      return;
+   static char line[1024];
+   vsnprintf( line,sizeof(line),fmt,vl);
+   int iLen = strlen(line);
+   if( line[iLen-1] == '\n' )
+      line[iLen-1] = '\0';
+   //fprintf(stderr,line);
+   esyslog("ffmpeg(%d): %s",level,line);
+}
+
+#ifdef USE_FFMPEG
+extern cFileName *cfn;
+extern cNoadIndexFile *cIF;
+
+#ifdef USE_URLCONTEXT
 static int noad_close(URLContext* /* h */ )
 {
 	//BUF*	pf = (BUF*)&h->priv_data;
@@ -121,8 +136,7 @@ static URLProtocol noad_protocol =
 };
 #endif
 
-#if (LIBAVCODEC_VERSION_MAJOR >= 54)
-
+#ifdef USE_AVIOCONTEXT
 static int noad_read_packet(void *h, uint8_t *buf, int size)
 {
   FFMPegDecoder *decoder = (FFMPegDecoder*)(h);
@@ -169,7 +183,7 @@ static int noad_read_packet(void *h, uint8_t *buf, int size)
 	return 0;
 }
 
-static int noad_write_packet(void *h, uint8_t *buf, int size)
+static int noad_write_packet(void */*h*/, uint8_t */*buf*/, int /*size*/)
 {
   //FFMPegDecoder *decoder = (FFMPegDecoder*)(h->priv_data);
 	/*
@@ -221,7 +235,7 @@ FFMPegDecoder::FFMPegDecoder() :
 	cont_reading = false;
    av_log_set_callback(my_av_dolog);
    av_log_set_level(AV_LOG_ERROR);
-#if (LIBAVCODEC_VERSION_MAJOR >= 54)
+#ifdef USE_AVIOCONTEXT
    pIOContext = NULL;
 #endif
 }
@@ -235,10 +249,10 @@ int FFMPegDecoder::decoder_init()
 {
 	// Register all formats and codecs
 	av_register_all();
-#if (LIBAVCODEC_VERSION_MAJOR < 54)
+#ifdef USE_URLCONTEXT
    av_register_protocol2(&noad_protocol, sizeof(noad_protocol));
 #endif
-#if (LIBAVCODEC_VERSION_MAJOR >= 54)
+#ifdef USE_AVIOCONTEXT
 #define IOBUFSIZE (1024L*200L)
    iobuffer = (unsigned char*)av_malloc(IOBUFSIZE);
    pIOContext =  avio_alloc_context(
@@ -262,17 +276,17 @@ int FFMPegDecoder::openFile(cFileName *_cfn, cNoadIndexFile *_cIF)
 	cont_reading = true;
    doSeekPos = true;
 
-#if (LIBAVCODEC_VERSION_MAJOR < 54)
+#ifdef USE_URLCONTEXT
    char somebuf[1024];
    sprintf(somebuf, "noad:0x%08lx", (unsigned long)this);
    if(av_open_input_file(&pFormatCtx, somebuf, NULL, 0, NULL)!=0)
 		return -1; // Couldn't open file
 #endif
-#if (LIBAVCODEC_VERSION_MAJOR >= 54)
+#ifdef USE_AVIOCONTEXT
    pFormatCtx = avformat_alloc_context();
    pFormatCtx->pb = pIOContext;
 	char somebuf[1024];
-	sprintf(somebuf, "noad:0x%08lx", this);
+   sprintf(somebuf, "noad:0x%08lx", (long unsigned int)this);
    int openCode = avformat_open_input(&pFormatCtx,"name",NULL,NULL);
    if( openCode != 0 )
 		return -1; // Couldn't open file
@@ -353,7 +367,7 @@ int FFMPegDecoder::decoder_exit()
 		//avcodec_close(pCodecCtx);
 		pCodecCtx = NULL;
 	}
-#if (LIBAVCODEC_VERSION_MAJOR >= 54)
+#ifdef USE_AVIOCONTEXT
    if( pIOContext )
    {
       //av_free(iobuffer);
@@ -611,3 +625,4 @@ void FFMPegDecoder::resetDecoder(int iFrame)
       avcodec_flush_buffers(pCodecCtx);
 }
 
+#endif //USE_FFMPEG

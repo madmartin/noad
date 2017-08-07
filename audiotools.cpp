@@ -63,18 +63,7 @@ static unsigned int bitrates[3][16] =
 
 static uint32_t freq[4] = {441, 480, 320, 0};
 
-void my_av_dolog(void * /*ptr*/, int level, const char *fmt,va_list vl)
-{
-   if( level >= AV_LOG_ERROR )
-      return;
-   static char line[1024];
-   vsnprintf( line,sizeof(line),fmt,vl);
-   int iLen = strlen(line);
-   if( line[iLen-1] == '\n' )
-      line[iLen-1] = '\0';
-   //fprintf(stderr,line);
-   esyslog("ffmpeg(%d): %s",level,line);
-}
+extern void my_av_dolog(void *ptr, int level, const char *fmt,va_list vl);
 
 void my_av_log(void*, int level,const char *fmt,...)
 {
@@ -298,10 +287,10 @@ int scan_audio_stream_0(unsigned char *mbuf, int count)
     double sampleoffset;
     sampleoffset = audiosamples;
     sampleoffset /=48000.0;
-    int min = (int)(sampleoffset/60);
+    //int min = (int)(sampleoffset/60);
     int sec=(int)sampleoffset;
     sec%=60;
-    int min2 = (int)((sampleoffset-lastsampleoffset)/60);
+    //int min2 = (int)((sampleoffset-lastsampleoffset)/60);
     int sec2 = (int)((sampleoffset-lastsampleoffset));
     sec2%=60;
     lastsampleoffset = sampleoffset;

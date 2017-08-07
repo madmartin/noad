@@ -98,7 +98,6 @@ char *filename = NULL;
 bool bReUseLogo = true;
 int default_Decoder = FFMPEG_DECODER;
 
-
 cNoadIndexFile *cIF = NULL;
 cFileName *cfn = NULL;
 bool bMarkChanged = false;
@@ -1601,10 +1600,15 @@ int scanRecord( int iNumFrames, cMarks *_marks )
   else
     pmarks = localMarks = new cMarks();
   
+#ifdef USE_FFMPEG
     if( default_Decoder == FFMPEG_DECODER )
 		 decoder = new FFMPegDecoder();
-	 else if( default_Decoder == LIBMPEG2_DECODER )
-		 decoder = new LibMPeg2Decoder();
+    else
+#endif
+#ifdef USE_LIBMPGE2
+       if( default_Decoder == LIBMPEG2_DECODER )
+         decoder = new LibMPeg2Decoder();
+#endif
 	 decoder->decoder_init();
 	 decoder->openFile(cfn,cIF);
 

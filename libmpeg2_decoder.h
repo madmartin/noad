@@ -1,6 +1,8 @@
 #ifndef __LIBMPEG2_DECODER__
 #define __LIBMPEG2_DECODER__
 
+#if defined(USE_LIBMPGE2)
+
 #include "mpeg_decoder.h"
 extern "C"
 {
@@ -85,5 +87,7 @@ public:
 	int getTSPID(int f);
 	int TS2PES(uint8_t * buffer, uint8_t * end, int flags);
 };
+#endif // USE_LIBMPGE2
+
 #endif //#define __LIBMPEG2_DECODER__
 

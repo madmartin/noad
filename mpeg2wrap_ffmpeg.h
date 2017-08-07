@@ -1,5 +1,5 @@
 /***************************************************************************
-                          mpeg2wrap.h  -  description
+                          mpeg2wrap_ffmpeg.h  -  description
                              -------------------
     begin                : Son Nov 16 23:25:00 CET 2003
     copyright            : (C) 2003 by theNoad #709GRW

@@ -1,12 +1,14 @@
 #ifndef __FFMPEG_DECODER__
 #define __FFMPEG_DECODER__
 
+
 #include "mpeg_decoder.h"
+#ifdef USE_FFMPEG
 extern "C"
 {
   #include "libavcodec/avcodec.h"
   #include "libavformat/avformat.h"
-#if (LIBAVCODEC_VERSION_MAJOR < 54)
+#ifdef USE_URLCONTEXT
   #include "libavformat/url.h"
 #endif
 }
@@ -15,7 +17,7 @@ extern "C"
 class FFMPegDecoder : public MPEGDecoder
 {
 	AVFormatContext *pFormatCtx;
-#if (LIBAVCODEC_VERSION_MAJOR >= 54)
+#ifdef USE_AVIOCONTEXT
    AVIOContext     *pIOContext;
    unsigned char *iobuffer;
 #endif
@@ -50,5 +52,5 @@ public:
 	virtual void resetDecoder();
 	virtual void resetDecoder(int iFrame);
 };
+#endif //USE_FFMPEG
 #endif //#define __FFMPEG_DECODER__
-

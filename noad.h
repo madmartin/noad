@@ -27,7 +27,7 @@
 #define LIBMPEG2_DECODER 2
 extern int default_Decoder; 
 
-#include "mpeg2wrap.h"
+//#include "mpeg2wrap.h"
 #include "mpeg2wrap_ffmpeg.h"
 extern noadYUVBuf lastYUVBuf;  // last yuvbuf from StdCallBack
 #include "vdr_cl.h"

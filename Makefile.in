@@ -56,6 +56,12 @@ CONFIG_CLEAN_VPATH_FILES =
 LIBRARIES = $(noinst_LIBRARIES)
 AR = ar
 ARFLAGS = cru
+AM_V_AR = $(am__v_AR_$(V))
+am__v_AR_ = $(am__v_AR_$(AM_DEFAULT_VERBOSITY))
+am__v_AR_0 = @echo "  AR    " $@;
+AM_V_at = $(am__v_at_$(V))
+am__v_at_ = $(am__v_at_$(AM_DEFAULT_VERBOSITY))
+am__v_at_0 = @
 libnoad_a_AR = $(AR) $(ARFLAGS)
 libnoad_a_LIBADD =
 am_libnoad_a_OBJECTS = tools.$(OBJEXT) vdr_cl.$(OBJEXT) \
@@ -104,15 +110,33 @@ DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
 am__mv = mv -f
+AM_V_lt = $(am__v_lt_$(V))
+am__v_lt_ = $(am__v_lt_$(AM_DEFAULT_VERBOSITY))
+am__v_lt_0 = --silent
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
+AM_V_CXX = $(am__v_CXX_$(V))
+am__v_CXX_ = $(am__v_CXX_$(AM_DEFAULT_VERBOSITY))
+am__v_CXX_0 = @echo "  CXX   " $@;
 CXXLD = $(CXX)
 CXXLINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) \
 	-o $@
+AM_V_CXXLD = $(am__v_CXXLD_$(V))
+am__v_CXXLD_ = $(am__v_CXXLD_$(AM_DEFAULT_VERBOSITY))
+am__v_CXXLD_0 = @echo "  CXXLD " $@;
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
+AM_V_CC = $(am__v_CC_$(V))
+am__v_CC_ = $(am__v_CC_$(AM_DEFAULT_VERBOSITY))
+am__v_CC_0 = @echo "  CC    " $@;
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+AM_V_CCLD = $(am__v_CCLD_$(V))
+am__v_CCLD_ = $(am__v_CCLD_$(AM_DEFAULT_VERBOSITY))
+am__v_CCLD_0 = @echo "  CCLD  " $@;
+AM_V_GEN = $(am__v_GEN_$(V))
+am__v_GEN_ = $(am__v_GEN_$(AM_DEFAULT_VERBOSITY))
+am__v_GEN_0 = @echo "  GEN   " $@;
 SOURCES = $(libnoad_a_SOURCES) $(markpics_SOURCES) $(noad_SOURCES) \
 	$(showindex_SOURCES)
 DIST_SOURCES = $(libnoad_a_SOURCES) $(markpics_SOURCES) \
@@ -132,6 +156,7 @@ distuninstallcheck_listfiles = find . -type f -print
 distcleancheck_listfiles = find . -type f -print
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
+AM_DEFAULT_VERBOSITY = @AM_DEFAULT_VERBOSITY@
 AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
@@ -155,18 +180,18 @@ EXEEXT = @EXEEXT@
 FFMPEG_CFLAGS = @FFMPEG_CFLAGS@
 FFMPEG_LIBS = @FFMPEG_LIBS@
 GREP = @GREP@
-HAVE_AVCHEADER = @HAVE_AVCHEADER@
-HAVE_LIBAVCODEC = @HAVE_LIBAVCODEC@
 HAVE_LIBMPEG2 = @HAVE_LIBMPEG2@
-HAVE_MPEGHEADER = @HAVE_MPEGHEADER@
+IMAGEMAGICK_CFLAGS = @IMAGEMAGICK_CFLAGS@
+IMAGEMAGICK_LIBS = @IMAGEMAGICK_LIBS@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
+LIBMPEG2_CFLAGS = @LIBMPEG2_CFLAGS@
+LIBMPEG2_LIBS = @LIBMPEG2_LIBS@
 LIBMPEGX = @LIBMPEGX@
-LIBMPEG_VERSION = @LIBMPEG_VERSION@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LTLIBOBJS = @LTLIBOBJS@
@@ -202,54 +227,34 @@ am__leading_dot = @am__leading_dot@
 am__quote = @am__quote@
 am__tar = @am__tar@
 am__untar = @am__untar@
-avcincpath = @avcincpath@
 bindir = @bindir@
 build_alias = @build_alias@
 builddir = @builddir@
 datadir = @datadir@
 datarootdir = @datarootdir@
+decoderok = @decoderok@
 defprefix = @defprefix@
 docdir = @docdir@
 dvidir = @dvidir@
 exec_prefix = @exec_prefix@
-ffmpegincoverridden = @ffmpegincoverridden@
-ffmpeglibdir = @ffmpeglibdir@
-ffmpegliboverridden = @ffmpegliboverridden@
 ffmpegok = @ffmpegok@
 host_alias = @host_alias@
 htmldir = @htmldir@
 includedir = @includedir@
 infodir = @infodir@
 install_sh = @install_sh@
-libavcodecdir = @libavcodecdir@
-libavcodecinc = @libavcodecinc@
-libavcodeclib = @libavcodeclib@
 libdir = @libdir@
 libexecdir = @libexecdir@
+libmagickok = @libmagickok@
+libmpeg2ok = @libmpeg2ok@
 localedir = @localedir@
 localstatedir = @localstatedir@
 mandir = @mandir@
 markpiccxxflags = @markpiccxxflags@
+markpics_ldadd = @markpics_ldadd@
 mkdir_p = @mkdir_p@
-mpeginc = @mpeginc@
-mpegincoverridden = @mpegincoverridden@
-mpegincpath = @mpegincpath@
-mpeglibdir = @mpeglibdir@
-mpegliboverridden = @mpegliboverridden@
 oldincludedir = @oldincludedir@
 pdfdir = @pdfdir@
-pgkmagicklib = @pgkmagicklib@
-pkgconfigured = @pkgconfigured@
-pkgffmpegconfigured = @pkgffmpegconfigured@
-pkgffmpeginc = @pkgffmpeginc@
-pkgffmpeglib = @pkgffmpeglib@
-pkgffmpeglibdir = @pkgffmpeglibdir@
-pkgmagickflags = @pkgmagickflags@
-pkgmagickinc = @pkgmagickinc@
-pkgmagicklibdir = @pkgmagicklibdir@
-pkgmpeginc = @pkgmpeginc@
-pkgmpeglib = @pkgmpeglib@
-pkgmpeglibdir = @pkgmpeglibdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
@@ -275,7 +280,7 @@ noad_SOURCES = audiotools.cpp cchecklogo.cpp ccontrol.cpp cgetlogo.cpp ctoolbox.
 noad_LDADD = libnoad.a
 noinst_PROGRAMS = @PICSRC@ @TOOLSRC@
 markpics_SOURCES = markpics.cpp
-markpics_LDADD = libnoad.a -lMagick++
+markpics_LDADD = libnoad.a @markpics_ldadd@
 markpics_CXXFLAGS = @markpiccxxflags@
 showindex_SOURCES = showindex.cpp
 showindex_LDADD = libnoad.a
@@ -341,9 +346,9 @@ distclean-hdr:
 clean-noinstLIBRARIES:
 	-test -z "$(noinst_LIBRARIES)" || rm -f $(noinst_LIBRARIES)
 libnoad.a: $(libnoad_a_OBJECTS) $(libnoad_a_DEPENDENCIES) 
-	-rm -f libnoad.a
-	$(libnoad_a_AR) libnoad.a $(libnoad_a_OBJECTS) $(libnoad_a_LIBADD)
-	$(RANLIB) libnoad.a
+	$(AM_V_at)-rm -f libnoad.a
+	$(AM_V_AR)$(libnoad_a_AR) libnoad.a $(libnoad_a_OBJECTS) $(libnoad_a_LIBADD)
+	$(AM_V_at)$(RANLIB) libnoad.a
 install-binPROGRAMS: $(bin_PROGRAMS)
 	@$(NORMAL_INSTALL)
 	test -z "$(bindir)" || $(MKDIR_P) "$(DESTDIR)$(bindir)"
@@ -386,13 +391,13 @@ clean-noinstPROGRAMS:
 	-test -z "$(noinst_PROGRAMS)" || rm -f $(noinst_PROGRAMS)
 markpics$(EXEEXT): $(markpics_OBJECTS) $(markpics_DEPENDENCIES) 
 	@rm -f markpics$(EXEEXT)
-	$(markpics_LINK) $(markpics_OBJECTS) $(markpics_LDADD) $(LIBS)
+	$(AM_V_CXXLD)$(markpics_LINK) $(markpics_OBJECTS) $(markpics_LDADD) $(LIBS)
 noad$(EXEEXT): $(noad_OBJECTS) $(noad_DEPENDENCIES) 
 	@rm -f noad$(EXEEXT)
-	$(CXXLINK) $(noad_OBJECTS) $(noad_LDADD) $(LIBS)
+	$(AM_V_CXXLD)$(CXXLINK) $(noad_OBJECTS) $(noad_LDADD) $(LIBS)
 showindex$(EXEEXT): $(showindex_OBJECTS) $(showindex_DEPENDENCIES) 
 	@rm -f showindex$(EXEEXT)
-	$(CXXLINK) $(showindex_OBJECTS) $(showindex_LDADD) $(LIBS)
+	$(AM_V_CXXLD)$(CXXLINK) $(showindex_OBJECTS) $(showindex_LDADD) $(LIBS)
 install-binSCRIPTS: $(bin_SCRIPTS)
 	@$(NORMAL_INSTALL)
 	test -z "$(bindir)" || $(MKDIR_P) "$(DESTDIR)$(bindir)"
@@ -453,29 +458,33 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vdr_cl.Po@am__quote@
 
 .cpp.o:
-@am__fastdepCXX_TRUE@	$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
-@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@am__fastdepCXX_FALSE@	$(AM_V_CXX) @AM_BACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXXCOMPILE) -c -o $@ $<
 
 .cpp.obj:
-@am__fastdepCXX_TRUE@	$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ `$(CYGPATH_W) '$<'`
-@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ `$(CYGPATH_W) '$<'`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@am__fastdepCXX_FALSE@	$(AM_V_CXX) @AM_BACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXXCOMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
 
 markpics-markpics.o: markpics.cpp
-@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(markpics_CXXFLAGS) $(CXXFLAGS) -MT markpics-markpics.o -MD -MP -MF $(DEPDIR)/markpics-markpics.Tpo -c -o markpics-markpics.o `test -f 'markpics.cpp' || echo '$(srcdir)/'`markpics.cpp
-@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/markpics-markpics.Tpo $(DEPDIR)/markpics-markpics.Po
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(markpics_CXXFLAGS) $(CXXFLAGS) -MT markpics-markpics.o -MD -MP -MF $(DEPDIR)/markpics-markpics.Tpo -c -o markpics-markpics.o `test -f 'markpics.cpp' || echo '$(srcdir)/'`markpics.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/markpics-markpics.Tpo $(DEPDIR)/markpics-markpics.Po
+@am__fastdepCXX_FALSE@	$(AM_V_CXX) @AM_BACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='markpics.cpp' object='markpics-markpics.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(markpics_CXXFLAGS) $(CXXFLAGS) -c -o markpics-markpics.o `test -f 'markpics.cpp' || echo '$(srcdir)/'`markpics.cpp
 
 markpics-markpics.obj: markpics.cpp
-@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(markpics_CXXFLAGS) $(CXXFLAGS) -MT markpics-markpics.obj -MD -MP -MF $(DEPDIR)/markpics-markpics.Tpo -c -o markpics-markpics.obj `if test -f 'markpics.cpp'; then $(CYGPATH_W) 'markpics.cpp'; else $(CYGPATH_W) '$(srcdir)/markpics.cpp'; fi`
-@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/markpics-markpics.Tpo $(DEPDIR)/markpics-markpics.Po
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(markpics_CXXFLAGS) $(CXXFLAGS) -MT markpics-markpics.obj -MD -MP -MF $(DEPDIR)/markpics-markpics.Tpo -c -o markpics-markpics.obj `if test -f 'markpics.cpp'; then $(CYGPATH_W) 'markpics.cpp'; else $(CYGPATH_W) '$(srcdir)/markpics.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/markpics-markpics.Tpo $(DEPDIR)/markpics-markpics.Po
+@am__fastdepCXX_FALSE@	$(AM_V_CXX) @AM_BACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='markpics.cpp' object='markpics-markpics.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(markpics_CXXFLAGS) $(CXXFLAGS) -c -o markpics-markpics.obj `if test -f 'markpics.cpp'; then $(CYGPATH_W) 'markpics.cpp'; else $(CYGPATH_W) '$(srcdir)/markpics.cpp'; fi`

@@ -1,4 +1,5 @@
 #include "libmpeg2_decoder.h"
+#if defined(USE_LIBMPGE2)
 
 bool ignorevideo = false;
 #define VIDEO_STREAM_S   0xE0
@@ -15,15 +16,15 @@ LibMPeg2Decoder::LibMPeg2Decoder() :
 	state = DEMUX_SKIP;
 	state_bytes = 0;
 	__bufBytes = 0;
-	__bufPos;
-	__bufEnd;
+   __bufPos = 0;
+   __bufEnd = 0;
 	__tsBytes = 0;
 	libmpeg2_index=0;
 	libmpeg2_Lastindex=-1;
-	libmpeg2FileNumber;		// current file-number
-	libmpeg2FileOffset;     // current file-offset
-	libmpeg2LastFileOffset; // last file-offset
-	libmpeg2Length;         // frame-lenght of current frame
+   libmpeg2FileNumber=1;		// current file-number
+   libmpeg2FileOffset=0;      // current file-offset
+   libmpeg2LastFileOffset=0;  // last file-offset
+   libmpeg2Length=0;          // frame-lenght of current frame
 	cont_reading = true;
 }
 
@@ -139,8 +140,8 @@ bool LibMPeg2Decoder::GetTSVideoFrame(bool restart)
 	libmpeg2error = false;
 	int flags;
 	flags = restart?DEMUX_RESET:0;
-	static int tsflags = 0;
-	static int tsPacketCount = 0;
+//	static int tsflags = 0;
+//	static int tsPacketCount = 0;
 	static int currentTsPacket = 0;
 	do
 	{
@@ -176,13 +177,13 @@ bool LibMPeg2Decoder::GetTSVideoFrame(bool restart)
 			if( restart )
 				flags = DEMUX_RESET;
 				__bufBytes += bytesRed;
-				tsflags = 0;
+//				tsflags = 0;
 			//}
 			__bufPos = readBuffer; 
 			__bufEnd = readBuffer + __bufBytes;
 			libmpeg2LastFileOffset = libmpeg2FileOffset;
 
-			tsPacketCount = libmpeg2Length/TS_SIZE;
+//			tsPacketCount = libmpeg2Length/TS_SIZE;
 			currentTsPacket = 0;
 			__tsBytes = 0;
 		}
@@ -199,7 +200,7 @@ bool LibMPeg2Decoder::GetTSVideoFrame(bool restart)
 
 			if( __tsBytes )
 			{
-				uint8_t *pos =	 readBuffer;
+//				uint8_t *pos =	 readBuffer;
 				bRet = demuxPES(__bufPos, __bufEnd, flags);
 				bRet = havepic;
 				flags = 0;
@@ -356,7 +357,7 @@ int LibMPeg2Decoder::decode_mpeg2 (uint8_t * current, uint8_t * end, uint32_t &b
 	// dsyslog(LOG_INFO,"decode_mpeg2");
 	//dump2log(current,end);
 	mpeg2_buffer (mpeg2dec, current, end);
-	int iRet = 0;
+//	int iRet = 0;
 	info = mpeg2_info (mpeg2dec);
 	while ((state = (mpeg2_state_t)mpeg2_parse (mpeg2dec)) != STATE_BUFFER) 
 	{
@@ -1012,3 +1013,4 @@ int LibMPeg2Decoder::getTSPacket(uchar *buffer, int size, int &PacketNum,int &fl
 	}
 	return retSize;
 }
+#endif

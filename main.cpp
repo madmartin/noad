@@ -163,13 +163,19 @@ void cleanUp(void)
   rm_pidfile(recDir);
 }
 
-int main(int argc, char *argv[], char * /*envp[]*/)
+int main(int argc, char *argv[], char * /*envp*/[])
 {
   openlog("noad", LOG_PID | LOG_CONS, LOG_USER);
   //
   for(int i = 0; i < argc; i++)
     syslog(LOG_INFO, "noad arg[%d]: %s", i, argv[i]);
   syslog(LOG_INFO, "noad args done");
+
+#ifdef USE_FFMPEG
+  default_Decoder = FFMPEG_DECODER;
+#else
+  default_Decoder = LIBMPEG2_DECODER;
+#endif
 
   //syslog(LOG_INFO, "noad pid: %d", getpid());
 

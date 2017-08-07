@@ -19,7 +19,7 @@
  ***************************************************************************/
 #include "tnoad.h"
 #include "noad.h"
-#include "mpeg2wrap.h"
+//#include "mpeg2wrap.h"
 #include "svdrpc.h"
 
 extern int SysLogLevel;
@@ -76,10 +76,16 @@ void scanLoop(cMarks *marks)
    iCurrentFrame = 0;
    iStopFrame = 0;
 
-   if( default_Decoder == FFMPEG_DECODER )
-      decoder = new FFMPegDecoder();
-   else if( default_Decoder == LIBMPEG2_DECODER )
-      decoder = new LibMPeg2Decoder();
+#ifdef USE_FFMPEG
+    if( default_Decoder == FFMPEG_DECODER )
+       decoder = new FFMPegDecoder();
+    else
+#endif
+#ifdef USE_LIBMPGE2
+       if( default_Decoder == LIBMPEG2_DECODER )
+         decoder = new LibMPeg2Decoder();
+#endif
+
    decoder->decoder_init();
    decoder->openFile(cfn,cIF);
 

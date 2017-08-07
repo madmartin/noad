@@ -295,7 +295,7 @@ void noadData::setColorCorners()
       mb = n*BYTES_PER_PIXEL;
       mg = mb+1;
       mr = mg+1;
-      /** set corner top left * /
+      // set corner top left
       if( IS_TOP_LEFT )
       {
         fCompBlue  = (unsigned char)m_chColorCorner0[mb];
@@ -304,7 +304,7 @@ void noadData::setColorCorners()
         fSum = fRed*fCompRed + fGreen*fCompGreen + fBlue*fCompBlue;
         m_chGreyCorner0[n] = (int)fSum;
   	  }
-      /** set corner top right * /
+      // set corner top right
       if( IS_TOP_RIGHT )
       {
         fCompBlue  = (unsigned char)m_chColorCorner1[mb];
@@ -313,7 +313,7 @@ void noadData::setColorCorners()
         fSum = fRed*fCompRed + fGreen*fCompGreen + fBlue*fCompBlue;
         m_chGreyCorner1[n] = (int)fSum;
    	}
-      /** set corner bot right * /
+      // set corner bot right
       if( IS_BOT_RIGHT )
       {
         fCompBlue  = (unsigned char)m_chColorCorner2[mb];
@@ -322,7 +322,7 @@ void noadData::setColorCorners()
         fSum = fRed*fCompRed + fGreen*fCompGreen + fBlue*fCompBlue;
         m_chGreyCorner2[n] = (int)fSum;
    	}
-      /** set corner bot left * / 
+      // set corner bot left
       if( IS_BOT_LEFT )
       {
         fCompBlue  = (unsigned char)m_chColorCorner3[mb];
@@ -336,7 +336,7 @@ void noadData::setColorCorners()
   }
 }
 */
-/** sets the running corners */
+// sets the running corners
 void noadData::setCorners()
 {
   if ( nyuvbuf != NULL )
@@ -431,7 +431,7 @@ void writeInt( FILE *fd, const char * /*name*/, int iVal)
   fwrite(&iVal, sizeof(int), 1, fd);
 }
 
-int readInt( FILE *fd, const char *name, int *iVal, bool ignoredata = false)
+int readInt( FILE *fd, const char */*name*/, int *iVal, bool ignoredata = false)
 {
   int iDummy;
   if(ignoredata)
@@ -675,80 +675,6 @@ int noadData::countvals(noadYUVBuf *yuvbuf, int line, int border)
   iRetval += abs( 128 - (vSum/(iHalfWidth)));
   return iRetval;
 }
-/*
-void noadData::detectBlackLines(unsigned char *buf)
-{
-  bool bNonBlack = false;
-  m_nBlackLinesTop = 0;
-  m_nBlackLinesBottom = 0;
-  m_nBlackLinesTop2 = 0;
-  m_nBlackLinesBottom2 = 0;
-  m_nBlackLinesLeft = 0;
-  m_nBlackLinesRight = 0;
-  int i;
-  int ii;
-  int iBytesPerPixel = isYUVSource() ? 1 : BYTES_PER_PIXEL;
-  int cutval = isYUVSource() ? 20/*83* / : 9;
-  if( isYUVSource() )
-  {
-    if( buf == NULL )
-      return;
-    unsigned char **bufs =(unsigned char **)buf;
-    for( i = 8; i < m_nGrabHeight/2 && !bNonBlack; i++ )
-    {
-      if( countvals(bufs, i, m_nGrabWidth, m_nGrabHeight,m_nBorderX+m_nSizeX) > cutval )
-        bNonBlack = true;
-      else
-        m_nBlackLinesTop2++;
-    }
-    m_nBlackLinesTop2 &= ~1;
-    bNonBlack = false;
-    for( i = m_nGrabHeight-2; i > 0 && i > m_nBlackLinesTop2 && !bNonBlack; i-- )
-    {
-      if( countvals(bufs, i, m_nGrabWidth, m_nGrabHeight,m_nBorderX+m_nSizeX) > cutval )
-        bNonBlack = true;
-      else
-        m_nBlackLinesBottom2++;
-    }
-    if( m_nBlackLinesBottom2 &1 )
-      m_nBlackLinesBottom2--;
-
-    m_nBlackLinesTop = m_nBlackLinesTop2;
-    m_nBlackLinesBottom = m_nBlackLinesBottom2;
-
-  }
-  else
-  {
-    for( i = 0; i < m_nGrabHeight && !bNonBlack; i++ )
-    {
-      int linestart = i * (m_nGrabWidth * iBytesPerPixel);
-      int iLineSum = 0;
-      for( ii = 0; ii < m_nGrabWidth * iBytesPerPixel; ii++ )
-      {
-        iLineSum += (unsigned char)video_buffer_mem[linestart+ii];
-      }
-      if( iLineSum > m_nGrabWidth*cutval )
-        bNonBlack = true;
-      else
-        m_nBlackLinesTop++;
-    }
-    bNonBlack = false;
-    for( i = m_nGrabHeight-1; i > 0 && !bNonBlack; i-- )
-    {
-      int linestart = i * (m_nGrabWidth * iBytesPerPixel);
-      int iLineSum = 0;
-      for( ii = 0; ii < m_nGrabWidth * iBytesPerPixel; ii++ )
-      {
-        iLineSum += video_buffer_mem[linestart+ii];
-      }
-      if( iLineSum > m_nGrabWidth*cutval )
-        bNonBlack = true;
-      else
-        m_nBlackLinesBottom++;
-    }
-  }
-}
-*/
 
 void noadData::detectBlackLines( noadYUVBuf *yuvbuf )
 {
@@ -758,8 +684,8 @@ void noadData::detectBlackLines( noadYUVBuf *yuvbuf )
    m_nBlackLinesTop2 = 0;
    m_nBlackLinesBottom2 = 0;
    int i;
-   int ii;
-   int iBytesPerPixel = 1;
+//   int ii;
+//   int iBytesPerPixel = 1;
    int cutval = 20;
    for( i = 8; i < m_nGrabHeight/2 && !bNonBlack; i++ )
    {
@@ -791,7 +717,7 @@ void noadData::ndetectBlackLines(int width, int height, unsigned char **buf)
   m_nBlackLinesTop = 0;
   m_nBlackLinesBottom = 0;
   int i;
-  unsigned char **bufs = buf;
+  //unsigned char **bufs = buf;
   unsigned char *line = buf[0];
   for( i = 0; i < height/4 && !bNonBlack; i++ )
   {
@@ -1057,27 +983,6 @@ bool noadData::CheckFrameIsBlank(int framenum, noadYUVBuf *yuvbuf )
     return(true);
 }
 
-/*
-int noadData::GetAvgBrightness(int /*framenum* /, unsigned char ** /*buf* / )
-{
-  int brightness = 0;
-  int pixels = 0;
-  int yPos;
-
-  unsigned char *frame_ptr = (unsigned char *)getVideoBuffer();//buf[0];
-  for(int y = 0; y < m_nGrabHeight; y += 4)
-  {
-    yPos = y * m_nGrabWidth;
-    for(int x = 0; x < m_nGrabWidth; x += 4)
-    {
-      brightness += frame_ptr[yPos + x];
-      pixels++;
-    }
-  }
-  //dsyslog( "AvgBrightness of frame %d is %d",framenum, brightness/pixels);
-  return(brightness/pixels);
-}
-*/
 
 int noadData::GetAvgBrightness(int framenum, noadYUVBuf *yuvbuf )
 {

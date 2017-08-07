@@ -106,7 +106,7 @@ void CGetLogo::newData()
 }
 
 // reset all buffers for a new run 
-void CGetLogo::reset( bool bFirst )
+void CGetLogo::reset( bool /*bFirst*/ )
 {
   // set the buffers to init values 
   memcpy( m_chRefPicture, m_chRunData, m_pData->m_nSizeX*m_pData->m_nSizeY );
