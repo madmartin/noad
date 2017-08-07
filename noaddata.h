@@ -3,7 +3,7 @@
                              -------------------
     begin                : Sun Mar 10 2002
     copyright            : (C) 2002/2004 by theNoad #709GRW
-    email                : theNoad@SoftHome.net
+    email                : theNoad@ulmail.net
  ***************************************************************************/
 
 /***************************************************************************
@@ -18,8 +18,9 @@
 #ifndef NOADDATA_H
 #define NOADDATA_H
 #include <stdio.h>
-#include <linux/videodev.h>
+//#include <linux/videodev.h>
 #include "cchecklogo.h"
+#include "mpeg2wrap.h"
 
 #define GRAB_WIDTH  768
 #define GRAB_HEIGHT 576
@@ -90,7 +91,6 @@ struct endpoints
   struct endpoints *next;
 };
 typedef struct endpoints endpoints;
-typedef int (* cbfunc)(void *rgb_buf, int width, int height, void *yufbuf);
 typedef int simpleHistogram[256];
 
 struct pattern
@@ -110,7 +110,7 @@ class noadData
 {
   bool bYUVSource;
   bool bUseExternalMem;
-  int *iSet; // für countvals
+  int *iSet; // fï¿½r countvals
 public:
   noadData();
   ~noadData();
@@ -161,7 +161,8 @@ public:
   bool extLogoSearch;
 private:
   char* video_buffer_mem;
-
+  mpeg2_fbuf_t *yufbuf;
+  
 public:
   #ifdef VNOAD
   char* video_buffer_mem2[NUMPICS];
@@ -225,8 +226,8 @@ public:
 
   void setUseExternalMem(bool b);
   bool isUseExternalMem() { return bUseExternalMem; }
-  void setExternalMem(char *extMem);
-  void setExternalMem(void *extMem) { setExternalMem((char*)extMem); }
+  void setExternalMem(char *extMem, mpeg2_fbuf_t *yufbuf);
+  void setExternalMem(void *extMem, mpeg2_fbuf_t *yufbuf=NULL) { setExternalMem((char*)extMem,yufbuf); }
   char *getVideoBuffer() { return video_buffer_mem; }
 
   void resetSceneChangeDetection();

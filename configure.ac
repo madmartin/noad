@@ -3,14 +3,14 @@ dnl Process this file with autoconf to produce a configure script.
 dnl
 dnl ---------------------------------------------------------------------------
 dnl top-level configure.ac for noad
-dnl Copyright (c) by theNoad <theNoad@SoftHome.net>
+dnl Copyright (c) by theNoad <theNoad@ulmail.net>
 dnl ---------------------------------------------------------------------------
 
 dnl ---------------------------------------------------------------------------
 dnll initialisation
 dnl ---------------------------------------------------------------------------
 AC_PREREQ(2.57)
-AC_INIT(noad, 0.6.1, theNoad@SoftHome.net)
+AC_INIT(noad, 0.7.0, theNoad@ulmail.net)
 AM_INIT_AUTOMAKE(dist-bzip2)
 AC_CONFIG_SRCDIR([cchecklogo.cpp])
 AC_CONFIG_HEADER([config.h])
@@ -183,8 +183,9 @@ AC_ARG_WITH(tools,
    withtools="0")
 test $withtools -eq 1 && TOOLSRC="showindex"
 
-
-dnl check for request avoid trashing
+dnl ---------------------------------------------------------------------------
+dnl check for request "avoid trashing"
+dnl ---------------------------------------------------------------------------
 AC_ARG_WITH(avoid-trashing,
    AC_HELP_STRING([--with-avoid-trashing],[avoid filesystem trashing (uses posix_fadvise)]),
    haveposixfadvise="1",
@@ -192,6 +193,7 @@ AC_ARG_WITH(avoid-trashing,
 if test "$haveposixfadvise" == "1"; then 
 CPPFLAGS="$CPPFLAGS -DAVOID_TRASHING"
 fi
+
 
 dnl ---------------------------------------------------------------------------
 # Checks for header files.
@@ -219,7 +221,7 @@ dnl ---------------------------------------------------------------------------
 AC_FUNC_CLOSEDIR_VOID
 AC_FUNC_FORK
 AC_FUNC_MALLOC
-AC_FUNC_REALLOC
+#AC_FUNC_REALLOC
 AC_FUNC_SELECT_ARGTYPES
 AC_FUNC_STAT
 AC_FUNC_STRFTIME
@@ -262,6 +264,7 @@ AC_ARG_WITH(libmpeg2-static,
    AC_HELP_STRING([--with-libmpeg2-static],[force linking of static version of libmpeg]),
    [AC_SUBST(LIBMPEGX,"-Xlinker -Bstatic $pkgmpeglib -Xlinker -Bdynamic")])
 
+LDFLAGS="$LDFLAGS -rdynamic"
 
 dnl ---------------------------------------------------------------------------
 dnl check for libmpeg2

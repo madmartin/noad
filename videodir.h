@@ -14,7 +14,7 @@
 
 extern const char *VideoDirectory;
 
-int OpenVideoFile(const char *FileName, int Flags);
+//int OpenVideoFile(const char *FileName, int Flags);
 int CloseVideoFile(int FileHandle);
 bool RenameVideoFile(const char *OldName, const char *NewName);
 bool RemoveVideoFile(const char *FileName);

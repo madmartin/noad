@@ -23,20 +23,17 @@
 
 extern int SysLogLevel;
 
-/*
-#define esyslog(a...) void( (SysLogLevel > 0) ? syslog(a) : void() )
-#define isyslog(a...) void( (SysLogLevel > 1) ? syslog(a) : void() )
-#define dsyslog(a...) void( (SysLogLevel > 2) ? syslog(a) : void() )
-*/
-#define esyslog(a...) void( (SysLogLevel & 1) ? syslog(a) : void() )
-#define isyslog(a...) void( (SysLogLevel & 2) ? syslog(a) : void() )
-#define dsyslog(a...) void( (SysLogLevel & 4) ? syslog(a) : void() )
-#define xsyslog(a...) void( (SysLogLevel & 8) ? syslog(a) : void() )
+#define USE_FADVISE
+#define esyslog(a...) void( (SysLogLevel > 0) ? syslog_with_tid(LOG_ERR, a) : void() )
+#define isyslog(a...) void( (SysLogLevel > 1) ? syslog_with_tid(LOG_ERR, a) : void() )
+#define dsyslog(a...) void( (SysLogLevel > 2) ? syslog_with_tid(LOG_ERR, a) : void() )
+#define xsyslog(a...) void( (SysLogLevel & 8) ? syslog_with_tid(LOG_ERR, a) : void() )
+void syslog_with_tid(int priority, const char *format, ...) __attribute__ ((format (printf, 2, 3)));
 
-//#define LOG_ERROR         esyslog(LOG_ERR, "ERROR (%s,%d): %m", __FILE__, __LINE__)
-//#define LOG_ERROR_STR(s)  esyslog(LOG_ERR, "ERROR: %s: %m", s)
-#define LOG_ERROR         
-#define LOG_ERROR_STR(s)  
+#define LOG_ERROR         esyslog("ERROR (%s,%d): %m", __FILE__, __LINE__)
+#define LOG_ERROR_STR(s)  esyslog("ERROR: %s: %m", s)
+//#define LOG_ERROR         
+//#define LOG_ERROR_STR(s)  
 
 #define SECSINDAY  86400
 
@@ -53,11 +50,31 @@ template<class T> inline T min(T a, T b) { return a <= b ? a : b; }
 template<class T> inline T max(T a, T b) { return a >= b ? a : b; }
 template<class T> inline void swap(T &a, T &b) { T t = a; a = b; b = t; }
 
+#ifdef AVOID_TRASHING
 int OpenStream(const char* PathName, int Flags, mode_t Mode);
 int OpenStream(const char* PathName, int Flags);
 ssize_t ReadStream(int fd, void* Buffer, size_t Size);
 ssize_t WriteStream(int fd, const void* Buffer, size_t Size);
 int CloseStream(int fd);
+#endif // AVOID_TRASHING
+
+
+class cString {
+private:
+  char *s;
+public:
+  cString(const char *S = NULL, bool TakePointer = false);
+  cString(const cString &String);
+  virtual ~cString();
+  operator const void * () const { return s; } // to catch cases where operator*() should be used
+  operator const char * () const { return s; } // for use in (const char *) context
+  const char * operator*() const { return s; } // for use in (const void *) context (printf() etc.)
+  cString &operator=(const cString &String);
+  cString &Truncate(int Index); ///< Truncate the string at the given Index (if Index is < 0 it is counted from the end of the string).
+  static cString sprintf(const char *fmt, ...) __attribute__ ((format (printf, 1, 2)));
+  static cString sprintf(const char *fmt, va_list &ap);
+  };
+
 
 ssize_t safe_read(int filedes, void *buffer, size_t size);
 ssize_t safe_write(int filedes, const void *buffer, size_t size);
@@ -78,7 +95,7 @@ int time_ms(void);
 void delay_ms(int ms);
 const char *secToTime(int sec);
 bool isnumber(const char *s);
-const char *AddDirectory(const char *DirName, const char *FileName); // returns a statically allocated string!
+cString AddDirectory(const char *DirName, const char *FileName); // returns a statically allocated string!
 int FreeDiskSpaceMB(const char *Directory, int *UsedMB = NULL);
 bool DirectoryOk(const char *DirName, bool LogErrors = false);
 bool MakeDirs(const char *FileName, bool IsDirectory = false);
@@ -90,6 +107,7 @@ const char *WeekDayName(int WeekDay); // returns a statically allocated string!
 const char *DayDateTime(time_t t = 0); // returns a statically allocated string!
 int ReadFrame(int f, unsigned char *b, int Length, int Max);
 int getVStreamID(int f);
+int getTSPID(int f);
 
 class cFile {
 private:
@@ -100,7 +118,7 @@ public:
   cFile(void);
   ~cFile();
   operator int () { return f; }
-  bool Open(const char *FileName, int Flags, mode_t Mode = S_IRUSR | S_IWUSR | S_IRGRP);
+  bool Open(const char *FileName, int Flags, mode_t Mode = DEFFILEMODE);
   bool Open(int FileDes);
   void Close(void);
   bool IsOpen(void) { return f >= 0; }
@@ -109,6 +127,38 @@ public:
   static bool FileReady(int FileDes, int TimeoutMs = 1000);
   static bool FileReadyForWriting(int FileDes, int TimeoutMs = 1000);
   };
+
+/// cUnbufferedFile is used for large files that are mainly written or read
+/// in a streaming manner, and thus should not be cached.
+
+class cUnbufferedFile {
+private:
+  int fd;
+  off_t curpos;
+  off_t cachedstart;
+  off_t cachedend;
+  off_t begin;
+  off_t lastpos;
+  off_t ahead;
+  size_t readahead;
+  size_t written;
+  size_t totwritten;
+#ifdef USE_FADVISE
+  int FadviseDrop(off_t Offset, off_t Len);
+#endif
+public:
+  cUnbufferedFile(void);
+  ~cUnbufferedFile();
+  int Open(const char *FileName, int Flags, mode_t Mode = DEFFILEMODE);
+  int Close(void);
+  void SetReadAhead(size_t ra);
+  off_t Seek(off_t Offset, int Whence);
+  ssize_t Read(void *Data, size_t Size);
+  ssize_t Write(const void *Data, size_t Size);
+  int get_fd() { return fd; }
+  static cUnbufferedFile *Create(const char *FileName, int Flags, mode_t Mode = DEFFILEMODE);
+};
+
 
 class cSafeFile {
 private:

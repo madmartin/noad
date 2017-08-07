@@ -48,7 +48,7 @@ void cSocket::Close(void)
 
 bool cSocket::Open(int Port)
 {
-  dsyslog(LOG_INFO, "cSocket::Open, port = %d",Port );
+  dsyslog( "cSocket::Open, port = %d",Port );
   port = Port;
   sock = -1;
   if (sock < 0) {
@@ -72,13 +72,13 @@ bool cSocket::Open(int Port)
         }
      //ToDo: make Socket-keep-alive...
   }
-  dsyslog(LOG_INFO, "cSocket::Open ok" );
+  dsyslog("cSocket::Open ok" );
   return true;
 }
 
 int cSocket::Connect(void)
 {
-  dsyslog(LOG_INFO, "cSocket::Connect" );
+  dsyslog("cSocket::Connect" );
   if (Open(port)) {
      struct sockaddr_in name;
      name.sin_family = AF_INET;
@@ -116,7 +116,7 @@ cSVDRPC::~cSVDRPC()
 
 void cSVDRPC::Open(int Port)
 {
-  dsyslog(LOG_INFO, "cSVDRPC::Open port is %d",Port );
+  dsyslog("cSVDRPC::Open port is %d",Port );
   name[0]=0;
   if (socket.Open(Port))
     filedes = socket.Connect();
@@ -128,7 +128,7 @@ void cSVDRPC::Open(int Port)
 
 void cSVDRPC::Close(void)
 {
-  dsyslog(LOG_INFO, "cSVDRPC::Close" );
+  dsyslog("cSVDRPC::Close" );
   close(filedes);
 	socket.Close();
   filedes=-1;
@@ -136,7 +136,7 @@ void cSVDRPC::Close(void)
 
 bool cSVDRPC::Send(const char *s, int length)
 {
-  dsyslog(LOG_INFO, "cSVDRPC::Send %s %d",s,length );
+  dsyslog("cSVDRPC::Send %s %d",s,length );
 	int ret=0;
   if(filedes>0)
   {
@@ -174,7 +174,7 @@ bool cSVDRPC::Send(const char *s, int length)
 
 bool cSVDRPC::ReadReply()
 {
-  dsyslog(LOG_INFO, "cSVDRPC::ReadReply" );
+  dsyslog("cSVDRPC::ReadReply" );
   int n=0,i=0,rbytes=0,size=MAXCMDBUFFER-1;
   buf[0]=0;
   if (filedes >= 0)
@@ -189,6 +189,11 @@ bool cSVDRPC::ReadReply()
     {
       select(1, &set, NULL, NULL, &timeout);
       n = read(filedes, buf + rbytes, 1);
+      if(n<0) 
+      {
+        filedes=-1;
+        break;
+      }
       rbytes += n;
       if (rbytes == size)
          break;
@@ -214,7 +219,8 @@ bool cSVDRPC::ReadCompleteReply()
   while( i < 100 && outstandingReply > 0 )
   {
     usleep(10000);
-    ReadReply();
+    if( !ReadReply() )
+      break;
     i++;
   }
   return( outstandingReply <= 0 );
@@ -222,7 +228,7 @@ bool cSVDRPC::ReadCompleteReply()
 
 bool cSVDRPC::CmdQuit()
 {
-  dsyslog(LOG_INFO, "cSVDRPC::CmdQuit" );
+  dsyslog("cSVDRPC::CmdQuit" );
   char *Option=NULL;
   asprintf(&Option,"Quit\r\n");
   bool result=Send(Option);
@@ -246,7 +252,7 @@ void VDRMessage(const char *s)
   delete svdrpc;
 }
 
-char *noadMsg(const char *msg, const char *filename)
+void noadMsg(const char *msg, const char *filename)
 {
   char *baseName = NULL;
   char *cp = NULL;

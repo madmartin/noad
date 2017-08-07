@@ -3,7 +3,7 @@
                              -------------------
     begin                : Son Nov 16 23:25:00 CET 2003
     copyright            : (C) 2003/2004 by theNoad #709GRW
-    email                : theNoad@SoftHome.net
+    email                : theNoad@ulmail.net
  ***************************************************************************/
 
 /***************************************************************************
@@ -34,6 +34,7 @@
 #include <inttypes.h>
 #include "mpeg2wrap.h"
 #include "tools.h"
+#include "audiotools.h"
 
 #ifdef VNOAD
 #define DECODE_AUDIO
@@ -44,11 +45,13 @@ mpeg2dec_t *mpeg2dec = NULL;
 int demux_pid = 0;
 int demux_track = 0;
 int audio_demux_track = 0x80;
-int bFrameDisplayed = 0;
+int iFrameDisplayed = 0;
 bool iframeDisplay = false;
 bool streamHasAC3 = false;
 int ac3mode = 0;
 bool ignorevideo = false;
+bool dodumpts=false;
+bool isOnlinescan=false;
 
 //bool doConversion = false;
 cbfunc current_cbf = NULL;
@@ -190,7 +193,7 @@ void decode_mpeg2 (uint8_t * current, uint8_t * end)
         if (info->display_fbuf)
         {
           //save_ppm (info->sequence->width, info->sequence->height, info->display_fbuf->buf[0], iCurrentDecodedFrame);
-          bFrameDisplayed++;
+          iFrameDisplayed++;
           int picType = info->current_picture ? ( info->current_picture->flags & PIC_MASK_CODING_TYPE ):0;
           if( picType != PIC_FLAG_CODING_TYPE_I )
             iframeDisplay = true;
@@ -220,7 +223,7 @@ void scan_private_stream_1(unsigned char *buf, int len)
   unsigned char c = buf[0];
   if( 
     (c >= 0x20 && c <= 0x3f)    // Subpictures
-    || (c >= 0x80 && c <= 0x87) // Dolby Digital Audio
+    //|| (c >= 0x80 && c <= 0x87) // Dolby Digital Audio
     || (c >= 0x88 && c <= 0x8f) // DTS Audio
     || (c >= 0xa0 && c <= 0xa7) // Linear PCM Audio
     )
@@ -358,9 +361,20 @@ static int oldscan_audio_stream_0(unsigned char *mbuf, int count)
 }
 
 
+#define DEMUX_HEADER 0
+#define DEMUX_DATA 1
+#define DEMUX_SKIP 2
+static int state = DEMUX_SKIP;
+static int state_bytes = 0;
+
+void demux_reset(void)
+{
+	state = DEMUX_SKIP;
+	state_bytes = 0;
+}
 
 // from mpeg2dec.cpp
-int demux (uint8_t * buf, uint8_t * end, int flags)
+int demuxPES (uint8_t * buf, uint8_t * end, int flags)
 {
   static int mpeg1_skip_table[16] =
   {
@@ -383,12 +397,7 @@ int demux (uint8_t * buf, uint8_t * end, int flags)
    * DONEBYTES updates "buf" to point after the header we just parsed.
    */
 
-#define DEMUX_HEADER 0
-#define DEMUX_DATA 1
-#define DEMUX_SKIP 2
 
-  static int state = DEMUX_SKIP;
-  static int state_bytes = 0;
   static uint8_t head_buf[264];
 
   uint8_t * header;
@@ -426,6 +435,11 @@ int demux (uint8_t * buf, uint8_t * end, int flags)
       buf = header + (x);	\
   } while (0)
 
+  if (flags & DEMUX_RESET)
+  {
+	  state = DEMUX_SKIP;
+	  state_bytes = 0;
+  }
   if (flags & DEMUX_PAYLOAD_START)
   {
     state = DEMUX_SKIP;
@@ -573,8 +587,8 @@ int demux (uint8_t * buf, uint8_t * end, int flags)
           audiopts |= (((uint_64)buf[13]) & 0xfe) >>  1;
           //printf(" len total=%d, ac3pts: %llums\n", len,ac3pts/90);
         }
-        #ifdef DECODE_AUDIO
-        //scan_audio_stream_0(buf+9+buf[8],len-9-buf[8]);
+        #if defined(DECODE_AUDIO) && defined (HAVE_LIBAVCODEC)
+        scan_audio_stream_0(buf+9+buf[8],len-9-buf[8]);
         #endif
         if( current_playaudiocbf )
           current_playaudiocbf(buf+9+buf[8],len-9-buf[8]);
@@ -694,7 +708,7 @@ int demux (uint8_t * buf, uint8_t * end, int flags)
       {
         //fprintf (stderr,
         //         "looks like a video stream, not system stream\n");
-        esyslog(LOG_ERR, "ERROR: looks like a video stream, not system stream");
+        esyslog("ERROR: looks like a video stream, not system stream");
         dump2log (buf, end );
         syslog(LOG_ERR,"header byte follows");
         dump2log (header, header+40 );
@@ -722,10 +736,14 @@ int demux (uint8_t * buf, uint8_t * end, int flags)
  
 extern uchar readBuffer[MAXFRAMESIZE]; // frame-buffer
 int LastDemuxIndex = -1;
-bool demuxFrame(cFileName *cfn, cNoadIndexFile *cIF, int index )
+bool bTSFoundPayload = false;
+cNoadIndexFile *cCurrentCIF = NULL;
+extern YUVBUF volatile lastYUVBuf;  // last yuvbuf from StdCallBack
+bool demuxFrame(cFileName *cfn, cNoadIndexFile *cIF, int index, int flags  )
 {
-  uchar FileNumber;         // current file-number
-  int FileOffset;           // current file-offset
+  bool ret = false;
+  uint16_t FileNumber;         // current file-number
+  off_t FileOffset;           // current file-offset
   int Length;               // frame-lenght of current frame
   
   cIF->Get(index,&FileNumber, &FileOffset, NULL, &Length);
@@ -735,27 +753,116 @@ bool demuxFrame(cFileName *cfn, cNoadIndexFile *cIF, int index )
     show_stackframe(false);
     return false;
   }
-  return demuxFrame(cfn, FileNumber, FileOffset, Length);
+  cCurrentCIF = cIF;
+  ret = demuxFrame(cfn, FileNumber, FileOffset, Length,flags);
+  if( !cfn->isPES() )
+  {
+		if( lastYUVBuf == NULL )
+		{
+			dsyslog("!!!!!!!!!!!!!!!!!!!no YUVBuf after demuxTS for frame %d",index );
+			//exit(-1);
+		}
+  }
+  return ret;
 }
 
-bool demuxFrame(cFileName *cfn, uchar FileNumber, int FileOffset, int Length )
+static int retries=0;
+bool demuxFrame(cFileName *cfn, uint16_t FileNumber, off_t FileOffset, int Length, int flags )
 {
   uint8_t * end;            // pointer to frame-end
   
   cfn->SetOffset( FileNumber, FileOffset);
   end = readBuffer + ReadFrame (cfn->File(), readBuffer, Length, MAXFRAMESIZE);
-  int demuxret = demux (readBuffer, end, 0);
-  if( demuxret < 0 )
+
+  if( cfn->isPES() )
   {
-    syslog(LOG_ERR,"last read was from index %d",LastDemuxIndex);
-    cfn->SetOffset( FileNumber, FileOffset);
-    end = readBuffer + ReadFrame (cfn->File(), readBuffer, Length, MAXFRAMESIZE);
-    demuxret = demux (readBuffer, end, 0);
-    if( demuxret < 0 )
-    {
-      syslog(LOG_ERR,"last read was from index %d",LastDemuxIndex);
-      exit(1);
-    }
+	  bTSFoundPayload = true;
+	  int demuxret = demuxPES (readBuffer, end, flags);
+	  if( demuxret < 0 )
+	  {
+		 syslog(LOG_ERR,"last read was from index %d, file %d, offset %ld, length %d",LastDemuxIndex,FileNumber,FileOffset,Length );
+		 cfn->SetOffset( FileNumber, FileOffset);
+		 end = readBuffer + ReadFrame (cfn->File(), readBuffer, Length, MAXFRAMESIZE);
+		 demuxret = demuxPES (readBuffer, end, DEMUX_RESET);
+		 if( demuxret < 0 )
+		 {
+	#ifdef VNOAD
+			 if( retries == 0 )
+			 {
+				retries++;
+				bool bRet = demuxFrame(cfn, cCurrentCIF, LastDemuxIndex+1,0 );
+				if( bRet )
+				{
+					retries--;
+					return true;
+				}
+			 }
+	#endif
+			 syslog(LOG_ERR,"last read was from index %d",LastDemuxIndex);
+			exit(1);
+		 }
+	  }
+  }
+  else
+  {
+      if( dodumpts )
+      {
+         syslog(LOG_ERR, "demuxTS");
+      }
+      demuxTS(readBuffer, end, flags );
   }
   return true;
+}
+
+int demuxTS(uint8_t * buffer, uint8_t * end, int flags )
+{
+	uint8_t * buf;
+	uint8_t * nextbuf;
+	uint8_t * data;
+	int pid;
+	buf = buffer;
+	int demuxflag = flags;
+//	lastYUVBuf = NULL;
+
+   if( dodumpts )
+   {
+      dump2log(buffer,end);
+   }
+	for (; (nextbuf = buf + 188) <= end; buf = nextbuf) 
+	{
+		if (*buf != 0x47) 
+		{
+			fprintf (stderr, "bad sync byte\n");
+			nextbuf = buf + 1;
+			continue;
+		}
+		pid = ((buf[1] << 8) + buf[2]) & 0x1fff;
+		if (pid != demux_pid)
+			continue;
+		data = buf + 4;
+		if (buf[3] & 0x20) 
+		{	// buf contains an adaptation field 
+			data = buf + 5 + buf[4];
+			if (data > nextbuf)
+				continue;
+		}
+		if (buf[3] & 0x10)
+		{
+			if( (demuxflag & DEMUX_RESET) == DEMUX_RESET )
+			{
+				if( buf[1] & 0x40 )
+				{
+					demuxPES (data, nextbuf,DEMUX_PAYLOAD_START|demuxflag);
+					bTSFoundPayload = true;
+					demuxflag = 0;
+				}
+			}
+			else
+			{
+				demuxPES (data, nextbuf,(buf[1] & 0x40) ? DEMUX_PAYLOAD_START|demuxflag : demuxflag);
+				demuxflag = 0;
+			}
+		}
+	}
+	return true;
 }

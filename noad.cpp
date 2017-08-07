@@ -3,7 +3,7 @@
                              -------------------
     begin                : Sun Mar 10 2002
     copyright            : (C) 2002/2004 by theNoad #709GRW
-    email                : theNoad@SoftHome.net
+    email                : theNoad@ulmail.net
  ***************************************************************************/
  /*
    this is the main part of noad
@@ -48,7 +48,7 @@ bool bOnMarksOnly = false;
 
 extern "C"
 {
-  static const char *VERSIONSTRING = "0.6.0";
+  static const char *VERSIONSTRING = "0.6.1";
 }
 
 #ifdef VNOAD
@@ -91,7 +91,7 @@ typedef unsigned char uchar;
 
 extern int demux_track;
 extern int SysLogLevel;
-noadData *data = NULL;
+noadData *ndata = NULL;
 CControl* cctrl = NULL;
 char *filename = NULL;
 bool bReUseLogo = true;
@@ -160,12 +160,12 @@ int checkedFrames;
 
 uchar readBuffer[MAXFRAMESIZE]; // frame-buffer
 int curIndex = 1;         // current index
-uchar FileNumber;         // current file-number
-int FileOffset;           // current file-offset
-uchar PictureType;        // current picture-type
+uint16_t FileNumber;         // current file-number
+off_t FileOffset;           // current file-offset
+bool Independent;        // current picture-type
 int Length;               // frame-lenght of current frame
 uint8_t * end;            // pointer to frame-end
-void *lastYUVBuf = NULL;  // last yuvbuf from StdCallBack
+YUVBUF volatile lastYUVBuf = NULL;  // last yuvbuf from StdCallBack
 
 
 // Standard-Callback-Funktion
@@ -173,7 +173,7 @@ void *lastYUVBuf = NULL;  // last yuvbuf from StdCallBack
 // buffer: zeiger auf rgb24/rgb32 image (wenn RGB-image verwendet wird)
 //          oder y-buffer (wenn yuv verwendet wird)
 // width:  aktuelle bildbreite
-// width:  aktuelle bildhöhe
+// width:  aktuelle bildhï¿½he
 // yufbuf: array von pointern auf die y/u/v-daten
 bool StdCallBack(void *buffer, int width, int height, void *yuvbuf )
 {
@@ -187,20 +187,20 @@ bool StdCallBack(void *buffer, int width, int height, void *yuvbuf )
     return false;
   }
 
-  if( data && buffer && yuvbuf)
+  if( ndata && buffer && yuvbuf)
   {
-    // bei Änderung der Bildgrösse daten zurücksetzen
-    if( width != data->m_nGrabWidth || height != data->m_nGrabHeight )
+    // bei ï¿½nderung der Bildgrï¿½sse daten zurï¿½cksetzen
+    if( width != ndata->m_nGrabWidth || height != ndata->m_nGrabHeight )
     {
       delete cctrl;
       cctrl = NULL;
-      data->setGrabSize( width, height );
+      ndata->setGrabSize( width, height );
       /*
-      delete [] data->video_buffer_mem;
-      data->video_buffer_mem = NULL;
+      delete [] ndata->video_buffer_mem;
+      ndata->video_buffer_mem = NULL;
       */
     }
-    data->setExternalMem(buffer);
+    ndata->setExternalMem(buffer,(mpeg2_fbuf_t *)yuvbuf);
     //usleep(100);
     return true;
   }
@@ -225,24 +225,26 @@ int drawCallback( void *buffer, int width, int height, void *yufbuf )
   {
     if(cctrl == NULL )
     {
-      cctrl = new CControl(data);
+      cctrl = new CControl(ndata);
+      dsyslog("drawCallback: cctrl created");
     }
-    data->detectBlackLines((unsigned char *)yufbuf);
-    ulTopBlackLines += data->m_nBlackLinesTop;
-    ulBotBlackLines += data->m_nBlackLinesBottom;
+    ndata->detectBlackLines((unsigned char *)yufbuf);
+    ulTopBlackLines += ndata->m_nBlackLinesTop;
+    ulBotBlackLines += ndata->m_nBlackLinesBottom;
     checkedFrames++;
-    data->setCorners();
-    if( data->m_bFound == false )
+    ndata->setCorners();
+    if( ndata->m_bFound == false )
     {
       cctrl->newData();
+      dsyslog("drawCallback: cctrl->newdata called");
     }
     else
     {
-      bool bOldState = data->m_pCheckLogo->isLogo;
-      data->m_pCheckLogo->newData();
-      if( bOldState != data->m_pCheckLogo->isLogo )
+      bool bOldState = ndata->m_pCheckLogo->isLogo;
+      ndata->m_pCheckLogo->newData();
+      if( bOldState != ndata->m_pCheckLogo->isLogo )
       {
-        dsyslog(LOG_INFO, "LogoDetection: logo %s at %d", data->m_pCheckLogo->isLogo ? "appears" : "disappears", iLastIFrame);
+        dsyslog("LogoDetection: logo %s at %d", ndata->m_pCheckLogo->isLogo ? "appears" : "disappears", iLastIFrame);
       }
     }
     #ifdef VNOAD
@@ -250,6 +252,7 @@ int drawCallback( void *buffer, int width, int height, void *yufbuf )
       fCallBack(iCurrentDecodedFrame,buffer,width,height, yufbuf);
     #endif
   }
+  dsyslog("drawCallback: StdCallBack returns 0");
   return 0;
 }
 
@@ -257,9 +260,9 @@ int BlacklineCallback( void *buffer, int width, int height, void *yufbuf )
 {
   if( StdCallBack( buffer, width, height, yufbuf) )
   {
-    data->detectBlackLines((unsigned char *)yufbuf);
-    ulTopBlackLines += data->m_nBlackLinesTop;
-    ulBotBlackLines += data->m_nBlackLinesBottom;
+    ndata->detectBlackLines((unsigned char *)yufbuf);
+    ulTopBlackLines += ndata->m_nBlackLinesTop;
+    ulBotBlackLines += ndata->m_nBlackLinesBottom;
     checkedFrames++;
     #ifdef VNOAD
     if( fCallBack )
@@ -273,14 +276,14 @@ int BlackframeCallback( void *buffer, int width, int height, void *yufbuf )
 {
   if( StdCallBack( buffer, width, height, yufbuf) )
   {
-    //data->checkMonoFrame(iCurrentDecodedFrame,(unsigned char **)yufbuf);
+    //ndata->checkMonoFrame(iCurrentDecodedFrame,(unsigned char **)yufbuf);
     #ifdef VNOAD
     if( fCallBack )
       fCallBack(iCurrentDecodedFrame,buffer,width,height, yufbuf);
     #endif
-    data->CheckFrameIsBlank(iCurrentDecodedFrame,(unsigned char **)yufbuf);
-    ulTopBlackLines += data->m_nBlackLinesTop;
-    ulBotBlackLines += data->m_nBlackLinesBottom;
+    ndata->CheckFrameIsBlank(iCurrentDecodedFrame,(unsigned char **)yufbuf);
+    ulTopBlackLines += ndata->m_nBlackLinesTop;
+    ulBotBlackLines += ndata->m_nBlackLinesBottom;
     checkedFrames++;
   }
   return 0;
@@ -291,8 +294,8 @@ int checkCallback( void *buffer, int width, int height, void *yufbuf )
   if( StdCallBack( buffer, width, height, yufbuf) )
   {
     checkedFrames++;
-    data->setCorners();
-    data->m_pCheckLogo->newData();
+    ndata->setCorners();
+    ndata->m_pCheckLogo->newData();
     #ifdef VNOAD
     if( fCallBack )
       fCallBack(iCurrentDecodedFrame,buffer,width,height,yufbuf);
@@ -308,59 +311,66 @@ int checkCallback( void *buffer, int width, int height, void *yufbuf )
 // logo should be visible in at least #CHECKLOGO_FRAMES frames
 bool checkLogo(cFileName *cfn, int startpos)
 {
-  dsyslog(LOG_INFO, "checklogo for %d frames starting at frame %d", CHECKLOGO_FRAMES, startpos);
+  dsyslog("checklogo for %d frames starting at frame %d", CHECKLOGO_FRAMES, startpos);
   int iLogosFound = 0;
   cbfunc cbf_old = getCB_Func();
   setCB_Func(checkCallback);
 
   int index = startpos;
+  bTSFoundPayload = false;
+  int flags = DEMUX_RESET;
 
   index = cIF->GetNextIFrame( index, true, &FileNumber, &FileOffset, &Length, true);
   for( int i = 0; i < CHECKLOGO_BLOCKS && iLogosFound < CHECKLOGO_FRAMES; i++ )
   {
     for( int ii = 1; ii <= CHECKLOGO_BLOCKFRAMES && iLogosFound < CHECKLOGO_FRAMES; ii++ )
     {
-      demuxFrame(cfn, FileNumber, FileOffset, Length);
-      iLogosFound += data->m_pCheckLogo->isLogo ? 1 : 0;
-      cIF->Get( index+ii, &FileNumber, &FileOffset, &PictureType, &Length);
+      demuxFrame(cfn, FileNumber, FileOffset, Length,flags);
+		flags = bTSFoundPayload ? 0 : DEMUX_RESET;
+      iLogosFound += ndata->m_pCheckLogo->isLogo ? 1 : 0;
+      cIF->Get( index+ii, &FileNumber, &FileOffset, &Independent, &Length);
       iCurrentDecodedFrame = index+ii;
     }
     index += CHECKLOGO_DIST;
     index = cIF->GetNextIFrame( index, true, &FileNumber, &FileOffset, &Length, true);
   }
   setCB_Func(cbf_old);
-  dsyslog(LOG_INFO, "checklogo for %d frames gives %d", CHECKLOGO_FRAMES, iLogosFound >= CHECKLOGO_FRAMES);
+  dsyslog("checklogo for %d frames gives %d", CHECKLOGO_FRAMES, iLogosFound >= CHECKLOGO_FRAMES);
   return iLogosFound >= CHECKLOGO_FRAMES;
 }
 
 #define CHECKLOGOSHORT_FRAMES 600
 bool checkLogoShort(cFileName *cfn, int startpos)
 {
-  dsyslog(LOG_INFO, "checklogo for %d frames", CHECKLOGO_FRAMES);
+  dsyslog("checklogo for %d frames", CHECKLOGO_FRAMES);
   int iLogosFound = 0;
   cbfunc cbf_old = getCB_Func();
   setCB_Func(checkCallback);
 
   int index = startpos;
+  bTSFoundPayload = false;
+  int flags = DEMUX_RESET;
 
   index = cIF->GetNextIFrame( index, true, &FileNumber, &FileOffset, &Length, true);
   for( int i = 0; i < CHECKLOGO_BLOCKS && iLogosFound < CHECKLOGO_FRAMES; i++ )
   {
     for( int ii = 1; ii <= CHECKLOGO_BLOCKFRAMES && iLogosFound < CHECKLOGO_FRAMES; ii++ )
     {
-      demuxFrame(cfn, FileNumber, FileOffset, Length);
-      iLogosFound += data->m_pCheckLogo->isLogo ? 1 : 0;
-      cIF->Get( index+ii, &FileNumber, &FileOffset, &PictureType, &Length);
+      demuxFrame(cfn, FileNumber, FileOffset, Length,flags);
+		flags = bTSFoundPayload ? 0 : DEMUX_RESET;
+		if( bTSFoundPayload )
+			iLogosFound += ndata->m_pCheckLogo->isLogo ? 1 : 0;
+      cIF->Get( index+ii, &FileNumber, &FileOffset, &Independent, &Length);
       iCurrentDecodedFrame = index+ii;
     }
     index += CHECKLOGO_SHORTDIST;
     index = cIF->GetNextIFrame( index, true, &FileNumber, &FileOffset, &Length, true);
   }
   setCB_Func(cbf_old);
-  dsyslog(LOG_INFO, "checklogo for %d frames gives %d", CHECKLOGO_FRAMES, iLogosFound >= CHECKLOGO_FRAMES);
+  dsyslog("checklogo for %d frames gives %d", CHECKLOGO_FRAMES, iLogosFound >= CHECKLOGO_FRAMES);
   return iLogosFound >= CHECKLOGO_FRAMES;
 /*
-  dsyslog(LOG_INFO, "checklogo for %d frames from %d", CHECKLOGOSHORT_FRAMES,startpos);
+  dsyslog( "checklogo for %d frames from %d", CHECKLOGOSHORT_FRAMES,startpos);
   int iLogosFound = 0;
   cbfunc cbf_old = getCB_Func();
   setCB_Func(checkCallback);
@@ -372,12 +382,12 @@ bool checkLogoShort(cFileName *cfn, int startpos)
     cfn->SetOffset( FileNumber, FileOffset);
     end = readBuffer + ReadFrame (cfn->File(), readBuffer, Length, MAXFRAMESIZE);
     demux (readBuffer, end, 0);
-    iLogosFound += data->m_pCheckLogo->isLogo ? 1 : 0;
+    iLogosFound += ndata->m_pCheckLogo->isLogo ? 1 : 0;
     cIF->Get( ++index, &FileNumber, &FileOffset, &PictureType, &Length);
     iCurrentDecodedFrame = index+i;
   }
   setCB_Func(cbf_old);
-  dsyslog(LOG_INFO, "checklogo for %d frames gives %d", CHECKLOGOSHORT_FRAMES, iLogosFound >= CHECKLOGOSHORT_FRAMES);
+  dsyslog( "checklogo for %d frames gives %d", CHECKLOGOSHORT_FRAMES, iLogosFound >= CHECKLOGOSHORT_FRAMES);
   return iLogosFound >= CHECKLOGOSHORT_FRAMES;
 */
 }
@@ -387,41 +397,44 @@ bool doLogoDetection(cFileName *cfn, int startIndex)
 {
   cbfunc cbf_old = getCB_Func();
   setCB_Func(drawCallback);
+  bTSFoundPayload = false;
+  int flags = DEMUX_RESET;
 
   // go to the next I-Frame near curIndex
   curIndex = cIF->GetNextIFrame( startIndex, true, &FileNumber, &FileOffset, &Length, true);
-  dsyslog(LOG_INFO, "doLogoDetection %d %d", startIndex, curIndex);
-  while( curIndex >= 0 && !data->m_bFound && checkedFrames < FRAMES_TO_CHECK )
+  dsyslog("doLogoDetection %d %d", startIndex, curIndex);
+  while( curIndex >= 0 && !ndata->m_bFound && checkedFrames < FRAMES_TO_CHECK )
   {
     iLastIFrame = curIndex;
     iCurrentDecodedFrame = curIndex;
-    demuxFrame(cfn, FileNumber, FileOffset, Length);
+    demuxFrame(cfn, FileNumber, FileOffset, Length,flags);
+    flags = bTSFoundPayload ? 0 : DEMUX_RESET;
     curIndex++;
-    if( !cIF->Get( curIndex, &FileNumber, &FileOffset, &PictureType, &Length) )
+    if( !cIF->Get( curIndex, &FileNumber, &FileOffset, &Independent, &Length) )
     {
       setCB_Func(cbf_old);
       return false;
     }
   }
   setCB_Func(cbf_old);
-  return data->m_bFound;
+  return ndata->m_bFound;
 }
 
 void reInitNoad(int top, int bottom )
 {
-  dsyslog(LOG_INFO, "reInitNoad %d %d", top, bottom);
+  dsyslog("reInitNoad %d %d", top, bottom);
   ulTopBlackLines = 0;
   ulBotBlackLines = 0;
   checkedFrames = 0;
   delete cctrl;
   cctrl = NULL;
-  data->m_nTopLinesToIgnore = top;
-  data->m_nBottomLinesToIgnore = bottom;
-  data->initBuffer();
-  //  data->m_pCheckLogo->reset();
-  data->m_bFound = false;
-  data->m_nLogoCorner = UNKNOWN;
-  cctrl = new CControl(data);
+  ndata->m_nTopLinesToIgnore = top;
+  ndata->m_nBottomLinesToIgnore = bottom;
+  ndata->initBuffer();
+  //  ndata->m_pCheckLogo->reset();
+  ndata->m_bFound = false;
+  ndata->m_nLogoCorner = UNKNOWN;
+  cctrl = new CControl(ndata);
 }
 
 // try to detect the Logo of the Record and verfiy it
@@ -434,7 +447,7 @@ bool detectLogo( cFileName *cfn, char* logoname, int iStartFrame )
   if( bReUseLogo && iStartFrame == 0 )
   {
     // try to reuse a saved logo
-    if( data->loadCheckData(logoname, true) )
+    if( ndata->loadCheckData(logoname, true) )
     {
       start = time(NULL);
       // we have a logo
@@ -468,7 +481,7 @@ bool detectLogo( cFileName *cfn, char* logoname, int iStartFrame )
   do
   {
     // detect from start
-    dsyslog(LOG_INFO, "detectLogo part%d",iPart+1);
+    dsyslog("detectLogo part%d",iPart+1);
     reInitNoad( 0,0 );
     if( doLogoDetection(cfn, iAStartpos[iPart]+iStartFrame ) )
       if( checkLogo( cfn, iAStartpos[iPart]+iStartFrame ) )
@@ -477,15 +490,15 @@ bool detectLogo( cFileName *cfn, char* logoname, int iStartFrame )
         end = time(NULL);
         secsForLogoDetection = end - start;
         decodedFramesForLogoDetection = totalDecodedFrames;
-        dsyslog(LOG_INFO, "logo detected %s", 
-          data->m_nLogoCorner == TOP_LEFT ? "top left ":
-           data->m_nLogoCorner == TOP_RIGHT ? "top right ":
-            data->m_nLogoCorner == BOT_LEFT ? "bottom left ":
-             data->m_nLogoCorner == BOT_RIGHT ? "bottom right ": "unknown"
+        dsyslog("logo detected %s", 
+          ndata->m_nLogoCorner == TOP_LEFT ? "top left ":
+           ndata->m_nLogoCorner == TOP_RIGHT ? "top right ":
+            ndata->m_nLogoCorner == BOT_LEFT ? "bottom left ":
+             ndata->m_nLogoCorner == BOT_RIGHT ? "bottom right ": "unknown"
           );
-        dsyslog(LOG_INFO, "logo data:");
-        data->logCheckData();
-        dsyslog(LOG_INFO, "logo data end");
+        dsyslog("logo data:");
+        ndata->logCheckData();
+        dsyslog("logo data end");
         return true;
       }
     iPart++;
@@ -494,7 +507,7 @@ bool detectLogo( cFileName *cfn, char* logoname, int iStartFrame )
   end = time(NULL);
   secsForLogoDetection = end - start;
   decodedFramesForLogoDetection = totalDecodedFrames;
-  dsyslog(LOG_INFO, "detectLogo: no Logo found, give up");
+  dsyslog("detectLogo: no Logo found, give up");
   return false;
 }
 
@@ -503,39 +516,41 @@ int checkLogoState(cFileName *cfn, int iState, int iCurrentFrame, int /*FramesTo
 {
   int iLastIFrame = 0;
 
-  bool extLogoSearch = data->extLogoSearch;
-  data->extLogoSearch = false;
+  bool extLogoSearch = ndata->extLogoSearch;
+  ndata->extLogoSearch = false;
+  bTSFoundPayload = false;
+  int flags = DEMUX_RESET;
 
-  dsyslog(LOG_INFO, "checkLogoState for %d Frames starting at Frame %d",
+  dsyslog("checkLogoState for %d Frames starting at Frame %d",
           FramesToCheck,iCurrentFrame);
   cbfunc cbf_old = getCB_Func();
   setCB_Func(checkCallback);
 
   iCurrentFrame = cIF->GetNextIFrame( iCurrentFrame, true, &FileNumber, &FileOffset, &Length, true);
-  PictureType = I_FRAME;
   while( iCurrentFrame < cIF->Last() && iCurrentFrame >= 0 && FramesToCheck > 0 )
   {
-    cIF->Get( iCurrentFrame, &FileNumber, &FileOffset, &PictureType, &Length);
+    cIF->Get( iCurrentFrame, &FileNumber, &FileOffset, &Independent, &Length);
     iCurrentDecodedFrame = iCurrentFrame;
     checkedFrames = 0;
     iLastIFrame = iCurrentFrame;
-    demuxFrame(cfn, FileNumber, FileOffset, Length);
-    if( PictureType == I_FRAME )
+    demuxFrame(cfn, FileNumber, FileOffset, Length,flags);
+	 flags = bTSFoundPayload ? 0 : DEMUX_RESET;
+    if( Independent == 1 /*I_FRAME*/ )
     {
       iLastIFrame = iCurrentFrame;
     }
-    if( iState != data->m_pCheckLogo->isLogo )
+    if( bTSFoundPayload && (iState != ndata->m_pCheckLogo->isLogo) )
     {
-      dsyslog(LOG_INFO, "checkLogoState Logo lost, iLastIFrame is %d ", iLastIFrame);
-      data->extLogoSearch = extLogoSearch;
+      dsyslog("checkLogoState Logo lost, iLastIFrame is %d ", iLastIFrame);
+      ndata->extLogoSearch = extLogoSearch;
       return( iLastIFrame );
     }
     iCurrentFrame ++;
     FramesToCheck --;
   }
   setCB_Func(cbf_old);
-  data->extLogoSearch = extLogoSearch;
-  dsyslog(LOG_INFO, "checkLogoState ends, iLastIFrame %d ", iLastIFrame);
+  ndata->extLogoSearch = extLogoSearch;
+  dsyslog("checkLogoState ends, iLastIFrame %d ", iLastIFrame);
   return( 0 );
 }
 
@@ -544,23 +559,25 @@ int checkLogoState(cFileName *cfn, int iState, int iCurrentFrame, int /*FramesTo
 int findLogoChange(cFileName *cfn, int iState, int& iCurrentFrame,
                    int FramesToSkip, int repeatCheckframes)
 {
-  dsyslog(LOG_INFO, "findLogoChange: iState %d, iCurrentFrame %d, iTotalFrames %d, FramesToSkip %d, repeatCheckframes=%d",
+  dsyslog("findLogoChange: iState %d, iCurrentFrame %d, iTotalFrames %d, FramesToSkip %d, repeatCheckframes=%d",
           iState, iCurrentFrame, cIF->Last(), FramesToSkip, repeatCheckframes);
 
   if(logoJumpDetection)
   {
     if( iState == 1 )
-      data->extLogoSearch = false;
+      ndata->extLogoSearch = false;
     else
-      data->extLogoSearch = true;
+      ndata->extLogoSearch = true;
   }
     
   cbfunc cbf_old = getCB_Func();
   setCB_Func(checkCallback);
+  bTSFoundPayload = false;
+  int flags = DEMUX_RESET;
 
   iCurrentFrame = cIF->GetNextIFrame( iCurrentFrame, true, &FileNumber, &FileOffset, &Length, true);
   int iEndFrame = iState == 0 ? iCurrentFrame+CHANGE_SEARCH_BREAK:cIF->Last();
-  PictureType = I_FRAME;
+  Independent = 1; //I_FRAME
   #ifdef VNOAD
   bool bFirst = true;
   #endif
@@ -573,43 +590,48 @@ int findLogoChange(cFileName *cfn, int iState, int& iCurrentFrame,
     while( checkedFrames < FRAMESTOCHECK && iCurrentFrame < cIF->Last() )
     {
       iCurrentDecodedFrame = iCurrentFrame;
-      demuxFrame(cfn, FileNumber, FileOffset, Length);
-      if( PictureType == I_FRAME )
+      demuxFrame(cfn, FileNumber, FileOffset, Length,flags);
+		flags = bTSFoundPayload ? 0 : DEMUX_RESET;
+      if( Independent == 1 /*I_FRAME*/ )
       {
         iLastIFrame = iCurrentFrame;
       }
-      cIF->Get( ++iCurrentFrame, &FileNumber, &FileOffset, &PictureType, &Length);
+      cIF->Get( ++iCurrentFrame, &FileNumber, &FileOffset, &Independent, &Length);
     }
     #ifdef VNOAD
     bFirst = false;
     #endif
-    if( iState != data->m_pCheckLogo->isLogo )
+    if( iState != ndata->m_pCheckLogo->isLogo )
     {
-      dsyslog(LOG_INFO, "StateChanged: iLastIFrame %d ", iLastIFrame);
+      dsyslog("StateChanged: iLastIFrame %d ", iLastIFrame);
       if( repeatCheckframes > 0 )
       {
         // new found state must be stable over repeatCheckframes frames
-        int i = checkLogoState(cfn, data->m_pCheckLogo->isLogo, iCurrentFrame, FRAMESPERSEC*1, repeatCheckframes);
-        dsyslog(LOG_INFO, "checkLogoState: i = %d",i);
+        int i = checkLogoState(cfn, ndata->m_pCheckLogo->isLogo, iCurrentFrame, FRAMESPERSEC*1, repeatCheckframes);
+        dsyslog("checkLogoState: i = %d",i);
         if( i == 0 )
-          return( data->m_pCheckLogo->isLogo );
+          return( ndata->m_pCheckLogo->isLogo );
         else
+		  {
           iCurrentFrame = i-FramesToSkip;
+			 flags = DEMUX_RESET;
+		  }
       }
       else
-        return( data->m_pCheckLogo->isLogo );
+        return( ndata->m_pCheckLogo->isLogo );
     }
     if( iCurrentFrame+FramesToSkip >= cIF->Last() )
     {
       setCB_Func(cbf_old);
-      //return data->m_pCheckLogo->isLogo;
+      //return ndata->m_pCheckLogo->isLogo;
       return iState;
     }
     if( FramesToSkip > 1 )
     {
       iCurrentFrame += FramesToSkip;
       iCurrentFrame = cIF->GetNextIFrame( iCurrentFrame, true, &FileNumber, &FileOffset, &Length, true);
-      PictureType = I_FRAME;
+      Independent = 1;//I_FRAME;
+		flags = DEMUX_RESET;
     }
   }
   setCB_Func(cbf_old);
@@ -620,16 +642,16 @@ int findLogoChange(cFileName *cfn, int iState, int& iCurrentFrame,
 
 void MarkToggle(cMarks *marks, int index, const char *Comment)
 {
-  dsyslog(LOG_INFO, "ToggleMark: %d ", index);
+  dsyslog( "ToggleMark: %d ", index);
   cMark *m = marks->Get(index);
   if (m)
   {
-    dsyslog(LOG_INFO, "del Mark: %d ", m->position);
+    dsyslog( "del Mark: %d ", m->position);
     marks->Del(m);
   }
   else
   {
-    dsyslog(LOG_INFO, "add Mark: %d ", index);
+    dsyslog( "add Mark: %d ", index);
     marks->Add(index);
     if(markComments && Comment)
     {
@@ -645,10 +667,10 @@ void MarkToggle(cMarks *marks, int index, const char *Comment)
 void moveMark( cMarks *marks, cMark *m, int iNewPos, const char *Comment)
 {
   char *cpOldPos, *cpNewPos, *newComment;
-  asprintf(&cpOldPos, "%s",m->ToText(false));
-  asprintf(&cpNewPos, "%s",IndexToHMSF(iNewPos, false));
-  asprintf(&newComment, Comment?Comment:"(%s)",m->ToText(false) );
-  dsyslog(LOG_INFO, "moveMark from %d to %d (%s-->%s)",m->position, iNewPos, cpOldPos, cpNewPos );
+  asprintf(&cpOldPos, "%s",(const char *)m->ToText(false));
+  asprintf(&cpNewPos, "%s",(const char *)IndexToHMSF(iNewPos, false));
+  asprintf(&newComment, Comment?Comment:"(%s)",(const char *)m->ToText(false) );
+  dsyslog( "moveMark from %d to %d (%s-->%s)",m->position, iNewPos, cpOldPos, cpNewPos );
   marks->Del(m);
   marks->Add(iNewPos);
   cMark *mNew = marks->Get(iNewPos);
@@ -664,92 +686,108 @@ void moveMark( cMarks *marks, cMark *m, int iNewPos, const char *Comment)
 
 void checkOnMarkBlacklines( cMarks *marks, cMark *m, cFileName *cfn)
 {
-  dsyslog(LOG_INFO, "checkOnMark at %d",m->position );
+  dsyslog( "checkOnMark at %d",m->position );
   if( m->position < BACKFRAMES )
     return;
   int index = cIF->GetNextIFrame( m->position, true, &FileNumber, &FileOffset, &Length, true);
-  demuxFrame(cfn, FileNumber, FileOffset, Length);
+  bTSFoundPayload = false;
+  int flags = DEMUX_RESET;
+
+  demuxFrame(cfn, FileNumber, FileOffset, Length, flags);
   ulTopBlackLines = 0;
   ulBotBlackLines = 0;
   checkedFrames = 0;
   for( int i = 0; i < 10; i++ )
   {
-    demuxFrame(cfn, cIF, index+i );
+    demuxFrame(cfn, cIF, index+i, flags );
+	 flags = bTSFoundPayload ? 0 : DEMUX_RESET;
   }
 
   ulTopBlackLines /= checkedFrames;
   ulBotBlackLines /= checkedFrames;
-  dsyslog(LOG_INFO, "checkOnMark TopBlackLines = %ld, BotBlackLines = %ld",ulTopBlackLines, ulBotBlackLines );
+  dsyslog( "checkOnMark TopBlackLines = %ld, BotBlackLines = %ld",ulTopBlackLines, ulBotBlackLines );
   if( ulTopBlackLines < MINBLACKLINES || ulBotBlackLines < MINBLACKLINES )
     return;
 
   // we have blacklines, check backward to the first frame with diff blacklines
   int iTopBlackLines = ulTopBlackLines;
   int iBotBlackLines = ulBotBlackLines;
-  dsyslog(LOG_INFO, "checkOnMark ulTopBlackLines = %d, ulBotBlackLines = %d",iTopBlackLines, iBotBlackLines );
+  dsyslog( "checkOnMark ulTopBlackLines = %d, ulBotBlackLines = %d",iTopBlackLines, iBotBlackLines );
   for( int i = 0; i < BACKFRAMES; i++ )
   {
-    demuxFrame(cfn, cIF, index-i );
-    if( data->m_nBlackLinesTop > iTopBlackLines+MAXBLACKLINEDIFF ||
-        data->m_nBlackLinesTop < iTopBlackLines-MAXBLACKLINEDIFF ||
-        data->m_nBlackLinesBottom > iBotBlackLines+MAXBLACKLINEDIFF ||
-        data->m_nBlackLinesBottom < iBotBlackLines-MAXBLACKLINEDIFF )
-    {
-      int newindex = cIF->GetNextIFrame( index-i+1, true, &FileNumber, &FileOffset, &Length, true);
-      if( newindex > 0 )
-      {
-        dsyslog(LOG_INFO, "do moveMark from %d to %d ",index, newindex );
-        moveMark( marks, m, newindex, "moved from [%s] by checkOnMarkBlacklines");
-      }
-      return;
-    }
+    demuxFrame(cfn, cIF, index-i,flags );
+	 flags = bTSFoundPayload ? 0 : DEMUX_RESET;
+	 if( bTSFoundPayload )
+	 {
+		 if( ndata->m_nBlackLinesTop > iTopBlackLines+MAXBLACKLINEDIFF ||
+			  ndata->m_nBlackLinesTop < iTopBlackLines-MAXBLACKLINEDIFF ||
+			  ndata->m_nBlackLinesBottom > iBotBlackLines+MAXBLACKLINEDIFF ||
+			  ndata->m_nBlackLinesBottom < iBotBlackLines-MAXBLACKLINEDIFF )
+		 {
+			int newindex = cIF->GetNextIFrame( index-i+1, true, &FileNumber, &FileOffset, &Length, true);
+			if( newindex > 0 )
+			{
+			  dsyslog( "do moveMark from %d to %d ",index, newindex );
+			  moveMark( marks, m, newindex, "moved from [%s] by checkOnMarkBlacklines");
+			}
+			return;
+		 }
+	 }
   }
 }
 
 void checkOffMarkBlacklines( cMarks *marks, cMark *m, cFileName *cfn)
 {
-  dsyslog(LOG_INFO, "checkOffMark at %d",m->position );
+  dsyslog( "checkOffMark at %d",m->position );
   if( m->position < OFFBACKFRAMES )
     return;
   int index = cIF->GetNextIFrame( m->position-OFFBACKFRAMES, true, &FileNumber, &FileOffset, &Length, true);
   //cfn->SetOffset( FileNumber, FileOffset);
   //end = readBuffer + ReadFrame (cfn->File(), readBuffer, Length, MAXFRAMESIZE);
   //demux (readBuffer, end, 0);
-  demuxFrame(cfn, FileNumber, FileOffset, Length );
+  bTSFoundPayload = false;
+  int flags = DEMUX_RESET;
+  demuxFrame(cfn, FileNumber, FileOffset, Length, flags );
+  flags = bTSFoundPayload ? 0 : DEMUX_RESET;
   ulTopBlackLines = 0;
   ulBotBlackLines = 0;
   checkedFrames = 0;
   for( int i = 0; i < 10; i++ )
   {
-    demuxFrame(cfn, cIF, index+i );
+    demuxFrame(cfn, cIF, index+i, flags );
+	 flags = bTSFoundPayload ? 0 : DEMUX_RESET;
   }
 
   ulTopBlackLines /= checkedFrames;
   ulBotBlackLines /= checkedFrames;
-  dsyslog(LOG_INFO, "checkOffMark TopBlackLines = %ld, BotBlackLines = %ld",ulTopBlackLines, ulBotBlackLines );
+  dsyslog( "checkOffMark TopBlackLines = %ld, BotBlackLines = %ld",ulTopBlackLines, ulBotBlackLines );
   if( ulTopBlackLines < MINBLACKLINES || ulBotBlackLines < MINBLACKLINES )
     return;
 
   // we have blacklines, check forward to the first frame with diff blacklines
   int iTopBlackLines = ulTopBlackLines;
   int iBotBlackLines = ulBotBlackLines;
-  dsyslog(LOG_INFO, "checkOffMark ulTopBlackLines = %d, ulBotBlackLines = %d",iTopBlackLines, iBotBlackLines );
+  dsyslog( "checkOffMark ulTopBlackLines = %d, ulBotBlackLines = %d",iTopBlackLines, iBotBlackLines );
   for( int i = 0; i < OFFBACKFRAMES; i++ )
   {
-    demuxFrame(cfn, cIF, index+i );
-    if( data->m_nBlackLinesTop > iTopBlackLines+MAXBLACKLINEDIFF ||
-        data->m_nBlackLinesTop < iTopBlackLines-MAXBLACKLINEDIFF ||
-        data->m_nBlackLinesBottom > iBotBlackLines+MAXBLACKLINEDIFF ||
-        data->m_nBlackLinesBottom < iBotBlackLines-MAXBLACKLINEDIFF )
-    {
-      int newindex = cIF->GetNextIFrame( index+i-1, true, &FileNumber, &FileOffset, &Length, true);
-      if( newindex > 0 )
-      {
-        dsyslog(LOG_INFO, "do moveMark from %d to %d ",index, newindex );
-        moveMark( marks, m, newindex, "moved from [%s] by checkOffMarkBlacklines");
-      }
-      return;
-    }
+    demuxFrame(cfn, cIF, index+i, flags );
+	 flags = bTSFoundPayload ? 0 : DEMUX_RESET;
+	 if( bTSFoundPayload )
+	 {
+		 if( ndata->m_nBlackLinesTop > iTopBlackLines+MAXBLACKLINEDIFF ||
+			  ndata->m_nBlackLinesTop < iTopBlackLines-MAXBLACKLINEDIFF ||
+			  ndata->m_nBlackLinesBottom > iBotBlackLines+MAXBLACKLINEDIFF ||
+			  ndata->m_nBlackLinesBottom < iBotBlackLines-MAXBLACKLINEDIFF )
+		 {
+			int newindex = cIF->GetNextIFrame( index+i-1, true, &FileNumber, &FileOffset, &Length, true);
+			if( newindex > 0 )
+			{
+			  dsyslog( "do moveMark from %d to %d ",index, newindex );
+			  moveMark( marks, m, newindex, "moved from [%s] by checkOffMarkBlacklines");
+			}
+			return;
+		 }
+	 }
   }
 }
 
@@ -757,7 +795,7 @@ void checkOffMarkBlacklines( cMarks *marks, cMark *m, cFileName *cfn)
 #define BACK_TIME 90
 bool checkOnMark( cMarks *marks, cMark *m, cFileName *cfn, bool bForward, int iCheckTime)
 {
-  dsyslog(LOG_INFO, "checkOnMark at %d",m->position );
+  dsyslog( "checkOnMark at %d",m->position );
   int iDiff;
   int iOffset = 0;
   if( bForward )
@@ -778,7 +816,10 @@ bool checkOnMark( cMarks *marks, cMark *m, cFileName *cfn, bool bForward, int iC
   //cfn->SetOffset( FileNumber, FileOffset);
   //end = readBuffer + ReadFrame (cfn->File(), readBuffer, Length, MAXFRAMESIZE);
   //demux (readBuffer, end, 0);
-  demuxFrame(cfn, FileNumber, FileOffset, Length );
+  bTSFoundPayload = false;
+  int flags = DEMUX_RESET;
+  demuxFrame(cfn, FileNumber, FileOffset, Length, flags );
+  flags = bTSFoundPayload ? 0 : DEMUX_RESET;
   ulTopBlackLines = 0;
   ulBotBlackLines = 0;
   checkedFrames = 0;
@@ -787,20 +828,25 @@ bool checkOnMark( cMarks *marks, cMark *m, cFileName *cfn, bool bForward, int iC
   {
     for( int ii = 0; ii < FRAMESPERSEC; ii++)
     {
-      demuxFrame(cfn, cIF, index+ii );
-      if( data->m_nBlackLinesTop > data->m_nGrabHeight/2 ||
-          data->m_nBlackLinesBottom > data->m_nGrabHeight/2 )
-      {
-        int newIndex = cIF->GetNextIFrame( index, true, &FileNumber, &FileOffset, &Length, true);
-        if( newIndex > 0 )
-        {
-          dsyslog(LOG_INFO, "do moveMark from %d to %d ",index, newIndex );
-          moveMark( marks, m, newIndex, "moved from [%s] by checkOnMark");
-        }
-        return true;
-      }
+      demuxFrame(cfn, cIF, index+ii, flags );
+		flags = bTSFoundPayload ? 0 : DEMUX_RESET;
+		if( bTSFoundPayload )
+		{
+			if( ndata->m_nBlackLinesTop > ndata->m_nGrabHeight/2 ||
+				 ndata->m_nBlackLinesBottom > ndata->m_nGrabHeight/2 )
+			{
+			  int newIndex = cIF->GetNextIFrame( index, true, &FileNumber, &FileOffset, &Length, true);
+			  if( newIndex > 0 )
+			  {
+				 dsyslog( "do moveMark from %d to %d ",index, newIndex );
+				 moveMark( marks, m, newIndex, "moved from [%s] by checkOnMark");
+			  }
+			  return true;
+			}
+		}
     }
     index = cIF->GetNextIFrame( index+iDiff, true, &FileNumber, &FileOffset, &Length, true);
+	 flags = DEMUX_RESET;
   }
   return false;
 }
@@ -808,41 +854,52 @@ bool checkOnMark( cMarks *marks, cMark *m, cFileName *cfn, bool bForward, int iC
 int displayIFrame(int iFrameIndex)
 {
   int index = iFrameIndex;
+  int flags = DEMUX_RESET;
+  lastYUVBuf = NULL;
   mpeg2_close (mpeg2dec);
   mpeg2dec= mpeg2_init ();
-  cIF->Get( iFrameIndex, &FileNumber, &FileOffset, &PictureType, &Length);
-  if( PictureType != I_FRAME )
+  demux_reset();
+  cIF->Get( iFrameIndex, &FileNumber, &FileOffset, &Independent, &Length);
+  if( Independent != I_FRAME )
     index = cIF->GetNextIFrame( iFrameIndex, true, &FileNumber, &FileOffset, &Length, true);
-//  int previndex = cIF->GetNextIFrame( iFrameIndex, false, &FileNumber, &FileOffset, &Length, true);
-  //cIF->Get( previndex, &FileNumber, &FileOffset, &PictureType, &Length);
-  cIF->Get( index, &FileNumber, &FileOffset, &PictureType, &Length);
-  cfn->SetOffset( FileNumber, FileOffset);
-  end = readBuffer + ReadFrame (cfn->File(), readBuffer, Length, MAXFRAMESIZE);
-  for(int i = 0; i < 3 ; i++)
-    demux (readBuffer, end, DEMUX_PAYLOAD_START);
-
+  do
+  {
+	//  int previndex = cIF->GetNextIFrame( iFrameIndex, false, &FileNumber, &FileOffset, &Length, true);
+	  //cIF->Get( previndex, &FileNumber, &FileOffset, &PictureType, &Length);
+	  cIF->Get( index, &FileNumber, &FileOffset, &Independent, &Length);
+	  cfn->SetOffset( FileNumber, FileOffset);
+	  end = readBuffer + ReadFrame (cfn->File(), readBuffer, Length, MAXFRAMESIZE);
+	  //for(int i = 0; i < 3 ; i++)
+	//		  demux (readBuffer, end, i == 0 ? DEMUX_RESET : DEMUX_PAYLOAD_START);
+	  if( cfn->isPES() )
+			demuxPES (readBuffer, end, flags);
+	  else
+		  demuxTS (readBuffer, end, flags);
+	   flags = bTSFoundPayload ? 0 : DEMUX_RESET;
+		index++;
+  } while (lastYUVBuf == NULL && index < cIF->Last() );
   return index;
 }
 
 bool checkBlacklineOnMark( cMarks *marks, cMark *m, cFileName *cfn, bool bForward, int iCheckTime, int iTopLines, int iBottomLines)
 {
-  #define POS_OK (data->m_nBlackLinesTop >= iTopMin \
-    && data->m_nBlackLinesTop <= iTopMax \
-    && data->m_nBlackLinesBottom >= ibotmin \
-    && data->m_nBlackLinesBottom <= ibotmax)
-  #define POS_NOT_OK (data->m_nBlackLinesTop < iTopMin \
-    || data->m_nBlackLinesBottom < ibotmin)
-  #define POS_MAYBE_OK (data->m_nBlackLinesTop > iTopMin \
-    && data->m_nBlackLinesBottom > ibotmin)
+  #define POS_OK (ndata->m_nBlackLinesTop >= iTopMin \
+    && ndata->m_nBlackLinesTop <= iTopMax \
+    && ndata->m_nBlackLinesBottom >= ibotmin \
+    && ndata->m_nBlackLinesBottom <= ibotmax)
+  #define POS_NOT_OK (ndata->m_nBlackLinesTop < iTopMin \
+    || ndata->m_nBlackLinesBottom < ibotmin)
+  #define POS_MAYBE_OK (ndata->m_nBlackLinesTop > iTopMin \
+    && ndata->m_nBlackLinesBottom > ibotmin)
 
-  #define PRE_POS_OK (data->m_nBlackLinesTop >= iTopLines && data->m_nBlackLinesBottom >= iBottomLines)
-  #define PRE_POS_RESET (data->m_nBlackLinesTop + data->m_nBlackLinesBottom < (iTopLines+iBottomLines)-(((iTopLines+iBottomLines)*20)/100))
+  #define PRE_POS_OK (ndata->m_nBlackLinesTop >= iTopLines && ndata->m_nBlackLinesBottom >= iBottomLines)
+  #define PRE_POS_RESET (ndata->m_nBlackLinesTop + ndata->m_nBlackLinesBottom < (iTopLines+iBottomLines)-(((iTopLines+iBottomLines)*20)/100))
   // MAX_BEST_POS_RESET_COUNT - Anzahl Frames mit POS_NOT_OK == true,
-  // nach denen iBestPos zurückgesetzt wird
-  // 20.9.03: geändert auf 25 (vorher 3) wegen RTL/The 6th Day
+  // nach denen iBestPos zurï¿½ckgesetzt wird
+  // 20.9.03: geï¿½ndert auf 25 (vorher 3) wegen RTL/The 6th Day
   #define MAX_BEST_POS_RESET_COUNT 90
 
-  dsyslog(LOG_INFO, "checkBlacklineOnMark at %d %s %d %d for %d frames",m->position, bForward ? "forward":"backward",iTopLines, iBottomLines, iCheckTime );
+  dsyslog( "checkBlacklineOnMark at %d %s %d %d for %d frames",m->position, bForward ? "forward":"backward",iTopLines, iBottomLines, iCheckTime );
   int iDiff;
   int iOffset = 0;
   int iBestPos = 0;
@@ -856,7 +913,7 @@ bool checkBlacklineOnMark( cMarks *marks, cMark *m, cFileName *cfn, bool bForwar
   int iTopMin = iTopLines - iTopLines*20/100;
   int ibotmax = iBottomLines + iBottomLines*30/100;
   int ibotmin = iBottomLines - iBottomLines*30/100;
-  dsyslog(LOG_INFO, "check-range top %d %d, bott %d %d",iTopMin,iTopMax,ibotmin,ibotmax );
+  dsyslog( "check-range top %d %d, bott %d %d",iTopMin,iTopMax,ibotmin,ibotmax );
   iOffset = 0;//iCheckTime*FRAMESPERSEC;
   if( bForward )
   {
@@ -886,13 +943,13 @@ bool checkBlacklineOnMark( cMarks *marks, cMark *m, cFileName *cfn, bool bForwar
     iCurrentDecodedFrame = index;
     ulTopBlackLines = 0;
     ulBotBlackLines = 0;
-    demuxFrame(cfn, cIF, index );
+    demuxFrame(cfn, cIF, index,0 );
 
     if( iPrePos == 0 && PRE_POS_OK )
     {
       iPrePos = index;
       iPrePosResetCount = 0;
-      dsyslog(LOG_INFO, "checkOnMark set prepos %d",iPrePos );
+      dsyslog( "checkOnMark set prepos %d",iPrePos );
     }
     if( iPrePos != 0 && PRE_POS_RESET )
     {
@@ -900,39 +957,39 @@ bool checkBlacklineOnMark( cMarks *marks, cMark *m, cFileName *cfn, bool bForwar
       if(iPrePosResetCount > 3)
       {
         iPrePos = 0;
-        dsyslog(LOG_INFO, "checkOnMark preposreset at %d",index );
+        dsyslog( "checkOnMark preposreset at %d",index );
       }
     }
     if( (iBestPos == 0) && (checkedFrames > 3) && POS_OK )
     {
       iBestPos = index;
-      dsyslog(LOG_INFO, "checkOnMark best pos = %d, prepos = %d",iBestPos, iPrePos );
+      dsyslog( "checkOnMark best pos = %d, prepos = %d",iBestPos, iPrePos );
       iBestPosResetCount = 0;
     }
     else if( (iBestPos > 0) && (checkedFrames > 3)  && POS_NOT_OK )
     {
       iBestPosResetCount++;
-      dsyslog(LOG_INFO, "checkOnMark pos not ok at frame %3d top %3d topmin %3d bot %3d botmin %3d resetcount %3d", index,data->m_nBlackLinesTop ,iTopMin,data->m_nBlackLinesBottom , ibotmin, iBestPosResetCount  );
+      dsyslog( "checkOnMark pos not ok at frame %3d top %3d topmin %3d bot %3d botmin %3d resetcount %3d", index,ndata->m_nBlackLinesTop ,iTopMin,ndata->m_nBlackLinesBottom , ibotmin, iBestPosResetCount  );
       if(iBestPosResetCount > MAX_BEST_POS_RESET_COUNT)
       {
-        dsyslog(LOG_INFO, "checkOnMark reset best pos to 0 at %d", index );
+        dsyslog( "checkOnMark reset best pos to 0 at %d", index );
         iBestPos = 0;
         checkedFrames = 0;
       }
     }
   }
-  dsyslog(LOG_INFO, "checkOnMark bestPos %d prepos %d",iBestPos,iPrePos );
+  dsyslog( "checkOnMark bestPos %d prepos %d",iBestPos,iPrePos );
   if( (iBestPos == 0 || (iPrePos - iBestPos) < 200) && POS_MAYBE_OK && iPrePos > 0 )
   {
     iBestPos = iPrePos;
-    dsyslog(LOG_INFO, "checkOnMark use prepos to set newmark" );
+    dsyslog( "checkOnMark use prepos to set newmark" );
   }
   if( iBestPos > 0 )
   {
     int newIndex = cIF->GetNextIFrame( iBestPos-1, true, &FileNumber, &FileOffset, &Length, true);
     if( newIndex > 0 && newIndex != m->position)
     {
-      dsyslog(LOG_INFO, "do moveMark from %d to %d, prepos = %d ",m->position, newIndex, iPrePos );
+      dsyslog( "do moveMark from %d to %d, prepos = %d ",m->position, newIndex, iPrePos );
       if(bForward)
         moveMark( marks, m, newIndex,"moved from [%s] by checkBlacklineOnMark(forward)");
       else
@@ -941,7 +998,7 @@ bool checkBlacklineOnMark( cMarks *marks, cMark *m, cFileName *cfn, bool bForwar
     }
     if( newIndex == m->position)
     {
-      dsyslog(LOG_INFO, "mark is on same position" );
+      dsyslog( "mark is on same position" );
       if(!bForward)
         return false;
     }
@@ -956,19 +1013,19 @@ bool checkBlacklineOnMark( cMarks *marks, cMark *m, cFileName *cfn, bool bForwar
 
 bool checkBlacklineOffMark( cMarks *marks, cMark *m, cFileName *cfn, int iCheckTime, int iTopLines, int iBottomLines)
 {
-    #define POS_OK (data->m_nBlackLinesTop >= iTopMin \
-     && data->m_nBlackLinesTop <= iTopMax \
-     && data->m_nBlackLinesBottom >= ibotmin \
-     && data->m_nBlackLinesBottom <= ibotmax)
-    #define POS_NOT_OK (data->m_nBlackLinesTop < iTopMin \
-     || data->m_nBlackLinesBottom < ibotmin)
-    #define POS_MAYBE_OK (data->m_nBlackLinesTop > iTopMin \
-     && data->m_nBlackLinesBottom > ibotmin)
+    #define POS_OK (ndata->m_nBlackLinesTop >= iTopMin \
+     && ndata->m_nBlackLinesTop <= iTopMax \
+     && ndata->m_nBlackLinesBottom >= ibotmin \
+     && ndata->m_nBlackLinesBottom <= ibotmax)
+    #define POS_NOT_OK (ndata->m_nBlackLinesTop < iTopMin \
+     || ndata->m_nBlackLinesBottom < ibotmin)
+    #define POS_MAYBE_OK (ndata->m_nBlackLinesTop > iTopMin \
+     && ndata->m_nBlackLinesBottom > ibotmin)
 
-   #define PRE_POS_OK (data->m_nBlackLinesTop >= iTopLines && data->m_nBlackLinesBottom >= iBottomLines)
-   #define PRE_POS_RESET (data->m_nBlackLinesTop + data->m_nBlackLinesBottom < (iTopLines+iBottomLines)-(((iTopLines+iBottomLines)*20)/100))
+   #define PRE_POS_OK (ndata->m_nBlackLinesTop >= iTopLines && ndata->m_nBlackLinesBottom >= iBottomLines)
+   #define PRE_POS_RESET (ndata->m_nBlackLinesTop + ndata->m_nBlackLinesBottom < (iTopLines+iBottomLines)-(((iTopLines+iBottomLines)*20)/100))
 
-  dsyslog(LOG_INFO, "checkBlacklineOffMark at %d %d %d for %d frames",m->position, iTopLines, iBottomLines, iCheckTime );
+  dsyslog( "checkBlacklineOffMark at %d %d %d for %d frames",m->position, iTopLines, iBottomLines, iCheckTime );
   int iDiff;
   int iOffset = 0;
   int iBestPos = 0;
@@ -980,7 +1037,7 @@ bool checkBlacklineOffMark( cMarks *marks, cMark *m, cFileName *cfn, int iCheckT
   int iTopMin = iTopLines - iTopLines*20/100;
   int ibotmax = iBottomLines + iBottomLines*30/100;
   int ibotmin = iBottomLines - iBottomLines*30/100;
-  dsyslog(LOG_INFO, "check-range top %d %d, bott %d %d",iTopMin,iTopMax,ibotmin,ibotmax );
+  dsyslog( "check-range top %d %d, bott %d %d",iTopMin,iTopMax,ibotmin,ibotmax );
   iOffset = 0;
 
   if( m->position < iCheckTime )
@@ -1001,40 +1058,40 @@ bool checkBlacklineOffMark( cMarks *marks, cMark *m, cFileName *cfn, int iCheckT
     iCurrentDecodedFrame = index;
     ulTopBlackLines = 0;
     ulBotBlackLines = 0;
-    demuxFrame(cfn, cIF, index );
+    demuxFrame(cfn, cIF, index, 0 );
 
     if( (checkedFrames > 3) && POS_OK )
     {
       iBestPos = index;
-      //dsyslog(LOG_INFO, "checkOffMark best pos = %d, prepos = %d",iBestPos, iPrePos );
+      //dsyslog( "checkOffMark best pos = %d, prepos = %d",iBestPos, iPrePos );
     }
     /*
     else if( (iBestPos > 0) && (checkedFrames > 3)  && POS_NOT_OK )
     {
-      dsyslog(LOG_INFO, "checkOffMark reset best pos to 0" );
+      dsyslog( "checkOffMark reset best pos to 0" );
       iBestPos = 0;
       checkedFrames = 0;
     }
     */
   }
-  dsyslog(LOG_INFO, "checkOffMark bestPos %d prepos %d",iBestPos,iPrePos );
+  dsyslog( "checkOffMark bestPos %d prepos %d",iBestPos,iPrePos );
   if( (iBestPos == 0 || (iPrePos - iBestPos) < 200) && POS_MAYBE_OK && iPrePos > 0 )
   {
     iBestPos = iPrePos;
-    dsyslog(LOG_INFO, "checkOffMark use prepos to set newmark" );
+    dsyslog( "checkOffMark use prepos to set newmark" );
   }
   if( iBestPos > 0 )
   {
     int newIndex = cIF->GetNextIFrame( iBestPos-1, true, &FileNumber, &FileOffset, &Length, true);
     if( newIndex > 0 && newIndex != m->position)
     {
-      dsyslog(LOG_INFO, "do moveMark from %d to %d, prepos = %d ",m->position, newIndex, iPrePos );
+      dsyslog( "do moveMark from %d to %d, prepos = %d ",m->position, newIndex, iPrePos );
       moveMark( marks, m, newIndex, "moved from [%s] by checkBlacklineOffMark");
       return true;
     }
     if( newIndex == m->position)
     {
-      dsyslog(LOG_INFO, "mark is on same position" );
+      dsyslog( "mark is on same position" );
     }
   }
   return false;
@@ -1048,11 +1105,11 @@ bool checkBlacklineOffMark( cMarks *marks, cMark *m, cFileName *cfn, int iCheckT
 #define MONOFRAME_CUTOFF 65
 bool checkBlackFrameOnMark( cMarks *marks, cMark *m, cFileName *cfn, bool bForward, int iCheckTime )
 {
-  dsyslog(LOG_INFO, "checkBlackFrameOnMark at %d %s",m->position, bForward ? "forward":"backward" );
+  dsyslog( "checkBlackFrameOnMark at %d %s",m->position, bForward ? "forward":"backward" );
   int iOffset = 0;
   int iBestPos = 0;
   int iEnd = m->position;
-//  int minlines = data->m_nGrabHeight*80/100;
+//  int minlines = ndata->m_nGrabHeight*80/100;
   bool bPosReset = true;
   if( bForward )
   {
@@ -1078,6 +1135,8 @@ bool checkBlackFrameOnMark( cMarks *marks, cMark *m, cFileName *cfn, bool bForwa
 
   cbfunc cbf_old = getCB_Func();
   setCB_Func(BlackframeCallback);
+  bTSFoundPayload = false;
+  int flags = DEMUX_RESET;
 
   while( index < iEnd )
   {
@@ -1085,24 +1144,28 @@ bool checkBlackFrameOnMark( cMarks *marks, cMark *m, cFileName *cfn, bool bForwa
     iCurrentDecodedFrame = index;
     ulTopBlackLines = 0;
     ulBotBlackLines = 0;
-    demuxFrame(cfn, cIF, index );
-    //dsyslog(LOG_INFO, "checkBlackFrameOnMark frame %d bPosReset %d isBlankFrame %d",index, bPosReset, data->isBlankFrame() );
-    if( bPosReset && data->isBlankFrame() )
-    {
-      dsyslog(LOG_INFO, "set iBestPos to %d",index);
-      iBestPos = index;
-      bPosReset = false;
-    }
-    if( !data->isBlankFrame() )
-      bPosReset = true;
+    demuxFrame(cfn, cIF, index, flags );
+	 flags = bTSFoundPayload ? 0 : DEMUX_RESET;
+    //dsyslog( "checkBlackFrameOnMark frame %d bPosReset %d isBlankFrame %d",index, bPosReset, ndata->isBlankFrame() );
+	 if( bTSFoundPayload )
+	 {
+		 if( bPosReset && ndata->isBlankFrame() )
+		 {
+			dsyslog( "set iBestPos to %d",index);
+			iBestPos = index;
+			bPosReset = false;
+		 }
+		 if( !ndata->isBlankFrame() )
+			bPosReset = true;
+	 }
     /*
-    if( bPosReset && data->m_nMonoFrameValue < MONOFRAME_CUTOFF )
+    if( bPosReset && ndata->m_nMonoFrameValue < MONOFRAME_CUTOFF )
     {
-      dsyslog(LOG_INFO, "set iBestPos to %d",index);
+      dsyslog( "set iBestPos to %d",index);
       iBestPos = index;
       bPosReset = false;
     }
-    if( data->m_nMonoFrameValue > MONOFRAME_CUTOFF )
+    if( ndata->m_nMonoFrameValue > MONOFRAME_CUTOFF )
       bPosReset = true;
     */
   }
@@ -1112,7 +1175,7 @@ bool checkBlackFrameOnMark( cMarks *marks, cMark *m, cFileName *cfn, bool bForwa
     int newIndex = cIF->GetNextIFrame( iBestPos-1, true, &FileNumber, &FileOffset, &Length, true);
     if( newIndex > 0 && newIndex < iEnd)
     {
-      dsyslog(LOG_INFO, "do moveMark from %d to %d ",m->position, newIndex );
+      dsyslog( "do moveMark from %d to %d ",m->position, newIndex );
       moveMark( marks, m, newIndex, "moved from[%s] by checkBlackFrameOnMark");
       listMarks( marks);
     }
@@ -1142,7 +1205,7 @@ void checkOnMarks(cMarks *marks, cFileName *cfn)
 
 bool checkBlackFramesOnMarks(cMarks *marks, cFileName *cfn)
 {
-  dsyslog(LOG_INFO, "check video for BlackFrames" );
+  dsyslog( "check video for BlackFrames" );
   cbfunc cbf_old = getCB_Func();
   setCB_Func(BlacklineCallback);
   
@@ -1154,7 +1217,7 @@ bool checkBlackFramesOnMarks(cMarks *marks, cFileName *cfn)
   cMark *m = marks->GetNext(-1);
   while( m != NULL )
   {
-    //dsyslog(LOG_INFO, "Mark: %d %s %d %s", m->position, cpos, iDiff, cdiff);
+    //dsyslog( "Mark: %d %s %d %s", m->position, cpos, iDiff, cdiff);
     int iPos = m->position;
     bool doBlackFrameDetection = true;
     
@@ -1183,7 +1246,7 @@ bool checkBlackFramesOnMarks(cMarks *marks, cFileName *cfn)
       m = marks->GetNext(m->position);
   }
   setCB_Func(cbf_old);
-  dsyslog(LOG_INFO, "check for Blackframes done" );
+  dsyslog( "check for Blackframes done" );
   return true;
 }
 
@@ -1193,13 +1256,13 @@ bool detectBlacklines(cMarks *marks, cFileName *cfn, int& iTopLines, int& iBotto
 
   bool bStartpos = false;
   int index = 0;
-  dsyslog(LOG_INFO, "detectBlacklines" );
+  dsyslog( "detectBlacklines" );
   cbfunc cbf_old = getCB_Func();
   setCB_Func(BlacklineCallback);
 
   // Startposition finden
   cMark *m = marks->GetNext(-1);
-  // erste Unterbrechung überspringen
+  // erste Unterbrechung ï¿½berspringen
   // wenn mehrere Unterbrechungen vorhanden sind...
   if( marks->Count() > 2 )
   {
@@ -1210,13 +1273,13 @@ bool detectBlacklines(cMarks *marks, cFileName *cfn, int& iTopLines, int& iBotto
   }
   while( !bStartpos && m != NULL )
   {
-    // zum nächsten I-Frame
+    // zum nï¿½chsten I-Frame
     index = cIF->GetNextIFrame( m->position, true, &FileNumber, &FileOffset, &Length, true);
     // 5 Minuten weiter
     index += 5*FRAMESPERMIN;
     if( m != NULL )
       m = marks->GetNext(m->position);
-    // prüfen, ob mind. 2000 Frames verfügbar sind
+    // prï¿½fen, ob mind. 2000 Frames verfï¿½gbar sind
     if( m != NULL )
     {
       if( index + 2000 < m->position )
@@ -1239,39 +1302,39 @@ bool detectBlacklines(cMarks *marks, cFileName *cfn, int& iTopLines, int& iBotto
   bool bOk = false;
   while( !bOk )
   {
-    // Abbruch bei der nächsten Unterbrechung
+    // Abbruch bei der nï¿½chsten Unterbrechung
     if( index > m->position )
     {
-      dsyslog(LOG_INFO, "detectBlacklines out of range" );
+      dsyslog( "detectBlacklines out of range" );
       setCB_Func(cbf_old);
       return( false );
     }
     // Abbruch, wenn 50 Frames ohne Blacklines gefunden wurden
     if( iNumFramesNoBlacklines > 50 )
     {
-      dsyslog(LOG_INFO, "detectBlacklines: video has no Blacklines" );
+      dsyslog( "detectBlacklines: video has no Blacklines" );
       setCB_Func(cbf_old);
       return( false );
     }
     // Frame holen und decodieren
     iCurrentDecodedFrame = index;
-    demuxFrame(cfn, cIF, index );
+    demuxFrame(cfn, cIF, index,0 );
     index++;
 
-//    dsyslog(LOG_INFO, "detectBlacklines (%d) TopBlackLines = %3d, BotBlackLines = %3d (%4d) %d",index,data->m_nBlackLinesTop, data->m_nBlackLinesBottom,data->m_nBlackLinesTop+data->m_nBlackLinesBottom,checkedFrames );
+//    dsyslog( "detectBlacklines (%d) TopBlackLines = %3d, BotBlackLines = %3d (%4d) %d",index,ndata->m_nBlackLinesTop, ndata->m_nBlackLinesBottom,ndata->m_nBlackLinesTop+ndata->m_nBlackLinesBottom,checkedFrames );
     // Reset-Bedingungen:
     // - Anzahl der Blacklines oben oder unten < MINBLACKLINES
-    // - Anzahl der Blacklines oben oder unten > 1/3 der Bildhöhe
+    // - Anzahl der Blacklines oben oder unten > 1/3 der Bildhï¿½he
     // - Differenz Top- und BottomBlacklines > 50
-    if( data->m_nBlackLinesTop < MINBLACKLINES ||
-        data->m_nBlackLinesBottom < MINBLACKLINES )
+    if( ndata->m_nBlackLinesTop < MINBLACKLINES ||
+        ndata->m_nBlackLinesBottom < MINBLACKLINES )
     {
       iNumFramesNoBlacklines++;
       RESETBLACKLINES;
     }
-    if( data->m_nBlackLinesTop > data->m_nGrabHeight/3 ||
-        data->m_nBlackLinesBottom > data->m_nGrabHeight/3 ||
-        abs(data->m_nBlackLinesTop-data->m_nBlackLinesBottom) > 50)
+    if( ndata->m_nBlackLinesTop > ndata->m_nGrabHeight/3 ||
+        ndata->m_nBlackLinesBottom > ndata->m_nGrabHeight/3 ||
+        abs(ndata->m_nBlackLinesTop-ndata->m_nBlackLinesBottom) > 50)
     {
       RESETBLACKLINES;
     }
@@ -1283,11 +1346,11 @@ bool detectBlacklines(cMarks *marks, cFileName *cfn, int& iTopLines, int& iBotto
     }
     if( checkedFrames > 50 )
       bOk = true;
-//    dsyslog(LOG_INFO, "detectBlacklines (%d) TopBlackLines = %3d, BotBlackLines = %3d (%4d) %d",index,data->m_nBlackLinesTop, data->m_nBlackLinesBottom,data->m_nBlackLinesTop+data->m_nBlackLinesBottom,checkedFrames );
+//    dsyslog( "detectBlacklines (%d) TopBlackLines = %3d, BotBlackLines = %3d (%4d) %d",index,ndata->m_nBlackLinesTop, ndata->m_nBlackLinesBottom,ndata->m_nBlackLinesTop+ndata->m_nBlackLinesBottom,checkedFrames );
   }
   iTopLines = (ulTopBlackLines / checkedFrames)*90/100;
   iBottomLines = (ulBotBlackLines / checkedFrames)*90/100;
-  dsyslog(LOG_INFO, "TopBlackLines = %d, BotBlackLines = %d",iTopLines, iBottomLines );
+  dsyslog( "TopBlackLines = %d, BotBlackLines = %d",iTopLines, iBottomLines );
   setCB_Func(cbf_old);
   return true;
 #undef RESETBLACKLINES
@@ -1297,7 +1360,7 @@ bool detectBlacklines(int _index, int iFramesToCheck, cFileName *cfn, int& iTopL
 {
 #define RESETBLACKLINES  ulTopBlackLines = 0; ulBotBlackLines = 0; checkedFrames = 0; iBlacklineResets++;
 
-  dsyslog(LOG_INFO, "detectBlacklines from %d over %d frames", _index, iFramesToCheck );
+  dsyslog( "detectBlacklines from %d over %d frames", _index, iFramesToCheck );
   cbfunc cbf_old = getCB_Func();
   setCB_Func(BlacklineCallback);
 
@@ -1309,73 +1372,80 @@ bool detectBlacklines(int _index, int iFramesToCheck, cFileName *cfn, int& iTopL
   int iBlacklineResets = 0;
   int endFrame = _index + iFramesToCheck;
   bool bOk = false;
+  bTSFoundPayload = false;
+  int flags = DEMUX_RESET;
   while( !bOk )
   {
     // Abbruch, wenn 50 Frames ohne Blacklines gefunden wurden
     if( iNumFramesNoBlacklines > 50 || index > endFrame )
     {
-      dsyslog(LOG_INFO, "detectBlacklines: video has no Blacklines in range %d %d", _index, iFramesToCheck );
+      dsyslog( "detectBlacklines: video has no Blacklines in range %d %d", _index, iFramesToCheck );
       setCB_Func(cbf_old);
       return( false );
     }
     // Frame holen und decodieren
     iCurrentDecodedFrame = index;
-    demuxFrame(cfn, cIF, index );
+    demuxFrame(cfn, cIF, index, flags );
+	 flags = bTSFoundPayload ? 0 : DEMUX_RESET;
     index++;
 
-    dsyslog(LOG_INFO, "detectBlacklines (%d) TopBlackLines = %3d, BotBlackLines = %3d (%4d) %d",index,data->m_nBlackLinesTop, data->m_nBlackLinesBottom,data->m_nBlackLinesTop+data->m_nBlackLinesBottom,checkedFrames );
-    // Reset-Bedingungen:
-    // - Anzahl der Blacklines oben oder unten < MINBLACKLINES
-    // - Anzahl der Blacklines oben oder unten > 1/3 der Bildhöhe
-    // - Differenz Top- und BottomBlacklines > 50
-    if( data->m_nBlackLinesTop < MINBLACKLINES ||
-        data->m_nBlackLinesBottom < MINBLACKLINES )
-    {
-      iNumFramesNoBlacklines++;
-      RESETBLACKLINES;
-    }
-    if( data->m_nBlackLinesTop > data->m_nGrabHeight/3 ||
-        data->m_nBlackLinesBottom > data->m_nGrabHeight/3 ||
-        abs(data->m_nBlackLinesTop-data->m_nBlackLinesBottom) > 50)
-    {
-      RESETBLACKLINES;
-    }
-    // wenn iBlacklineResets > 10, dann 1 Min springen
-    if( iBlacklineResets == 10 )
-    {
-      index += FRAMESPERMIN;
-      iBlacklineResets = 0;
-    }
-    if( checkedFrames > 50 )
-      bOk = true;
-    dsyslog(LOG_INFO, "detectBlacklines (%d) TopBlackLines = %3d, BotBlackLines = %3d (%4d) %d",index,data->m_nBlackLinesTop, data->m_nBlackLinesBottom,data->m_nBlackLinesTop+data->m_nBlackLinesBottom,checkedFrames );
+	 if( bTSFoundPayload )
+	 {
+		 dsyslog( "detectBlacklines (%d) TopBlackLines = %3d, BotBlackLines = %3d (%4d) %d",index,ndata->m_nBlackLinesTop, ndata->m_nBlackLinesBottom,ndata->m_nBlackLinesTop+ndata->m_nBlackLinesBottom,checkedFrames );
+		 // Reset-Bedingungen:
+		 // - Anzahl der Blacklines oben oder unten < MINBLACKLINES
+		 // - Anzahl der Blacklines oben oder unten > 1/3 der Bildhï¿½he
+		 // - Differenz Top- und BottomBlacklines > 50
+		 if( ndata->m_nBlackLinesTop < MINBLACKLINES ||
+			  ndata->m_nBlackLinesBottom < MINBLACKLINES )
+		 {
+			iNumFramesNoBlacklines++;
+			RESETBLACKLINES;
+		 }
+		 if( ndata->m_nBlackLinesTop > ndata->m_nGrabHeight/3 ||
+			  ndata->m_nBlackLinesBottom > ndata->m_nGrabHeight/3 ||
+			  abs(ndata->m_nBlackLinesTop-ndata->m_nBlackLinesBottom) > 50)
+		 {
+			RESETBLACKLINES;
+		 }
+		 // wenn iBlacklineResets > 10, dann 1 Min springen
+		 if( iBlacklineResets == 10 )
+		 {
+			index += FRAMESPERMIN;
+			flags = DEMUX_RESET;
+			iBlacklineResets = 0;
+		 }
+		 if( checkedFrames > 50 )
+			bOk = true;
+		 dsyslog( "detectBlacklines (%d) TopBlackLines = %3d, BotBlackLines = %3d (%4d) %d",index,ndata->m_nBlackLinesTop, ndata->m_nBlackLinesBottom,ndata->m_nBlackLinesTop+ndata->m_nBlackLinesBottom,checkedFrames );
+	 }
   }
   iTopLines = (ulTopBlackLines / checkedFrames);//*95/100;
   iBottomLines = (ulBotBlackLines / checkedFrames);//*95/100;
-  dsyslog(LOG_INFO, "TopBlackLines = %d, BotBlackLines = %d",iTopLines, iBottomLines );
+  dsyslog( "TopBlackLines = %d, BotBlackLines = %d",iTopLines, iBottomLines );
   setCB_Func(cbf_old);
   return true;
 }
 
 /*
 *  checkBlacklineOnMarks
-*  prüft, ob die Aufnahme schwarze Ränder oben und unten hat
+*  prï¿½ft, ob die Aufnahme schwarze Rï¿½nder oben und unten hat
 *  ist dies der Fall, werden die Einschaltmarken nach Untersuchung
 *  der umliegenden Bilder ggf. angepasst
 *  im Normalfall wird das Senderlogo erst einige sekunden nach
-*  Filmbeginn eingeblendet, daher wird zuerst rückwärts gesucht
-*  ist die rückwärtssuche erfolglos, wird vorwärts gesucht
-*  wg. RTL wird vorher von der Schnittmarke+3min rückwärts gesucht
+*  Filmbeginn eingeblendet, daher wird zuerst rï¿½ckwï¿½rts gesucht
+*  ist die rï¿½ckwï¿½rtssuche erfolglos, wird vorwï¿½rts gesucht
+*  wg. RTL wird vorher von der Schnittmarke+3min rï¿½ckwï¿½rts gesucht
 */
 bool checkBlacklineOnMarks(cMarks *marks, cFileName *cfn)
 {
   int iTopLines = 0;
   int iBottomLines = 0;
-  // prüfen auf Ränder
+  // prï¿½fen auf Rï¿½nder
   detectBlacklines(marks, cfn, iTopLines, iBottomLines);
   if( iTopLines < MINBLACKLINES || iBottomLines < MINBLACKLINES )
   {
-    dsyslog(LOG_INFO, "not enough Blacklines for further inspection" );
+    dsyslog( "not enough Blacklines for further inspection" );
     return false;
   }
 
@@ -1388,9 +1458,9 @@ bool checkBlacklineOnMarks(cMarks *marks, cFileName *cfn)
   while( m != NULL )
   {
     int iPos = m->position;
-    int iBackFrames = 60*FRAMESPERSEC;      // Anzahl Frames für normale rückwärtssuche
-    int iForwardFrames = 200*FRAMESPERSEC;  // Anzahl Frames für vorwärtssuche
-    // rückwärtssuche bis max zur vorherigen Schnittmarke
+    int iBackFrames = 60*FRAMESPERSEC;      // Anzahl Frames fï¿½r normale rï¿½ckwï¿½rtssuche
+    int iForwardFrames = 200*FRAMESPERSEC;  // Anzahl Frames fï¿½r vorwï¿½rtssuche
+    // rï¿½ckwï¿½rtssuche bis max zur vorherigen Schnittmarke
     cMark *m2 = marks->GetPrev(iPos);
     if( m2 != NULL )
     {
@@ -1399,7 +1469,7 @@ bool checkBlacklineOnMarks(cMarks *marks, cFileName *cfn)
       if( iBackFrames < 0 )
         iBackFrames = 0;
     }
-    // vorwärtssuche bis max zur nächsten Schnittmarke
+    // vorwï¿½rtssuche bis max zur nï¿½chsten Schnittmarke
     m2 = marks->GetNext(iPos);
     if( m2 != NULL )
     {
@@ -1441,13 +1511,13 @@ bool checkBlacklineOnMarks(cMarks *marks, cFileName *cfn)
     listMarks( marks);
   }
   setCB_Func(cbf_old);
-  dsyslog(LOG_INFO, "check for Blacklines done" );
+  dsyslog( "check for Blacklines done" );
   return true;
 }
 
 void listMarks(cMarks *marks)
 {
-  dsyslog(LOG_INFO, "current Marks:" );
+  dsyslog( "current Marks:" );
   int iDiff;
   int iLastPos = 0;
   char *cpos = NULL;
@@ -1459,13 +1529,13 @@ void listMarks(cMarks *marks)
   while( m != NULL )
   {
     iDiff = m->position - iLastPos;
-    asprintf(&cpos, "%s", m->ToText(false));
-    asprintf(&cdiff, "%s", IndexToHMSF(iDiff, false));
-    dsyslog(LOG_INFO, "Mark: %6d %s #frames %6d duration %s", m->position, cpos, iDiff, cdiff);
+    asprintf(&cpos, "%s", (const char *)m->ToText(false));
+    asprintf(&cdiff, "%s", (const char *)IndexToHMSF(iDiff, false));
+    dsyslog( "Mark: %6d %s #frames %6d duration %s", m->position, cpos, iDiff, cdiff);
     iLastPos = m->position;
     m = marks->GetNext(m->position);
   }
-  dsyslog(LOG_INFO, "current Marks end" );
+  dsyslog( "current Marks end" );
 }
 
 #define MINMARKDURATION (17*FRAMESPERSEC)
@@ -1485,7 +1555,7 @@ void cleanInactiveMarks(cMarks *marks)
     {
       if( mprev != NULL )
       {
-        dsyslog(LOG_INFO, "del Mark: %d ", mprev->position );
+        dsyslog( "del Mark: %d ", mprev->position );
         marks->Del(mprev);
         marks->Del(m);
         m = marks->GetNext(-1);
@@ -1521,15 +1591,15 @@ void cleanActiveMarks(cMarks *marks)
   while( m != NULL )
   {
     iDiff = m->position - iLastPos;
-    asprintf(&cpos, "%s", m->ToText(false));
-    asprintf(&cdiff, "%s", IndexToHMSF(iDiff, false));
-    dsyslog(LOG_INFO, "Mark: %d %s #frames %d duration %s", m->position, cpos, iDiff, cdiff);
+    asprintf(&cpos, "%s", (const char *)m->ToText(false));
+    asprintf(&cdiff, "%s", (const char *)IndexToHMSF(iDiff, false));
+    dsyslog( "Mark: %d %s #frames %d duration %s", m->position, cpos, iDiff, cdiff);
     iLastPos = m->position;
     if( iDiff > 0 && iDiff < ACTIVEMINMARKDURATION )
     {
       if( mprev != NULL )
       {
-        dsyslog(LOG_INFO, "del Marks: %d %d", mprev->position, m->position );
+        dsyslog( "del Marks: %d %d", mprev->position, m->position );
         marks->Del(mprev);
         marks->Del(m);
         m = marks->GetNext(-1);
@@ -1556,7 +1626,7 @@ void cleanActiveMarks(cMarks *marks)
 // the marks is shorter than MINMARKDURATION frames
 void MarkCleanup(cMarks *marks, cFileName *cfn)
 {
-  dsyslog(LOG_INFO, "MarkCleanup: %p %p ", (void *)marks, (void *)cfn );
+  dsyslog( "MarkCleanup: %p %p ", (void *)marks, (void *)cfn );
   int iDiff;
   int iLastPos = 0;
   char *cpos = NULL;
@@ -1578,7 +1648,7 @@ void MarkCleanup(cMarks *marks, cFileName *cfn)
     {
       if( mprev != NULL )
       {
-        dsyslog(LOG_INFO, "del Mark: %d ", mprev->position );
+        dsyslog( "del Mark: %d ", mprev->position );
         marks->Del(mprev);
         marks->Del(m);
         m = marks->GetNext(-1);
@@ -1615,15 +1685,15 @@ void MarkCleanup(cMarks *marks, cFileName *cfn)
     while( m != NULL )
     {
       iDiff = m->position - iLastPos;
-      asprintf(&cpos, "%s", m->ToText(false));
-      asprintf(&cdiff, "%s", IndexToHMSF(iDiff, false));
-      dsyslog(LOG_INFO, "Mark: %d %s #frames %d duration %s", m->position, cpos, iDiff, cdiff);
+      asprintf(&cpos, "%s", (const char *)m->ToText(false));
+      asprintf(&cdiff, "%s", (const char *)IndexToHMSF(iDiff, false));
+      dsyslog( "Mark: %d %s #frames %d duration %s", m->position, cpos, iDiff, cdiff);
       iLastPos = m->position;
       if( iDiff > 0 && iDiff < ACTIVEMINMARKDURATION )
       {
         if( mprev != NULL )
         {
-          dsyslog(LOG_INFO, "del Marks: %d %d", mprev->position, m->position );
+          dsyslog( "del Marks: %d %d", mprev->position, m->position );
           marks->Del(mprev);
           marks->Del(m);
           m = marks->GetNext(-1);
@@ -1650,15 +1720,15 @@ void MarkCleanup(cMarks *marks, cFileName *cfn)
     while( m != NULL )
     {
       iDiff = m->position - iLastPos;
-      asprintf(&cpos, "%s", m->ToText(false));
-      asprintf(&cdiff, "%s", IndexToHMSF(iDiff, false));
-      dsyslog(LOG_INFO, "Mark: %d %s #frames %d duration %s", m->position, cpos, iDiff, cdiff);
+      asprintf(&cpos, "%s", (const char*)m->ToText(false));
+      asprintf(&cdiff, "%s", (const char *)IndexToHMSF(iDiff, false));
+      dsyslog( "Mark: %d %s #frames %d duration %s", m->position, cpos, iDiff, cdiff);
       iLastPos = m->position;
       if( iDiff > 0 && iDiff < MINMARKDURATION )
       {
         if( mprev != NULL )
         {
-          dsyslog(LOG_INFO, "del Mark: %d ", mprev->position );
+          dsyslog( "del Mark: %d ", mprev->position );
           marks->Del(mprev);
           marks->Del(m);
           m = marks->GetNext(-1);
@@ -1689,7 +1759,7 @@ void MarkCleanup(cMarks *marks, cFileName *cfn)
 
 
 int iCurrentDecodedAudioFrame = 0;
-int audiocallback(int mode)
+int audiocallback(int /*mode*/)
 {
   iCurrentDecodedFrame++;
   iCurrentDecodedAudioFrame++;
@@ -1699,7 +1769,7 @@ int audiocallback(int mode)
 
 bool detect_ac3_51(int StartFrame)
 {
-  dsyslog(LOG_INFO, "start ac3-detection");
+  dsyslog( "start ac3-detection");
   time_t tstart, tend;
   tstart = time(NULL);
   cbfunc cbf_old = getCB_Func();
@@ -1709,8 +1779,10 @@ bool detect_ac3_51(int StartFrame)
   ac3mode = 0;
   iCurrentDecodedFrame = 0;
   checkedFrames = 0;
+  bTSFoundPayload = false;
+  int flags = DEMUX_RESET;
   //int iCurrentFrame = cIF->Get( StartFrame, &FileNumber, &FileOffset, &PictureType, &Length);
-  if( !cIF->Get( StartFrame, &FileNumber, &FileOffset, &PictureType, &Length) )
+  if( !cIF->Get( StartFrame, &FileNumber, &FileOffset, &Independent, &Length) )
     return false;
   int iCurrentFrame = StartFrame;
   int ac3mode51count = 0;
@@ -1720,7 +1792,8 @@ bool detect_ac3_51(int StartFrame)
     //end = readBuffer + ReadFrame (cfn->File(), readBuffer, Length, MAXFRAMESIZE);
     iCurrentDecodedFrame = iCurrentFrame;
     //demux (readBuffer, end, 0);
-    demuxFrame(cfn, FileNumber, FileOffset, Length );
+    demuxFrame(cfn, FileNumber, FileOffset, Length, flags );
+	 flags = bTSFoundPayload ? 0 : DEMUX_RESET;
     if( ac3mode == 51 )
     {
       while(  iCurrentFrame < cIF->Last() && iCurrentFrame < StartFrame+FRAMES_FOR_AC51DETECT && ac3mode51count < 50 && ac3mode == 51)
@@ -1729,7 +1802,7 @@ bool detect_ac3_51(int StartFrame)
         if (iCurrentFrame < cIF->Last())
         {
           iCurrentDecodedFrame = iCurrentFrame;
-          demuxFrame(cfn, cIF, iCurrentFrame );
+          demuxFrame(cfn, cIF, iCurrentFrame, flags );
           if( ac3mode == 51 )
             ac3mode51count++;
         }
@@ -1737,17 +1810,18 @@ bool detect_ac3_51(int StartFrame)
     }
     else
       ac3mode51count = 0;
-    dsyslog(LOG_INFO, "ac3-detection at %d ac3mode is %d", iCurrentFrame, ac3mode);
+    dsyslog( "ac3-detection at %d ac3mode is %d", iCurrentFrame, ac3mode);
     iCurrentFrame += AC3_51DETECT_SKIP;
+	 flags = DEMUX_RESET;
     if (iCurrentFrame < cIF->Last())
-      cIF->Get( iCurrentFrame, &FileNumber, &FileOffset, &PictureType, &Length);
+      cIF->Get( iCurrentFrame, &FileNumber, &FileOffset, &Independent, &Length);
   }
   setCB_Func(cbf_old);
   current_audiocbf = NULL;
 
   tend = time(NULL);
   secsForAC3Detection = tend - tstart;
-  dsyslog(LOG_INFO, "ac3-detection done, hasAC3 is %s", (ac3mode == 51)?"true":"false");
+  dsyslog( "ac3-detection done, hasAC3 is %s", (ac3mode == 51)?"true":"false");
   if( ac3mode51count >= 50 )
     return true;
   return false;
@@ -1758,6 +1832,8 @@ int find_ac3start( int iStart, int iEnd, int mode2Find)
   int iCurrentFrame = 0;
   int ipos;
   int diff = iEnd-iStart;
+  bTSFoundPayload = false;
+  int flags = DEMUX_RESET;
   while( diff > 10 )
   {
     iCurrentDecodedAudioFrame = 0;
@@ -1768,7 +1844,8 @@ int find_ac3start( int iStart, int iEnd, int mode2Find)
     {
       iCurrentFrame = ipos;
       iCurrentDecodedFrame = iCurrentFrame;
-      demuxFrame(cfn, cIF, ipos++ );
+      demuxFrame(cfn, cIF, ipos++, flags );
+		flags = bTSFoundPayload ? 0 : DEMUX_RESET;
     }
     if( ac3mode == mode2Find )
     {
@@ -1782,13 +1859,16 @@ int find_ac3start( int iStart, int iEnd, int mode2Find)
   }
   iCurrentFrame = iStart;
   ac3mode = 0;
+  bTSFoundPayload = false;
+  flags = DEMUX_RESET;
   while( iCurrentFrame <= iEnd && ac3mode != mode2Find)
   {
     iCurrentFrame++;
     iCurrentDecodedFrame = iCurrentFrame;
     iCurrentDecodedAudioFrame = 0;
     ac3mode = 0;
-    demuxFrame(cfn, cIF, iCurrentFrame );
+    demuxFrame(cfn, cIF, iCurrentFrame, flags );
+	 flags = bTSFoundPayload ? 0 : DEMUX_RESET;
   }
   //printf("vmode changed in frame %d to %d\n",iCurrentFrame-1,ac3mode);
   return iCurrentFrame-1;
@@ -1796,13 +1876,16 @@ int find_ac3start( int iStart, int iEnd, int mode2Find)
 
 int findVideoByPTS(uint_64 apts, int iStartFrame)
 {
-  //dsyslog(LOG_INFO, "findVideoByPTS from frame %d", iStartFrame);
+  //dsyslog( "findVideoByPTS from frame %d", iStartFrame);
+  bTSFoundPayload = false;
+  int flags = DEMUX_RESET;
   do
   {
-    demuxFrame(cfn, cIF, iStartFrame );
+    demuxFrame(cfn, cIF, iStartFrame, flags );
+	 flags = bTSFoundPayload ? 0 : DEMUX_RESET;
     iStartFrame--;
   } while( iStartFrame > 0 && videopts > apts );
-  //dsyslog(LOG_INFO, "findVideoByPTS returns %d", iStartFrame+1);
+  //dsyslog( "findVideoByPTS returns %d", iStartFrame+1);
   return iStartFrame+1;
 }
 
@@ -1828,14 +1911,16 @@ bool ac3Pass1(cMarks *pmarks/*,fcbfunc f*/)
   iCurrentDecodedFrame = 0;
   iCurrentDecodedAudioFrame = 0;
   checkedFrames = 0;
-  int iCurrentFrame = cIF->Get( 0, &FileNumber, &FileOffset, &PictureType, &Length);
+  int iCurrentFrame = cIF->Get( 0, &FileNumber, &FileOffset, &Independent, &Length);
 
-  dsyslog(LOG_INFO, "start ac3 pass1");
+  dsyslog( "start ac3 pass1");
   if( backupMarks )
     pmarks->Backup(filename);
-  pmarks->Load(filename);
+  pmarks->Load(filename,DEFAULTFRAMESPERSECOND,cfn->isPES());
   pmarks->ClearList();
   bMarkChanged = true;
+  bTSFoundPayload = false;
+  int flags = DEMUX_RESET;
 
   while(  iCurrentFrame < cIF->Last() /*&& !bStopAction*/ )
   {
@@ -1843,13 +1928,14 @@ bool ac3Pass1(cMarks *pmarks/*,fcbfunc f*/)
     while(  iCurrentFrame < cIF->Last() /*&& !bStopAction*/ && iCurrentDecodedAudioFrame == 0 )
     {
       iCurrentDecodedFrame = iCurrentFrame;
-      demuxFrame(cfn, cIF, iCurrentFrame );
+      demuxFrame(cfn, cIF, iCurrentFrame, flags );
+		flags = bTSFoundPayload ? 0 : DEMUX_RESET;
       if( !iCurrentDecodedAudioFrame )
         iCurrentFrame++;
     }
-    dsyslog(LOG_INFO, "Audio: oldac3mode = %d ac3mode = %d at %d", oldac3mode, ac3mode,iCurrentFrame);
+    dsyslog( "Audio: oldac3mode = %d ac3mode = %d at %d", oldac3mode, ac3mode,iCurrentFrame);
     //if( oldac3mode != ac3mode && ((oldac3mode==51)||(oldac3mode==0)||(ac3mode==51)))
-    if( oldac3mode != ac3mode && ((oldac3mode==51 && ac3mode !=51 )||(oldac3mode!=51 && ac3mode==51)) )
+	 if( bTSFoundPayload && oldac3mode != ac3mode && ((oldac3mode==51 && ac3mode !=51 )||(oldac3mode!=51 && ac3mode==51)) )
     {
       int ac3mode_help = ac3mode;
       int iStart = iCurrentFrame - AC3_51DETECT_SKIP;
@@ -1861,7 +1947,7 @@ bool ac3Pass1(cMarks *pmarks/*,fcbfunc f*/)
       {
           cframe = findVideoByPTS(ac3pts, cframe);
           iLastLogoFrame = cIF->GetNextIFrame( cframe, ac3mode_help == 51, &FileNumber, &FileOffset, &Length, true);
-          dsyslog(LOG_INFO, "AudioChanged: iLastLogoFrame=%6d, audio changed from %d to %d ", iLastLogoFrame, oldac3mode,ac3mode_help);
+          dsyslog( "AudioChanged: iLastLogoFrame=%6d, audio changed from %d to %d ", iLastLogoFrame, oldac3mode,ac3mode_help);
           //MarkToggle(pmarks, iLastLogoFrame, "audio-change");
           MarkToggle(pmarks, iLastLogoFrame, ac3mode_help != 51 ? "ac3 lost" : "ac3 start");
           bMarkChanged = true;
@@ -1869,17 +1955,18 @@ bool ac3Pass1(cMarks *pmarks/*,fcbfunc f*/)
       oldac3mode = ac3mode = ac3mode_help;
     }
     iCurrentFrame += AC3_51DETECT_SKIP;
+	 flags = DEMUX_RESET;
   }
   setCB_Func(cbf_old);
   current_audiocbf = NULL;
   tend = time(NULL);
   secsForAC3Scan = tend - tstart;
-  dsyslog(LOG_INFO, "ac3 pass1 done");
+  dsyslog( "ac3 pass1 done");
   int iaframes = pmarks->getActiveFrames(cIF->Last());
-  dsyslog(LOG_INFO, "ac3 pass1 marks %d frames of %d as active",iaframes,cIF->Last());
+  dsyslog( "ac3 pass1 marks %d frames of %d as active",iaframes,cIF->Last());
   if( iaframes < ( cIF->Last() * AC3ACTIVECUTOFF / 100 ) )
   {
-    dsyslog(LOG_INFO, "ac3 pass1 kicks out more than %d%, marks dropped", 100-AC3ACTIVECUTOFF);
+    dsyslog( "ac3 pass1 kicks out more than %d%%, marks dropped", 100-AC3ACTIVECUTOFF);
     pmarks->ClearList();
     return false;
   }
@@ -1904,7 +1991,8 @@ int scanRecord( int iNumFrames, cMarks *_marks )
   start = startall = time(NULL);
   #ifndef VNOAD
   // open the cIndexFile for the record
-  cIF = new cNoadIndexFile(filename,false);
+  bool isPES = isPESRecording(filename);
+  cIF = new cNoadIndexFile(filename,false, isPES);
   if( cIF == NULL )
     return -1;
   #endif
@@ -1919,7 +2007,7 @@ int scanRecord( int iNumFrames, cMarks *_marks )
 
   #ifndef VNOAD
   // open the record
-  cfn = new cFileName(filename, false);
+  cfn = new cFileName(filename, false, false, isPES);
   if( cfn->Open() < 0 )
   {
     delete cfn;
@@ -1927,6 +2015,10 @@ int scanRecord( int iNumFrames, cMarks *_marks )
     return -1;
   }
   demux_track = getVStreamID(cfn->File());
+  if( isPES )
+		demux_pid = 0;
+  else
+	  demux_pid = getTSPID(cfn->File());
   #endif
 
   if( _marks )
@@ -1937,7 +2029,7 @@ int scanRecord( int iNumFrames, cMarks *_marks )
 #ifdef HAVE_LIBAVCODEC
   if( pass3only )
   {
-    pmarks->Load(filename);
+    pmarks->Load(filename,DEFAULTFRAMESPERSECOND,cfn->isPES());
     pass3(pmarks, cfn);
     #ifndef VNOAD
     delete cfn;
@@ -1958,7 +2050,7 @@ int scanRecord( int iNumFrames, cMarks *_marks )
   {
     char logoname[2048];
     strcpy( logoname, filename);
-    strcat( logoname, "/cur.logo" );
+    strcat( logoname, "\\cur.logo" );
 
     if( !detectLogo(cfn,logoname) )
     {
@@ -1970,7 +2062,7 @@ int scanRecord( int iNumFrames, cMarks *_marks )
       return 0;
     }
     if( saveLogo )
-      data->saveCheckData(logoname, true);
+      ndata->saveCheckData(logoname, true);
 
     if( !bOnMarksOnly )
     {
@@ -1984,7 +2076,7 @@ int scanRecord( int iNumFrames, cMarks *_marks )
 
       if( backupMarks )
         pmarks->Backup(filename);
-      pmarks->Load(filename);
+      pmarks->Load(filename,DEFAULTFRAMESPERSECOND,cfn->isPES());
 
       pmarks->ClearList();
 
@@ -1993,7 +2085,7 @@ int scanRecord( int iNumFrames, cMarks *_marks )
         iOldState = iState;
         iLastStartFrame = iCurrentFrame;
         iState = findLogoChange(cfn, iState, iCurrentFrame, BIGSTEP );
-        dsyslog(LOG_INFO, "StateChanged: newstate=%d oldstate=%d currentFrame=%d", iState, iOldState, iCurrentFrame);
+        dsyslog( "StateChanged: newstate=%d oldstate=%d currentFrame=%d", iState, iOldState, iCurrentFrame);
         if( iState == -2 ) // means no logo for a long time
         {
           if( iRestartFrame == iLastStartFrame )
@@ -2009,7 +2101,7 @@ int scanRecord( int iNumFrames, cMarks *_marks )
             else
             {
               iState = 0;
-              data->m_pCheckLogo->isLogo = false;
+              ndata->m_pCheckLogo->isLogo = false;
               iCurrentFrame = iRestartFrame = iLastStartFrame;
               continue;
             }
@@ -2062,7 +2154,7 @@ int scanRecord( int iNumFrames, cMarks *_marks )
   if( doPass2 )
     MarkCleanup(pmarks, cfn);
   
-  dsyslog(LOG_INFO, "Marks before Save:" );
+  dsyslog( "Marks before Save:" );
   listMarks(pmarks);
   pmarks->Save();
   #ifndef VNOAD
@@ -2071,24 +2163,24 @@ int scanRecord( int iNumFrames, cMarks *_marks )
 
   end = time(NULL);
   secsForScan = end - startall;
-  picWidth = data->m_nGrabWidth;
-  picHeight = data->m_nGrabHeight;
+  picWidth = ndata->m_nGrabWidth;
+  picHeight = ndata->m_nGrabHeight;
 
-  dsyslog(LOG_INFO, "totalFrames %d",totalFrames );
-  dsyslog(LOG_INFO, "totalDecodedFrames %d",totalDecodedFrames );
-  dsyslog(LOG_INFO, "decodedFramesForLogoDetection %d",decodedFramesForLogoDetection );
-  dsyslog(LOG_INFO, "decodedFramesForLogoCheck %d",decodedFramesForLogoCheck );
-  dsyslog(LOG_INFO, "decodedFramesForAC3Detection %d",decodedFramesForAC3Detection );
-  dsyslog(LOG_INFO, "decodedFramesForAC3Check %d",decodedFramesForAC3Check );
-  dsyslog(LOG_INFO, "secsForLogoDetection %d",secsForLogoDetection );
-  dsyslog(LOG_INFO, "secsForLogoCheck %d",secsForLogoCheck );
-  dsyslog(LOG_INFO, "secsForAC3Detection %d",secsForAC3Detection );
-  dsyslog(LOG_INFO, "secsForAC3Scan %d",secsForAC3Scan );
-  dsyslog(LOG_INFO, "secsForScan %d",secsForScan );
-  dsyslog(LOG_INFO, "hasBlackLines %s",hasBlackLines?"yes":"no" );
-  dsyslog(LOG_INFO, "hasAC3 %s",hasAC3?"yes":"no" );
-  dsyslog(LOG_INFO, "hasOverlaps %s",hasOverlaps?"yes":"no" );
-  dsyslog(LOG_INFO, "picSize %dx%d",picWidth,picHeight );
+  dsyslog( "totalFrames %d",totalFrames );
+  dsyslog( "totalDecodedFrames %d",totalDecodedFrames );
+  dsyslog( "decodedFramesForLogoDetection %d",decodedFramesForLogoDetection );
+  dsyslog( "decodedFramesForLogoCheck %d",decodedFramesForLogoCheck );
+  dsyslog( "decodedFramesForAC3Detection %d",decodedFramesForAC3Detection );
+  dsyslog( "decodedFramesForAC3Check %d",decodedFramesForAC3Check );
+  dsyslog( "secsForLogoDetection %d",secsForLogoDetection );
+  dsyslog( "secsForLogoCheck %d",secsForLogoCheck );
+  dsyslog( "secsForAC3Detection %d",secsForAC3Detection );
+  dsyslog( "secsForAC3Scan %d",secsForAC3Scan );
+  dsyslog( "secsForScan %d",secsForScan );
+  dsyslog( "hasBlackLines %s",hasBlackLines?"yes":"no" );
+  dsyslog( "hasAC3 %s",hasAC3?"yes":"no" );
+  dsyslog( "hasOverlaps %s",hasOverlaps?"yes":"no" );
+  dsyslog( "picSize %dx%d",picWidth,picHeight );
 
   int iRet = cIF->Last();
   #ifndef VNOAD
@@ -2115,7 +2207,7 @@ int doX11Scan(noadData *thedata, const char *fName, int iNumFrames )
     return -1;
   else
     filename = (char *)fName;
-  data = thedata;
+  ndata = thedata;
   demux_track = 0xe0;
   mpeg2dec = mpeg2_init();
   int iRet = scanRecord(iNumFrames,NULL);
@@ -2126,7 +2218,8 @@ int doX11Scan(noadData *thedata, const char *fName, int iNumFrames )
 const char *myTime(time_t tim)
 {
   static char t_buf[2048];
-  strftime(t_buf,2048,"%A,%d.%m.%Y %T",localtime(&tim));
+  //strftime(t_buf,2048,"%A,%d.%m.%Y %T",localtime(&tim));
+  strftime(t_buf,2048,"%A,%d.%m.%Y %X",localtime(&tim));
   return t_buf;
 }
 
@@ -2168,13 +2261,15 @@ typedef struct
 // return 2 if mark is moved forward
 int checkScenecheckOnMark( cMarks *marks, cMark *m )
 {
-  dsyslog(LOG_INFO, "checkScenecheckOnMark at %d",m->position );
+  dsyslog( "checkScenecheckOnMark at %d",m->position );
   //int iSceneCheckFrames = SCENECHECKFRAMES;
   scs ChangeFreq[SCENECHECKFRAMES/FRAMESPERSEC];
 
   int iStart = m->position-SCENECHECKFRAMESBEFORE;
   int iEnd = m->position+SCENECHECKFRAMESAFTER;
   int sceneChangesAfter = 0;
+  bTSFoundPayload = false;
+  int flags = DEMUX_RESET;
   
   if( iEnd > cIF->Last() )
       return 0;
@@ -2189,7 +2284,7 @@ int checkScenecheckOnMark( cMarks *marks, cMark *m )
     iStart = 0;
 
   int index = displayIFrame(iStart);
-  data->resetSceneChangeDetection();
+  ndata->resetSceneChangeDetection();
 
   memset(ChangeFreq,0,SCENECHECKFRAMES/FRAMESPERSEC*sizeof(scs));
   checkedFrames = 0;
@@ -2200,26 +2295,27 @@ int checkScenecheckOnMark( cMarks *marks, cMark *m )
   {
     index++;
     iCurrentDecodedFrame = index;
-    demuxFrame(cfn, cIF, index );
+    demuxFrame(cfn, cIF, index, flags );
+	 flags = bTSFoundPayload ? 0 : DEMUX_RESET;
     if(checkedFrames>0)
     {
         int scsindex = (index-iStart)/FRAMESPERSEC;
-        data->CheckSceneHasChanged();
-        if( data->SceneHasChanged() )
+        ndata->CheckSceneHasChanged();
+        if( ndata->SceneHasChanged() )
         {
           ChangeFreq[scsindex].count++;
           ChangeFreq[scsindex].lastscenechange = index;
           if( index > m->position && index <= (m->position+SCENECHANGECOUNTRANGE) )
             sceneChangesAfter++;
         }
-        if( data->isBlankFrame() )
+        if( ndata->isBlankFrame() )
         {
           ChangeFreq[scsindex].blackcount++;
           ChangeFreq[scsindex].lastblack = index;
         }
     }
   }
-  dsyslog(LOG_INFO, "checkScenecheckOnMark at %d, sceneChangesAfter %d ",m->position, sceneChangesAfter );
+  dsyslog( "checkScenecheckOnMark at %d, sceneChangesAfter %d ",m->position, sceneChangesAfter );
 
   int iScPos = 0;
   int iFirst5SecBlock=0;
@@ -2227,7 +2323,7 @@ int checkScenecheckOnMark( cMarks *marks, cMark *m )
   for( int i = 0 ; i < (SCENECHECKFRAMES/FRAMESPERSEC); i++)
   {
     #ifdef VNOAD
-    dsyslog(LOG_INFO,"freq at %3d(%6d) is %3d %6d %3d %6d",i,i*FRAMESPERSEC+iStart,ChangeFreq[i].count, ChangeFreq[i].lastscenechange,ChangeFreq[i].blackcount,ChangeFreq[i].lastblack);
+    dsyslog("freq at %3d(%6d) is %3d %6d %3d %6d",i,i*FRAMESPERSEC+iStart,ChangeFreq[i].count, ChangeFreq[i].lastscenechange,ChangeFreq[i].blackcount,ChangeFreq[i].lastblack);
     #endif
     if( i < (SCENECHECKFRAMES/FRAMESPERSEC)-1 )
     {
@@ -2264,7 +2360,7 @@ int checkScenecheckOnMark( cMarks *marks, cMark *m )
     if(ChangeFreq[i].count > SCRESET )
       iFirst10SecBlock = 0;
   }
-  dsyslog(LOG_INFO,"iFirst10SecBlock %d (%d) --> %d",iFirst10SecBlock, iFirst10SecBlock*FRAMESPERSEC+iStart,iFirst10SecBlockBlackBack);
+  dsyslog("iFirst10SecBlock %d (%d) --> %d",iFirst10SecBlock, iFirst10SecBlock*FRAMESPERSEC+iStart,iFirst10SecBlockBlackBack);
   
   int sOfMark = (m->position-iStart)/FRAMESPERSEC;
   int iBackBlack = 0;
@@ -2282,8 +2378,8 @@ int checkScenecheckOnMark( cMarks *marks, cMark *m )
       iMarkpos = ChangeFreq[i].lastblack;
   }
   setCB_Func(cbf_old);
-  dsyslog(LOG_INFO,"iScPos %d iFirst5SecBlock %d iBackBlack %d iForwardBlack %d lastindex %d",iScPos, iFirst5SecBlock, iBackBlack,iForwardBlack, index);
-  dsyslog(LOG_INFO,"iMarkpos %d ",iMarkpos);
+  dsyslog("iScPos %d iFirst5SecBlock %d iBackBlack %d iForwardBlack %d lastindex %d",iScPos, iFirst5SecBlock, iBackBlack,iForwardBlack, index);
+  dsyslog("iMarkpos %d ",iMarkpos);
   if( marks && iMarkpos )
   {
     int iRet=1;
@@ -2297,21 +2393,22 @@ int checkScenecheckOnMark( cMarks *marks, cMark *m )
   return 0;
 }
 
-void checkMarksOnIFrames(noadData */*thedata*/, const char *fName)
+void checkMarksOnIFrames(noadData * /*thedata*/, const char *fName)
 {
-  cIF = new cNoadIndexFile(fName,false);
+  bool isPES = isPESRecording(fName);
+  cIF = new cNoadIndexFile(fName,false,isPES);
   cMarks marks;
   marks.Load(fName);
   cMark *m = marks.GetNext(-1);
 
   if( m == NULL )
-    dsyslog(LOG_INFO,"no marks!");
+    dsyslog("no marks!");
   while( m != NULL )
   {
-    PictureType = NO_PICTURE;
-    cIF->Get( m->position, &FileNumber, &FileOffset, &PictureType, &Length);
-    if( PictureType != I_FRAME )
-      dsyslog(LOG_INFO, "mark not on iframe %d",m->position);
+    Independent = false;
+    cIF->Get( m->position, &FileNumber, &FileOffset, &Independent, &Length);
+    if( Independent != I_FRAME )
+      dsyslog( "mark not on iframe %d",m->position);
     m = marks.GetNext(m->position);
   }
   delete cIF;
@@ -2330,45 +2427,48 @@ int getPicInfo(pic_info *info, int iStartFrame, int framesToRead,
                 bool bGetHisto, bool bGetBlacklines, bool bGetBlackframe)
 {
   int iCount = 0;
-  uchar picType = NO_PICTURE;
-  cIF->Get(iStartFrame,  &FileNumber, &FileOffset, &picType, &Length);
+  bool independent = false;
+  bTSFoundPayload = false;
+  int flags = DEMUX_RESET;
+
+  cIF->Get(iStartFrame,  &FileNumber, &FileOffset, &independent, &Length);
   int iCurrentFrame = iStartFrame;
-  if( picType != I_FRAME )
+  if( independent != I_FRAME )
     iCurrentFrame = cIF->GetNextIFrame( iStartFrame, true, &FileNumber, &FileOffset, &Length, true);
   displayIFrame(iCurrentFrame);
-  dsyslog(LOG_INFO,"getPicInfo read frames from %d to %d",iCurrentFrame,iCurrentFrame+framesToRead);
+  dsyslog("getPicInfo read frames from %d to %d",iCurrentFrame,iCurrentFrame+framesToRead);
   while(  iCurrentFrame < cIF->Last() && iCount < framesToRead )
   {
     info[iCount].framenum = iCurrentFrame;
     // get the histogramm
     if( bGetHisto )
-      data->getHistogram(info[iCount].histogramm);
+      ndata->getHistogram(info[iCount].histogramm);
     // get blacklines
     if( bGetBlacklines )
     {
-      data->detectBlackLines((unsigned char *)lastYUVBuf);
-      info[iCount].topBlacklines = data->m_nBlackLinesTop;
-      info[iCount].botBlacklines = data->m_nBlackLinesBottom;
-      //dsyslog(LOG_INFO,"index %d frame %d top %d bot %d",iCount,iCurrentFrame,data->m_nBlackLinesTop,data->m_nBlackLinesBottom);
+      ndata->detectBlackLines((unsigned char *)lastYUVBuf);
+      info[iCount].topBlacklines = ndata->m_nBlackLinesTop;
+      info[iCount].botBlacklines = ndata->m_nBlackLinesBottom;
+      //dsyslog("index %d frame %d top %d bot %d",iCount,iCurrentFrame,ndata->m_nBlackLinesTop,ndata->m_nBlackLinesBottom);
     }
     // get blackframe
     if( bGetBlackframe )
     {
-      data->CheckFrameIsBlank(iCurrentDecodedFrame,(unsigned char **)lastYUVBuf);
-      info[iCount].isBlackFrame = data->isBlankFrame();
+      ndata->CheckFrameIsBlank(iCurrentDecodedFrame,(unsigned char **)lastYUVBuf);
+      info[iCount].isBlackFrame = ndata->isBlankFrame();
     }
 
     iCount++;
     iCurrentFrame++;
     iCurrentDecodedFrame = iCurrentFrame;
-    demuxFrame(cfn, cIF, iCurrentFrame );
+    demuxFrame(cfn, cIF, iCurrentFrame, 0 );
   }
   return iCount;
 }
   
 bool doOverlapDetection(pic_info *picsbefore, int numPicsBefore, pic_info *picsafter, int numPicsAfter, cMark **m, cMarks *pmarks)
 {
-  dsyslog(LOG_INFO,"doOverlapDetection %d %d", numPicsBefore, numPicsAfter);
+  dsyslog("doOverlapDetection with %d pics before and %d pics after mark", numPicsBefore, numPicsAfter);
   int mostOk = 0;
   int mostOkCompStart = 0;
   int mostOkCmpStart = 0;
@@ -2387,8 +2487,8 @@ bool doOverlapDetection(pic_info *picsbefore, int numPicsBefore, pic_info *picsa
         bool compareOk = true;
         do
         {
-          bool simil = data->areSimilar(picsbefore[cmpCount].histogramm,picsafter[iCmpStart+cmpCount-compstart].histogramm);
-          //dsyslog(LOG_INFO, "doOverlapDetection, compare %3d %3d gives %d",picsbefore[cmpCount].framenum,picsafter[iCmpStart+cmpCount-compstart].framenum,simil);
+          bool simil = ndata->areSimilar(picsbefore[cmpCount].histogramm,picsafter[iCmpStart+cmpCount-compstart].histogramm);
+          //dsyslog( "doOverlapDetection, compare %3d %3d gives %d",picsbefore[cmpCount].framenum,picsafter[iCmpStart+cmpCount-compstart].framenum,simil);
           compareCount++;
           if( !simil )
           {
@@ -2415,19 +2515,19 @@ bool doOverlapDetection(pic_info *picsbefore, int numPicsBefore, pic_info *picsa
       }
     }
 
-    dsyslog(LOG_INFO,"doOverlapDetection #of compares %d",compareCount);
+    dsyslog("doOverlapDetection #of compares %d",compareCount);
 
-  dsyslog(LOG_INFO, "doOverlapDetection, posFound is %d %6d %6d, mostok is %3d at compstart %d iCmpStart %d",posFound, picsbefore[compstart].framenum,picsafter[iCmpStart].framenum-1, mostOk, mostOkCompStart, iCmpStart );
+  dsyslog( "doOverlapDetection, posFound is %d %6d %6d, mostok is %3d at compstart %d iCmpStart %d",posFound, picsbefore[compstart].framenum,picsafter[iCmpStart].framenum-1, mostOk, mostOkCompStart, iCmpStart );
   if(!posFound && mostOk >= OVERLAP_OK_FRAMES )
   {
     posFound = true;
     compstart = mostOkCompStart;
     iCmpStart = mostOkCmpStart;
   }
-  dsyslog(LOG_INFO, "doOverlapDetection, posFound is %d %6d %6d, mostok is %3d at compstart %d iCmpStart %d",posFound, picsbefore[compstart].framenum,picsafter[iCmpStart].framenum-1, mostOk, mostOkCompStart, iCmpStart );
+  dsyslog( "doOverlapDetection, posFound is %d %6d %6d, mostok is %3d at compstart %d iCmpStart %d",posFound, picsbefore[compstart].framenum,picsafter[iCmpStart].framenum-1, mostOk, mostOkCompStart, iCmpStart );
   if(posFound)
   {
-    dsyslog(LOG_INFO, "doOverlapDetection, %d %d",picsbefore[compstart+mostOk].framenum, picsafter[iCmpStart+mostOk].framenum );
+    dsyslog( "doOverlapDetection, %d %d",picsbefore[compstart+mostOk].framenum, picsafter[iCmpStart+mostOk].framenum );
     int newIndex = picsbefore[compstart+mostOk].framenum;
     newIndex = cIF->GetNextIFrame( newIndex, false, &FileNumber, &FileOffset, &Length, true);
     /*cIF->Get( newIndex, &FileNumber, &FileOffset, &PictureType, &Length);
@@ -2435,7 +2535,7 @@ bool doOverlapDetection(pic_info *picsbefore, int numPicsBefore, pic_info *picsa
       newIndex = cIF->GetNextIFrame( newIndex, true, &FileNumber, &FileOffset, &Length, true);*/
     if( newIndex > 0 && newIndex != (*m)->position)
     {
-      dsyslog(LOG_INFO, "do moveMark from %d to %d",(*m)->position, newIndex );
+      dsyslog( "do moveMark from %d to %d",(*m)->position, newIndex );
       char *nComment = NULL;
       asprintf(&nComment,"%s (%d)","moved from (%s) by doOverlapDetection",mostOk);
 
@@ -2452,7 +2552,7 @@ bool doOverlapDetection(pic_info *picsbefore, int numPicsBefore, pic_info *picsa
     newIndex = cIF->GetNextIFrame( picsafter[iCmpStart+mostOk].framenum, true, &FileNumber, &FileOffset, &Length, true);
     if( newIndex > 0 && newIndex != m2->position)
     {
-      dsyslog(LOG_INFO, "do moveMark from %d to %d",m2->position, newIndex );
+      dsyslog( "do moveMark from %d to %d",m2->position, newIndex );
       moveMark( pmarks, m2, newIndex, "moved from [%s] by doOverlapDetection");
     }
   }
@@ -2484,9 +2584,9 @@ void checkBlacklineOnmark(cMark *m, cMarks *marks, pic_info *picsafter, int iPic
     else
       notOkCount = 0;
     iPics--;
-    //dsyslog(LOG_INFO,"iPics is %d (frame %d) %3d %3d",iPics, picsafter[iPics].framenum,picsafter[iPics].topBlacklines,picsafter[iPics].botBlacklines);
+    //dsyslog("iPics is %d (frame %d) %3d %3d",iPics, picsafter[iPics].framenum,picsafter[iPics].topBlacklines,picsafter[iPics].botBlacklines);
   }while( iPics > 0 && notOkCount < NOTOKCOUNT );
-  //dsyslog(LOG_INFO,"checkBlacklineOnmark iPics is %d (frame %d)",iPics, picsafter[iPics+NOTOKCOUNT].framenum);
+  //dsyslog("checkBlacklineOnmark iPics is %d (frame %d)",iPics, picsafter[iPics+NOTOKCOUNT].framenum);
   if( iPics > 1 )
   {
     int iNextIFrame = cIF->GetNextIFrame( picsafter[iPics+5].framenum, true, &FileNumber, &FileOffset, &Length, true);
@@ -2501,7 +2601,7 @@ void checkBlacklineOnmark(cMark *m, cMarks *marks, pic_info *picsafter, int iPic
 // return 2 if mark is moved forward
 int checkScenecheckOnMark( cMarks *marks, cMark *m, pic_info *picsafter, int iPics)
 {
-  dsyslog(LOG_INFO, "checkScenecheckOnMark at %d for %d pics",m->position, iPics );
+  dsyslog( "checkScenecheckOnMark at %d for %d pics",m->position, iPics );
   //int iSceneCheckFrames = SCENECHECKFRAMES;
   if( iPics < 1000 )
      return 0;
@@ -2519,7 +2619,7 @@ int checkScenecheckOnMark( cMarks *marks, cMark *m, pic_info *picsafter, int iPi
   for( int i = 1; i < iPics; i++ )
   {
      int scsindex = i/FRAMESPERSEC;
-     if( !data->areSimilar(picsafter[i-1].histogramm,picsafter[i].histogramm) )
+     if( !ndata->areSimilar(picsafter[i-1].histogramm,picsafter[i].histogramm) )
      {
        ChangeFreq[scsindex].count++;
        ChangeFreq[scsindex].lastscenechange = picsafter[i-1].framenum;
@@ -2532,7 +2632,7 @@ int checkScenecheckOnMark( cMarks *marks, cMark *m, pic_info *picsafter, int iPi
        ChangeFreq[scsindex].lastblack = picsafter[i-1].framenum;
      }
   }
-  dsyslog(LOG_INFO, "checkScenecheckOnMark at %d, sceneChangesAfter %d ",m->position, sceneChangesAfter );
+  dsyslog( "checkScenecheckOnMark at %d, sceneChangesAfter %d ",m->position, sceneChangesAfter );
 
   int iScPos = 0;
   int iFirst5SecBlock=0;
@@ -2540,7 +2640,7 @@ int checkScenecheckOnMark( cMarks *marks, cMark *m, pic_info *picsafter, int iPi
   for( int i = 0 ; i < numscs; i++)
   {
     #ifdef VNOAD
-    dsyslog(LOG_INFO,"freq at %3d(%6d) is %3d %6d %3d %6d",i,i*FRAMESPERSEC+iStart,ChangeFreq[i].count, ChangeFreq[i].lastscenechange,ChangeFreq[i].blackcount,ChangeFreq[i].lastblack);
+    dsyslog("freq at %3d(%6d) is %3d %6d %3d %6d",i,i*FRAMESPERSEC+iStart,ChangeFreq[i].count, ChangeFreq[i].lastscenechange,ChangeFreq[i].blackcount,ChangeFreq[i].lastblack);
     #endif
     if( i < (SCENECHECKFRAMES/FRAMESPERSEC)-1 )
     {
@@ -2568,7 +2668,7 @@ int checkScenecheckOnMark( cMarks *marks, cMark *m, pic_info *picsafter, int iPi
     if( i10secChangeCount < 10 )
       iFirst10SecBlock = i;
   }
-  dsyslog(LOG_INFO,"iFirst10SecBlock %d",iFirst10SecBlock);
+  dsyslog("iFirst10SecBlock %d",iFirst10SecBlock);
 
 
   int sOfMark = (m->position-picsafter[0].framenum)/FRAMESPERSEC;
@@ -2586,8 +2686,8 @@ int checkScenecheckOnMark( cMarks *marks, cMark *m, pic_info *picsafter, int iPi
     for(int i = iFirst5SecBlock; i > 0 && iMarkpos == 0; i-- )
       iMarkpos = ChangeFreq[i].lastblack;
   }
-  dsyslog(LOG_INFO,"iScPos %d iFirst5SecBlock %d iBackBlack %d iForwardBlack %d",iScPos, iFirst5SecBlock, iBackBlack,iForwardBlack);
-  dsyslog(LOG_INFO,"iMarkpos %d ",iMarkpos);
+  dsyslog("iScPos %d iFirst5SecBlock %d iBackBlack %d iForwardBlack %d",iScPos, iFirst5SecBlock, iBackBlack,iForwardBlack);
+  dsyslog("iMarkpos %d ",iMarkpos);
   
   delete [] ChangeFreq;
   if( marks && iMarkpos )
@@ -2609,13 +2709,13 @@ int checkScenecheckOnMark( cMarks *marks, cMark *m, pic_info *picsafter, int iPi
 #define MAXBACK (45*FRAMESPERSEC)
 bool checkBlackFrameOnMarks(cMark *m, cMarks *marks, pic_info *picsafter, int iPics)
 {
-//  dsyslog(LOG_INFO, "checkBlackFrameOnMark at %d %s",m->position, bForward ? "forward":"backward" );
+//  dsyslog( "checkBlackFrameOnMark at %d %s",m->position, bForward ? "forward":"backward" );
   bool bForward = false;
-  dsyslog(LOG_INFO, "checkBlackFrameOnMark at %d %s",m->position, bForward ? "forward":"backward" );
+  dsyslog( "checkBlackFrameOnMark at %d %s",m->position, bForward ? "forward":"backward" );
 //  int iOffset = 0;
   int iBestPos = 0;
 //  int iEnd = m->position;
-//  int minlines = data->m_nGrabHeight*80/100;
+//  int minlines = ndata->m_nGrabHeight*80/100;
   bool bPosReset = true;
   bool doBlackFrameDetection = true;
   int iPos = m->position;
@@ -2646,10 +2746,10 @@ bool checkBlackFrameOnMarks(cMark *m, cMarks *marks, pic_info *picsafter, int iP
       while( index > istop && !iBestPos )
       {
         index--;
-        dsyslog(LOG_INFO, "checkBlackFrameOnMark frame %d bPosReset %d isBlankFrame %d",index, bPosReset, picsafter[index].isBlackFrame );
+        dsyslog( "checkBlackFrameOnMark frame %d bPosReset %d isBlankFrame %d",index, bPosReset, picsafter[index].isBlackFrame );
         if( picsafter[index].isBlackFrame )
         {
-          dsyslog(LOG_INFO, "set iBestPos to %d",index);
+          dsyslog( "set iBestPos to %d",index);
           iBestPos = picsafter[index].framenum;
         }
       }
@@ -2660,7 +2760,7 @@ bool checkBlackFrameOnMarks(cMark *m, cMarks *marks, pic_info *picsafter, int iP
       int newIndex = cIF->GetNextIFrame( iBestPos-1, true, &FileNumber, &FileOffset, &Length, true);
       if( newIndex > 0 )
       {
-        dsyslog(LOG_INFO, "do moveMark from %d to %d ",m->position, newIndex );
+        dsyslog( "do moveMark from %d to %d ",m->position, newIndex );
         moveMark( marks, m, newIndex, "moved from [%s] by checkBlackFrameOnMark");
       }
       return true;
@@ -2673,7 +2773,7 @@ bool checkBlackFrameOnMarks(cMark *m, cMarks *marks, pic_info *picsafter, int iP
 
 void checkMarkPair(cMark **m_org, cMarks *marks, cFileName *cfn)
 {
-  dsyslog(LOG_INFO,"checkMarkPair at %d", (*m_org)->position);
+  dsyslog("checkMarkPair at %d", (*m_org)->position);
 
   bool done = false;
   int iCount = 0;
@@ -2703,7 +2803,7 @@ void checkMarkPair(cMark **m_org, cMarks *marks, cFileName *cfn)
     cMark *m3 = marks->GetNext(m->position);
     if( m3 && iStartFrame+numFrames > m3->position )
       numFrames = m3->position -iStartFrame - 20;
-    dsyslog(LOG_INFO,"checkMarkPair read frames before first mark from %d ",iStartFrame);
+    dsyslog("checkMarkPair read frames before first mark from %d ",iStartFrame);
     numPicsBefore = getPicInfo(picsbefore, iStartFrame, numFrames, true, true, true );
     iStopFrame = iStartFrame + numFrames;
   }
@@ -2719,10 +2819,10 @@ void checkMarkPair(cMark **m_org, cMarks *marks, cFileName *cfn)
     int numFrames = PICS_READ_AFTER;
     cMark *m3 = marks->GetNext(m2->position);
     if( m3 )
-      dsyslog(LOG_INFO,"checkMarkPair m3pos is %d",m3->position);
+      dsyslog("checkMarkPair m3pos is %d",m3->position);
     if( m3 && iStartFrame+numFrames > (m3->position-25) )
       numFrames = m3->position - iStartFrame - 25;
-    dsyslog(LOG_INFO,"checkMarkPair read frames around second mark from %d",iStartFrame);
+    dsyslog("checkMarkPair read frames around second mark from %d",iStartFrame);
     numPicsAfter = getPicInfo(picsafter, iStartFrame, numFrames, true, true, true );
   }
 
@@ -2766,11 +2866,11 @@ void checkMarkPair(cMark **m_org, cMarks *marks, cFileName *cfn)
 
 void pass2a(cMarks *marks, cFileName *cfn)
 {
-  // prüfen auf Ränder
+  // prï¿½fen auf Rï¿½nder
   detectBlacklines(marks, cfn, iTopLines, iBottomLines);
   if( iTopLines < MINBLACKLINES || iBottomLines < MINBLACKLINES )
   {
-    dsyslog(LOG_INFO, "not enough Blacklines for further inspection" );
+    dsyslog( "not enough Blacklines for further inspection" );
     hasBlackLines = false;
   }
   else
@@ -2802,15 +2902,15 @@ void pass2a(cMarks *marks, cFileName *cfn)
   while( m != NULL )
   {
     iDiff = m->position - iLastPos;
-    asprintf(&cpos, "%s", m->ToText(false));
-    asprintf(&cdiff, "%s", IndexToHMSF(iDiff, false));
-    dsyslog(LOG_INFO, "Mark: %d %s #frames %d duration %s", m->position, cpos, iDiff, cdiff);
+    asprintf(&cpos, "%s", (const char *)m->ToText(false));
+    asprintf(&cdiff, "%s", (const char *)IndexToHMSF(iDiff, false));
+    dsyslog( "Mark: %d %s #frames %d duration %s", m->position, cpos, iDiff, cdiff);
     iLastPos = m->position;
     if( iDiff > 0 && iDiff < MINMARKDURATION )
     {
       if( mprev != NULL )
       {
-        dsyslog(LOG_INFO, "del Mark: %d ", mprev->position );
+        dsyslog( "del Mark: %d ", mprev->position );
         marks->Del(mprev);
         marks->Del(m);
         m = marks->GetNext(-1);
@@ -2829,7 +2929,7 @@ void pass2a(cMarks *marks, cFileName *cfn)
   listMarks(marks);
 }
 
-void calcSaving(cMarks *marks)
+void calcSaving(cMarks * /*marks*/)
 {
 /*
   m = marks->GetNext(-1);
@@ -2862,9 +2962,10 @@ void checkMarkByAudio(cMark **m_org, cMarks *marks, cFileName *cfn)
   current_playaudiocbf = scan_audio_stream_0;
   havesilence = false;
   lowvalcount = 0;
+  bTSFoundPayload = false;
   while(  (iCurrentFrame <= cIF->Last() && iCurrentFrame <= iEndFrame) )
   {
-    demuxFrame(cfn, cIF, iCurrentFrame++ );
+    demuxFrame(cfn, cIF, iCurrentFrame++,bTSFoundPayload ? 0 : DEMUX_RESET );
     iCurrentDecodedFrame = iCurrentFrame-1;
     if( havesilence )
     {
@@ -2873,7 +2974,7 @@ void checkMarkByAudio(cMark **m_org, cMarks *marks, cFileName *cfn)
       cframe = findVideoByPTS(audiopts, iCurrentFrame);
       if(cframe)
       {
-        dsyslog(LOG_INFO,"(loop)found silence in frame %d, videoframe is %d, diff is %d",iCurrentDecodedFrame,cframe,iCurrentFrame-iLastSilenceFrame);
+        dsyslog("(loop)found silence in frame %d, videoframe is %d, diff is %d",iCurrentDecodedFrame,cframe,iCurrentFrame-iLastSilenceFrame);
       }
       numsilence++;
       lastsilenceaudiopts = audiopts;
@@ -2885,9 +2986,9 @@ void checkMarkByAudio(cMark **m_org, cMarks *marks, cFileName *cfn)
   }
   ignorevideo = false;
   current_playaudiocbf = NULL;
-  dsyslog(LOG_INFO,"mark at %d checked for audio-silence",m->position);
-  dsyslog(LOG_INFO,"num silence = %d",numsilence);
-  dsyslog(LOG_INFO,"last silence in frame %d",iLastSilenceFrame);
+  dsyslog("mark at %d checked for audio-silence",m->position);
+  dsyslog("num silence = %d",numsilence);
+  dsyslog("last silence in frame %d",iLastSilenceFrame);
   if( numsilence > 3 )
   {
       cframe = cIF->GetNextIFrame( iLastSilenceFrame, true );
@@ -2913,7 +3014,7 @@ void checkMarkByAudio(cMark **m_org, cMarks *marks, cFileName *cfn)
 
 void pass3(cMarks *marks, cFileName *cfn)
 {
-  dsyslog(LOG_INFO,"start pass3 (audio-pass)");
+  dsyslog("start pass3 (audio-pass)");
   initAVCodec();
   cMark *m = marks->GetNext(-1);
   while( m != NULL )
@@ -2925,6 +3026,6 @@ void pass3(cMarks *marks, cFileName *cfn)
   }
   exitAVCodec();
   marks->Save();
-  dsyslog(LOG_INFO,"pass3 done");
+  dsyslog("pass3 done");
 }
 #endif //HAVE_LIBAVCODEC

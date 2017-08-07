@@ -3,7 +3,7 @@
                              -------------------
     begin                : Sun Mar 10 2002
     copyright            : (C) 2002/2004 by theNoad #709GRW
-    email                : theNoad@SoftHome.net
+    email                : theNoad@ulmail.net
  ***************************************************************************/
  /*
    this is tha main part of noad
@@ -25,6 +25,7 @@
 
 
 #include "mpeg2wrap.h"
+extern YUVBUF volatile lastYUVBuf;  // last yuvbuf from StdCallBack
 #include "vdr_cl.h"
 #include "noaddata.h"
 #include "ccontrol.h"
@@ -61,7 +62,7 @@
 #define AUDIO_CHECK_RANGE (FRAMESPERMIN * 2 + FRAMESPERSEC * 30)
 //#define AUDIO_CHECK_RANGE (FRAMESPERMIN * 3)
 
-extern noadData *data;
+extern noadData *ndata;
 extern CControl* cctrl;
 
 //statistic data
@@ -100,12 +101,12 @@ bool detectBlacklines(cMarks *marks, cFileName *cfn, int& iTopLines, int& iBotto
 void setCB_Func( cbfunc f );
 cbfunc getCB_Func(void);
 
-bool StdCallBack(void *buffer, int width, int height, void *yufbuf );
-int simpleCallback( void *buffer, int width, int height, void *yufbuf );
-int drawCallback( void *buffer, int width, int height, void *yufbuf );
-int BlacklineCallback( void *buffer, int width, int height, void *yufbuf );
-int BlackframeCallback( void *buffer, int width, int height, void *yufbuf );
-int checkCallback( void *buffer, int width, int height, void *yufbuf );
+bool StdCallBack(void *buffer, int width, int height, YUVBUF );
+int simpleCallback( void *buffer, int width, int height, YUVBUF );
+int drawCallback( void *buffer, int width, int height, YUVBUF );
+int BlacklineCallback( void *buffer, int width, int height, YUVBUF );
+int BlackframeCallback( void *buffer, int width, int height, YUVBUF );
+int checkCallback( void *buffer, int width, int height, YUVBUF );
 
 bool checkLogo(cFileName *cfn, int startpos);
 bool checkLogoShort(cFileName *cfn, int startpos);

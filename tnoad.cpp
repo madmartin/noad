@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2004 by the Noad                                        *
- *   theNoad@SoftHome.net                                                  *
+ *   theNoad@ulmail.net                                                  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -24,7 +24,7 @@
 
 extern int demux_track;
 extern int SysLogLevel;
-extern noadData *data;
+extern noadData *ndata;
 extern char *filename;
 extern cNoadIndexFile *cIF;
 extern cFileName *cfn;
@@ -37,15 +37,14 @@ extern int checkedFrames;
 
 extern uchar readBuffer[]; // frame-buffer
 extern int curIndex;         // current index
-extern uchar FileNumber;         // current file-number
-extern int FileOffset;           // current file-offset
-extern uchar PictureType;        // current picture-type
+extern uint16_t FileNumber;         // current file-number
+extern off_t FileOffset;           // current file-offset
+extern bool Independent;        // current picture-type
 extern int Length;               // frame-lenght of current frame
 extern uint8_t * end;            // pointer to frame-end
-extern void *lastYUVBuf;  // last yuvbuf from StdCallBack
 extern bool bMarkChanged;
 #ifdef VNOAD
-extern volatile bool bStop;
+extern bool volatile bStop;
 bool bTestMode = true;
 #else
 bool bStop = false;
@@ -111,13 +110,13 @@ void scanLoop(cMarks *marks)
     while(cIF->Last() < MINFRAMESTOSTART)
       cIF->CatchUp();
   }
-  xsyslog(LOG_INFO, "doOnlineScan: start scanLoop with %d frames", cIF->Last());
+  xsyslog("doOnlineScan: start scanLoop with %d frames", cIF->Last());
   marks->ClearList();
   bMarkChanged = true;
   if(cIF->Last() < MINFRAMESTOSTART)
   {
     int secs = (MINFRAMESTOSTART - cIF->Last()) / FRAMESPERSEC;
-    xsyslog(LOG_INFO, "scanLoop: go sleep for %d seconds",secs);
+    xsyslog("scanLoop: go sleep for %d seconds",secs);
     sleep(secs);
   }
   do
@@ -127,7 +126,7 @@ void scanLoop(cMarks *marks)
       cIF->CatchUp();
     if(cIF->Last()-lastFrameCount < NEWFRAMES)
     {
-       xsyslog(LOG_INFO, "scanLoop: go sleep for %d seconds",SLEEPTIME);
+       xsyslog("scanLoop: go sleep for %d seconds",SLEEPTIME);
        // sllep requested time - 2secs
        sleep(SLEEPTIME-1);
        // catchUp index-data
@@ -146,21 +145,23 @@ void scanLoop(cMarks *marks)
     lastFrameCount =  cIF->Last();
     #endif
     
-    xsyslog(LOG_INFO, "scanLoop: lastFrameCount %d logoDetectStart %d haveLogo %d haveAC3 %d iCurrentFrame %d",lastFrameCount, logoDetectStart,haveLogo, haveAC3, iCurrentFrame);
+    xsyslog("scanLoop: lastFrameCount %d logoDetectStart %d haveLogo %d haveAC3 %d iCurrentFrame %d",lastFrameCount, logoDetectStart,haveLogo, haveAC3, iCurrentFrame);
     // do logo-detection if necessary
     if( !haveLogo && !haveAC3 )
     {
-      //xsyslog(LOG_INFO, "scanLoop: ac3detection ac3DetectStart %d",ac3DetectStart);
+      //xsyslog("scanLoop: ac3detection ac3DetectStart %d",ac3DetectStart);
       if(useAudioDetection)
         haveAC3 = detect_ac3_51(ac3DetectStart);
       ac3DetectStart = cIF->Last();
-      //xsyslog(LOG_INFO, "scanLoop: ac3detection done, haveAC3= %d ac3DetectStart=%d",haveAC3,ac3DetectStart);
+      //xsyslog("scanLoop: ac3detection done, haveAC3= %d ac3DetectStart=%d",haveAC3,ac3DetectStart);
       if( !haveAC3 )
       {
         if( lastFrameCount - logoDetectStart >= FRAMES_TO_CHECK )
         {
+          demux_reset();
           reInitNoad( 0,0 );
-          xsyslog(LOG_INFO, "scanLoop: start logodetection at frame %d",logoDetectStart);
+          xsyslog("scanLoop: start logodetection at frame %d",logoDetectStart);
+          dodumpts=false;
           if( doLogoDetection(cfn, logoDetectStart ) )
           {
             //check logo from iLastIFrame for a least 100 frames!!
@@ -178,7 +179,8 @@ void scanLoop(cMarks *marks)
           }  
           else
             logoDetectStart += FRAMES_TO_CHECK;
-          xsyslog(LOG_INFO, "scanLoop: haveLogo %d",haveLogo);
+          dodumpts=false;
+          xsyslog("scanLoop: haveLogo %d",haveLogo);
         }
       }
     }
@@ -194,17 +196,20 @@ void scanLoop(cMarks *marks)
       current_audiocbf = audiocallback;
       cbfunc cbf_old = getCB_Func();
       setCB_Func(simpleCallback);
-      xsyslog(LOG_INFO,"scan audio from %d to %d",iCurrentFrame,cIF->Last());
+      xsyslog("scan audio from %d to %d",iCurrentFrame,cIF->Last());
       while(  iCurrentFrame < cIF->Last() /*&& !bStopAction*/ )
       {
         iCurrentDecodedAudioFrame = 0;
         while(  iCurrentFrame < cIF->Last() /*&& !bStopAction*/ && iCurrentDecodedAudioFrame == 0 )
         {
-          cIF->Get( iCurrentFrame, &FileNumber, &FileOffset, &PictureType, &Length);
+          cIF->Get( iCurrentFrame, &FileNumber, &FileOffset, &Independent, &Length);
           cfn->SetOffset( FileNumber, FileOffset);
           end = readBuffer + ReadFrame (cfn->File(), readBuffer, Length, MAXFRAMESIZE);
           iCurrentDecodedFrame = iCurrentFrame;
-          demux (readBuffer, end, 0);
+			 if( cfn->isPES() )
+				demuxPES (readBuffer, end, 0);
+			 else
+				demuxTS (readBuffer, end, 0);
           if( !iCurrentDecodedAudioFrame )
             iCurrentFrame++;
         }
@@ -226,7 +231,7 @@ void scanLoop(cMarks *marks)
               if( iNextIframe > 0 )
               {
                 iLastLogoFrame = iNextIframe;
-                xsyslog(LOG_INFO, "AudioChanged: iLastLogoFrame=%6d, audio changed from %d to %d ", iLastLogoFrame, oldac3mode,ac3mode_help);
+                xsyslog("AudioChanged: iLastLogoFrame=%6d, audio changed from %d to %d ", iLastLogoFrame, oldac3mode,ac3mode_help);
                 //MarkToggle(pmarks, iLastLogoFrame, "audio-change");
                 MarkToggle(marks, iLastLogoFrame, ac3mode_help != 51 ? "ac3 lost" : "ac3 start");
                 bMarkChanged = true;
@@ -250,14 +255,14 @@ void scanLoop(cMarks *marks)
     }
     else if( haveLogo )
     {
-      xsyslog(LOG_INFO, "scanLoopx: iCurrentFrame %d cIF->Last() %d iState  %d iLastLogoPos %d",iCurrentFrame,cIF->Last(),iState,iLastLogoPos);
+      xsyslog("scanLoopx: iCurrentFrame %d cIF->Last() %d iState  %d iLastLogoPos %d",iCurrentFrame,cIF->Last(),iState,iLastLogoPos);
       while(  iCurrentFrame < cIF->Last() && iCurrentFrame >= 0 && iState != -1 )
       {
         iOldState = iState;
         iLastStartFrame = iCurrentFrame;
-        xsyslog(LOG_INFO, "findLogoChange with iState=%d oldstate=%d currentFrame=%d", iState, iOldState, iCurrentFrame);
+        xsyslog("findLogoChange with iState=%d oldstate=%d currentFrame=%d", iState, iOldState, iCurrentFrame);
         iState = findLogoChange(cfn, iState, iCurrentFrame, BIGSTEP );
-        xsyslog(LOG_INFO, "StateChanged: newstate=%d oldstate=%d currentFrame=%d", iState, iOldState, iCurrentFrame);
+        xsyslog("StateChanged: newstate=%d oldstate=%d currentFrame=%d", iState, iOldState, iCurrentFrame);
         if( iState < 0 )
         {
           iState = iOldState;
@@ -275,8 +280,10 @@ void scanLoop(cMarks *marks)
             iCurrentFrame = iStopFrame;
           int logostabletime = LOGOSTABLETIME;
           if( !iState )
+          {
             if( isNelonen )
               logostabletime = LOGOSTABLETIME/2;
+          }
           else
               logostabletime = 0;
           if( iCurrentFrame + MINFORWARDFRAMES > cIF->Last() )
@@ -310,19 +317,19 @@ void scanLoop(cMarks *marks)
               iLastLogoPos = 0;
             
             iStopFrame = iLastLogoFrame;
-            xsyslog(LOG_INFO,"toggle mark at %d",iLastLogoFrame);
+            xsyslog("toggle mark at %d",iLastLogoFrame);
           }
         }
       }
       if( iCurrentFrame < 0 )
         iCurrentFrame = cIF->Last();
-      xsyslog(LOG_INFO,"nach detect iState %d",iState);
+      xsyslog("nach detect iState %d",iState);
       if( iState == 1 )
         iLastLogoPos = iCurrentFrame;
     }
     if( marks->Count() != lastMarkCount )
     {
-      xsyslog(LOG_INFO,"scanloop: %d new marks",marks->Count()-lastMarkCount);
+      xsyslog("scanloop: %d new marks",marks->Count()-lastMarkCount);
       lastMarkCount = marks->Count();
       int oldloglevel = SysLogLevel;
       SysLogLevel=3;
@@ -338,8 +345,8 @@ void scanLoop(cMarks *marks)
       lastMarkCount = marks->Count();
       if( marksChecked != lastMarkCount )
       {
-        xsyslog(LOG_INFO,"scanloop: %d marks to check",lastMarkCount-marksChecked);
-        cMark *m = ((cList<cMark>*)marks)->Get(1);
+        xsyslog("scanloop: %d marks to check",lastMarkCount-marksChecked);
+        //cMark *m = ((cList<cMark>*)marks)->Get(1);
         marksChecked = lastMarkCount;
       }
     }
@@ -373,33 +380,35 @@ void scanLoop(cMarks *marks)
     {
       haveLogo = haveAC3 = false;
       logoDetectStart = ac3DetectStart = iLastLogoPos+15;
-      xsyslog(LOG_INFO,"scanloop: set haveLogo/haveAC3 to false cause timeout, iLastLogoPos=%d",iLastLogoPos);
+      xsyslog("scanloop: set haveLogo/haveAC3 to false cause timeout, iLastLogoPos=%d",iLastLogoPos);
     }
   } while( !scanDone && !bStop );
   if( bTestMode )
     cIF->setInterval(0);
-  xsyslog(LOG_INFO, "doOnlineScan: end scanLoop");
+  xsyslog("doOnlineScan: end scanLoop");
 }
 
 int doOnlineScan(noadData *thedata, const char *fName, cMarks *_marks )
 {
-  xsyslog(LOG_INFO, "doOnlineScan %s", fName);
+  xsyslog("doOnlineScan %s", fName);
   cMarks *pmarks = NULL;
   cMarks *localMarks = NULL;
+  isOnlinescan=true;
+
   #ifdef VNOAD
   if( make_pidfile(fName) < 0 )
   {
-    xsyslog(LOG_INFO, "doOnlineScan: PidFile-error, delete PidFile and try again");
+    xsyslog("doOnlineScan: PidFile-error, delete PidFile and try again");
     rm_pidfile(fName);
     if( make_pidfile(fName) < 0 )
     {
-      xsyslog(LOG_INFO, "doOnlineScan: PidFile-error");
+      xsyslog("doOnlineScan: PidFile-error");
       return(-1);
     }
   }
   #endif
   filename = (char *)fName;
-  data = thedata;
+  ndata = thedata;
   #ifndef VNOAD
   demux_track = 0xe0;
   mpeg2dec = mpeg2_init();
@@ -412,21 +421,27 @@ int doOnlineScan(noadData *thedata, const char *fName, cMarks *_marks )
   clearStats();
   #ifndef VNOAD
   // open the cIndexFile for the record
-  cIF = new cNoadIndexFile(filename,false);
+  bool isPES = isPESRecording(filename);
+  cIF = new cNoadIndexFile(filename,false, isPES);
   if( cIF == NULL )
     return -1;
   #endif
   totalFrames = cIF->Last();
   #ifndef VNOAD
   // open the record
-  cfn = new cFileName(filename, false);
+  cfn = new cFileName(filename, false, false, isPES );
   if( cfn->Open() < 0 )
   {
     delete cfn;
     delete cIF;
+    isOnlinescan=false;
     return -1;
   }
   demux_track = getVStreamID(cfn->File());
+  if( isPES )
+      demux_pid = 0;
+  else
+     demux_pid = getTSPID(cfn->File());
   #endif
   
   if( _marks )
@@ -434,7 +449,7 @@ int doOnlineScan(noadData *thedata, const char *fName, cMarks *_marks )
   else
   {
     pmarks = localMarks = new cMarks();
-    pmarks->Load(filename);
+    pmarks->Load(filename,DEFAULTFRAMESPERSECOND,cfn->isPES());
   }  
   scanLoop(pmarks);
   
@@ -453,6 +468,7 @@ int doOnlineScan(noadData *thedata, const char *fName, cMarks *_marks )
   {
     noadEndMessage(filename);
   }
+  isOnlinescan=false;
   #ifdef VNOAD
   rm_pidfile(fName);
   #endif

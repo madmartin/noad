@@ -24,9 +24,9 @@
 #include <syslog.h>
 extern int SysLogLevel;
 
-#define esyslog(a...) void( (SysLogLevel > 0) ? syslog(a) : void() )
-#define isyslog(a...) void( (SysLogLevel > 1) ? syslog(a) : void() )
-#define dsyslog(a...) void( (SysLogLevel > 2) ? syslog(a) : void() )
+//#define esyslog(a...) void( (SysLogLevel > 0) ? syslog(a) : void() )
+//#define isyslog(a...) void( (SysLogLevel > 1) ? syslog(a) : void() )
+//#define dsyslog(a...) void( (SysLogLevel > 2) ? syslog(a) : void() )
 
 
 CCheckLogo::CCheckLogo( noadData* data ){
@@ -35,12 +35,13 @@ CCheckLogo::CCheckLogo( noadData* data ){
 
   // allocate and set memory of view analyse data **************
   #ifdef VNOAD
-  m_chAnalyseData = new char[m_pData->m_nSizeX*m_pData->m_nSizeY];
-  memset(m_chAnalyseData, 0, m_pData->m_nSizeX*m_pData->m_nSizeY);
-  m_chAnalyseData2 = new char[m_pData->m_nSizeX*m_pData->m_nSizeY];
-  memset(m_chAnalyseData2, 255, m_pData->m_nSizeX*m_pData->m_nSizeY);
-  m_chAnalyseData3 = new char[m_pData->m_nSizeX*m_pData->m_nSizeY];
-  memset(m_chAnalyseData3, 128, m_pData->m_nSizeX*m_pData->m_nSizeY);
+  m_chAnalyseDataSize = m_pData->m_nSizeX*m_pData->m_nSizeY;
+  m_chAnalyseData = new unsigned char[m_chAnalyseDataSize];
+  memset(m_chAnalyseData, 0, m_chAnalyseDataSize);
+  m_chAnalyseData2 = new unsigned char[m_chAnalyseDataSize];
+  memset(m_chAnalyseData2, 255, m_chAnalyseDataSize);
+  m_chAnalyseData3 = new unsigned char[m_chAnalyseDataSize];
+  memset(m_chAnalyseData3, 128, m_chAnalyseDataSize);
   #endif
 
   m_linehook = NULL;
@@ -136,13 +137,15 @@ void CCheckLogo::newData()
 }
 
 #define MIN_DIFF 5
-int CCheckLogo::checkTestlines( char* chSrc, struct testlines* tl, int yoffset, int xoffset )
+int CCheckLogo::checkTestlines( char* chSrc, struct testlines* tl, int yoffset, int /*xoffset*/ )
 {
   //syslog(LOG_INFO,"CCheckLogo::checkTestlines %p %p %d %d",chSrc, tl, yoffset, xoffset);
   int sizeY = m_pData->m_nSizeY;
   int sizeX = m_pData->m_nSizeX;
   #ifdef VNOAD
-  // ** copy picture to analyse view picture **
+  //  copy picture to analyse view picture 
+  if( m_chAnalyseDataSize != sizeX*sizeY )
+	  exit(-1);
   memcpy( m_chAnalyseData, chSrc, sizeX*sizeY );
   memset(m_chAnalyseData2, 255, sizeX*sizeY);
   memset(m_chAnalyseData3, 128, sizeX*sizeY);
@@ -159,32 +162,39 @@ int CCheckLogo::checkTestlines( char* chSrc, struct testlines* tl, int yoffset, 
     pair = tl->pair;
     while ( pair )
     {
-      int lineOffset = sizeX*(line+yoffset);
+      int aLineOffset = m_pData->m_nSizeX*(line);
       int xpos = pair->x_pos;
       int xneg = pair->x_neg;
-      #ifdef VNOAD
-      m_chAnalyseData3[lineOffset+xpos] = 255;
-      m_chAnalyseData3[lineOffset+xneg] = 0;
+		#ifdef VNOAD
+			if( aLineOffset+xpos >= m_chAnalyseDataSize  )
+				exit(-1);
+			if( aLineOffset+xneg >= m_chAnalyseDataSize  )
+				exit(-1);
+			if( xneg < 0 || aLineOffset < 0 )
+				exit(-1);
+      m_chAnalyseData3[aLineOffset+xpos] = 255;
+      m_chAnalyseData3[aLineOffset+xneg] = 0;
       #endif
+		int lineOffset = sizeX*(line+yoffset);
       nSumPair++;
-      fTempPos = (unsigned char)chSrc[lineOffset+xpos+2]
-               - (unsigned char)chSrc[lineOffset+xpos];
-      fTempNeg = (unsigned char)chSrc[lineOffset+xneg+2]
-               - (unsigned char)chSrc[lineOffset+xneg];
+      fTempPos = (float)((unsigned char)chSrc[lineOffset+xpos+2]
+               - (unsigned char)chSrc[lineOffset+xpos]);
+      fTempNeg = (float)((unsigned char)chSrc[lineOffset+xneg+2]
+               - (unsigned char)chSrc[lineOffset+xneg]);
       if ( fTempPos >= MIN_DIFF && fTempNeg <= -MIN_DIFF ){
          // ** the considered pair is ok *************
          nRestPair++;
-         #ifdef VNOAD
-         // ** set them to the view **
-         m_chAnalyseData[lineOffset+xpos] = 255;
-         m_chAnalyseData[lineOffset+xneg] = 255;
-         m_chAnalyseData2[lineOffset+xpos] = 0;
-         m_chAnalyseData2[lineOffset+xneg] = 0;
+			#ifdef VNOAD
+         // set them to the view 
+         m_chAnalyseData[aLineOffset+xpos] = 255;
+         m_chAnalyseData[aLineOffset+xneg] = 255;
+         m_chAnalyseData2[aLineOffset+xpos] = 0;
+         m_chAnalyseData2[aLineOffset+xneg] = 0;
          #endif
       }
       else {
-        // ** check if the area is to dark or to bright **
-        // ** check both points of pos and neg positions *
+        // check if the area is to dark or to bright 
+        // check both points of pos and neg positions 
         if ( (unsigned char)chSrc[lineOffset+xpos] >   200 ||
              (unsigned char)chSrc[lineOffset+xpos+1] > 200 ||
              (unsigned char)chSrc[lineOffset+xneg] >   200 ||
@@ -361,8 +371,8 @@ void CCheckLogo::log()
   int line;
   testpair* pair = NULL;
 
-  dsyslog( LOG_INFO, "    m_nNoLogo %d", m_nNoLogo);
-  dsyslog( LOG_INFO, "    m_nLogo %d", m_nLogo);
+  dsyslog("    m_nNoLogo %d", m_nNoLogo);
+  dsyslog("    m_nLogo %d", m_nLogo);
 
   line = 0;
   while ( tl )
@@ -370,12 +380,12 @@ void CCheckLogo::log()
     line++;
     tl= tl->next;
   }
-  dsyslog( LOG_INFO, "    n_lines %d", line);
+  dsyslog("    n_lines %d", line);
   tl = m_linehook;
   while ( tl )
   {
     line = tl->line;
-    dsyslog( LOG_INFO, "    line %d", line );
+    dsyslog("    line %d", line );
     pair = tl->pair;
     int iPairCount = 0;
     while ( pair )
@@ -383,12 +393,12 @@ void CCheckLogo::log()
       iPairCount++;
       pair = pair->next;
     }
-    dsyslog( LOG_INFO, "    n_pairs %d", iPairCount);
+    dsyslog("    n_pairs %d", iPairCount);
     pair = tl->pair;
     while ( pair )
     {
-      dsyslog( LOG_INFO, "    pair_x_pos %d", pair->x_pos );
-      dsyslog( LOG_INFO, "    pair_x_neg %d", pair->x_neg );
+      dsyslog("    pair_x_pos %d", pair->x_pos );
+      dsyslog("    pair_x_neg %d", pair->x_neg );
       pair = pair->next;
     }
     tl= tl->next;

@@ -36,18 +36,17 @@ class CToolBox {
 public:
 
   /** constructor */
-	CToolBox();
+  CToolBox();
   /** destructor */
   ~CToolBox();
   /** filter_tp chSrc to chDest with nSize and
     * feedback coefficient fC2
     */
-  void filter_tp( char* chDest, char* chSrc, int nSize, float fC2);
+  void filter_tp( char* chDest, char* chSrc, int nSize/*, float fC2*/);
   /** returns average of chSrc with size nSize  */
   int getAverage( char* chSrc, int nSize );	
   /** filter one byte */
-  void filter_tp( char* chDest, char* chSrc, float fC2 );
-
+  void filter_tp( char* chDest, char* chSrc/*, float fC2*/ );
 };
 
 #endif

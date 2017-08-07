@@ -1,15 +1,19 @@
 #include "audiotools.h"
 
+bool havesilence = false;
 #ifdef HAVE_LIBAVCODEC
 
 #include "mpeg2wrap.h"
-#include "avcodec.h"
+extern "C"
+{
+   #include "avcodec.h"
+}
 
 #define MIN_LOWVALS 3
 #define CUT_VAL 10
 int lowvalcount = 0;
 double lastsampleoffset=0.0;
-bool havesilence = false;
+//bool havesilence = false;
 uint8_t *inbuf_ptr;
 int out_size, size, len;
 AudioInfo _ai;
@@ -97,7 +101,7 @@ int scan_audio_stream_0(unsigned char *mbuf, int count)
   inbuf_ptr = mbuf;
   while (size > 0) 
   {
-    len = avcodec_decode_audio(c, (short *)outbuf, &out_size, 
+    len = avcodec_decode_audio2(c, (short *)outbuf, &out_size, 
                                   inbuf_ptr, size);
     if (len < 0) 
     {

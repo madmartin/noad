@@ -102,7 +102,7 @@ void writeStatistic(const char *statfilename, const char *recording)
       hasOverlaps?"yes":"no",
       picWidth,picHeight,
       totalFrames,
-      IndexToHMSF(totalFrames,false),
+      (const char *)IndexToHMSF(totalFrames,false),
       totalDecodedFrames,
       decodedFramesForLogoDetection,
       secsForLogoDetection,
@@ -341,8 +341,8 @@ int main(int argc, char *argv[], char *envp[])
         doPass3 = true;
       #else
         fprintf(stderr,"--asd given, but not compiled with ffmpeg-support\n--asd will be ignored\n");
-        esyslog(LOG_ERR, "--asd given, but not compiled with ffmpeg-support");
-        esyslog(LOG_ERR, "--asd will be ignored");
+        esyslog("--asd given, but not compiled with ffmpeg-support");
+        esyslog("--asd will be ignored");
       #endif
       break;
       
@@ -351,13 +351,13 @@ int main(int argc, char *argv[], char *envp[])
         pass3only = true;
       #else
         fprintf(stderr,"--pass3only given, but not compiled with ffmpeg-support\n--pass3only will be ignored\n");
-        esyslog(LOG_ERR, "--pass3only given, but not compiled with ffmpeg-support");
-        esyslog(LOG_ERR, "--pass3only will be ignored");
+        esyslog("--pass3only given, but not compiled with ffmpeg-support");
+        esyslog("--pass3only will be ignored");
       #endif
       break;
       
       default:
-        printf ("?? getopt returned character code 0%o ??(option_index %d)\n", c,option_index);
+        printf ("? getopt returned character code 0%o ?(option_index %d)\n", c,option_index);
     }
   }
 
@@ -416,8 +416,8 @@ int main(int argc, char *argv[], char *envp[])
     // and online is not set
     if( bBefore && !bOnline )
     {
-      syslog(LOG_INFO, "noad called with 'before' and online=%d and liverecording is %s",onlinemode,(strchr(recDir,'@')?"yes":"no"));
-      syslog(LOG_INFO, "nothing to do yet");
+      syslog(LOG_INFO,"noad called with 'before' and online=%d and liverecording is %s",onlinemode,(strchr(recDir,'@')?"yes":"no"));
+      syslog(LOG_INFO,"nothing to do yet");
       return 0;
     }
 
@@ -430,18 +430,18 @@ int main(int argc, char *argv[], char *envp[])
       if (pid < 0)
       {
         fprintf(stderr, "%m\n");
-        esyslog(LOG_ERR, "fork ERROR: %m");
+        esyslog("fork ERROR: %m");
         return 2;
       }
       if (pid != 0)
       {
-        syslog(LOG_INFO, "noad forked to pid %d",pid);
+        syslog(LOG_INFO,"noad forked to pid %d",pid);
         return 0; // initial program immediately returns
       }
     }
     if(bBefore)
     {
-      syslog(LOG_INFO, "wait %d secs for vdr creating directory",INITIAL_WAIT_TIME);
+      syslog(LOG_INFO,"wait %d secs for vdr creating directory",INITIAL_WAIT_TIME);
       sleep(INITIAL_WAIT_TIME);
     }
     if( !bNoPid )
@@ -459,15 +459,15 @@ int main(int argc, char *argv[], char *envp[])
             i++;
             if( i > 3 )
             {
-              syslog(LOG_INFO, "online-noad didn't stop, give up");
+              syslog(LOG_INFO,"online-noad didn't stop, give up");
               exit(-1);
             }
             if( i > 2 )
             {
               int killerr = kill(olPid,SIGUSR1);
-              syslog(LOG_INFO, "online-noad didn't stop, try to kill it(result:%d)",killerr);
+              syslog(LOG_INFO,"online-noad didn't stop, try to kill it(result:%d)",killerr);
             }
-            syslog(LOG_INFO, "wait 120 secs for stop of online-noad");
+            syslog(LOG_INFO,"wait 120 secs for stop of online-noad");
             sleep(120);
           }
           else
@@ -548,13 +548,13 @@ int main(int argc, char *argv[], char *envp[])
       int oldErrno = errno;
       if( errno == EPERM || errno == EACCES )
       {
-        esyslog(LOG_ERR, "ERROR: nice %d: no super-user rights",niceLevel);
+        esyslog("ERROR: nice %d: no super-user rights",niceLevel);
         errno = oldErrno;
         fprintf(stderr, "nice %d: no super-user rights\n",niceLevel);
       }
       else if( niceErr != niceLevel )
       {
-        esyslog(LOG_ERR, "nice ERROR(%d,%d): %m",niceLevel,niceErr);
+        esyslog("nice ERROR(%d,%d): %m",niceLevel,niceErr);
         errno = oldErrno;
         fprintf(stderr, "%d %d %m\n",niceErr,errno);
       }

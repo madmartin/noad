@@ -31,7 +31,7 @@ CToolBox::~CToolBox()
   * filter_tp chSrc to chDest with nSize and
   * feedback coefficient fC2
   */
-void CToolBox::filter_tp( char* chDest, char* chSrc, int nSize, float fC2){
+void CToolBox::filter_tp( char* chDest, char* chSrc, int nSize/*, float fC2*/){
 
   #if 1
   int nRun;
@@ -75,7 +75,7 @@ int CToolBox::getAverage( char* chSrc, int nSize ){
 }
 
 /** filter one byte */
-void CToolBox::filter_tp( char* chDest, char* chSrc, float fC2 ){
+void CToolBox::filter_tp( char* chDest, char* chSrc /*, float fC2*/ ){
 
   #if 1
    unsigned char fData = (unsigned char) *chSrc;

@@ -74,18 +74,19 @@ private:
 //  MyNoadDoc* m_pDoc;
   noadData* m_pData;
   #ifdef VNOAD
-  /**  temp buffer of data to show */
-  char* m_chAnalyseData;
-  char* m_chAnalyseData2;
-  char* m_chAnalyseData3;
+  //  temp buffer of data to show 
+  unsigned char* m_chAnalyseData;
+  unsigned char* m_chAnalyseData2;
+  unsigned char* m_chAnalyseData3;
+  int  m_chAnalyseDataSize;
   #endif
-  /** value of detected nologo one after another */
+  // value of detected nologo one after another 
   int m_nNoLogo;
-  /** value of detected logo one after another */
+  // value of detected logo one after another 
   int m_nLogo;
-  /** pointer to the testpoints */
+  // pointer to the testpoints 
   struct testlines* m_linehook;
-  /** pointer to the picture corner which is set from ccontrol */
+  // pointer to the picture corner which is set from ccontrol 
   char* m_chCornerData;
   int iTreshold;
   
@@ -94,17 +95,14 @@ private:
   int totalChecks;
 
 public:
-  /** signal logo emitted if logo is detected */
+  // signal logo emitted if logo is detected 
   void logo();
-  /** signal nologo emitted of no logo detected */
+  // signal nologo emitted of no logo detected 
   void nologo();
-  /** signal unknown emitted if there are not enough
-    * test pairs available at the moment
-    * -> the picture is to bright !
-    */
+  // signal unknown emitted if there are not enough
+  // test pairs available at the moment
+  //   -> the picture is to bright !
   void unknown();
-
-
 };
 
 #endif

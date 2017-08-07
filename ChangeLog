@@ -1,3 +1,9 @@
+Version 0.6.1
+- fixed a bug with using -O and no running vdr is found
+  (thanks to Helmut Auer for sending a patch)
+- implemented new function for file-io based
+  on a patch from Ralf Müller (see readme)
+
 Version 0.6.0
 - add audio-silence-detection
 - add check for ac3-scan

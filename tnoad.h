@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2004 by theNoad #709GRW                                 *
- *   theNoad@SoftHome.net                                                  *
+ *   theNoad@ulmail.net                                                  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *

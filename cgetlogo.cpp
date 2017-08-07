@@ -74,7 +74,7 @@ void CGetLogo::newData()
       if ( m_nFilteredCorner < m_pData->m_nFilterFrames )
       {
          tool.filter_tp( m_chFilterData, m_chRefPicture,
-                         m_pData->m_nSizeX*m_pData->m_nSizeY, m_pData->m_fMainFilter );
+                         m_pData->m_nSizeX*m_pData->m_nSizeY/*, m_pData->m_fMainFilter*/ );
          m_nFilteredCorner++;
       }
       else
@@ -278,8 +278,8 @@ void CGetLogo::setDiversions( char* chSrc )
      for ( x=0; x<sizeX-2; x++ )
      {
          int offset = y*sizeX;
-         fTemp = (unsigned char)chSrc[offset+x+2]  // check this
-                -(unsigned char)chSrc[offset+x];
+         fTemp = (float)((unsigned char)chSrc[offset+x+2]  // check this
+                -(unsigned char)chSrc[offset+x]);
          if ( fTemp > 0 )
             chSrc[offset+x] = 1;
          if ( fTemp < 0 )
@@ -315,8 +315,8 @@ int CGetLogo::updateDiversions( char* chMask, char* chSrc )
          {
            if ( mask == 1 )
            {
-               fTemp = (unsigned char)chSrc[offset+x+2]
-                      -(unsigned char)chSrc[offset+x];
+               fTemp = (float)((unsigned char)chSrc[offset+x+2]
+                      -(unsigned char)chSrc[offset+x]);
                if ( fTemp <= 0 )
                   chMask[offset+x] = 0;
                else
@@ -324,8 +324,8 @@ int CGetLogo::updateDiversions( char* chMask, char* chSrc )
            }
            if ( mask == 2 )
            {
-              fTemp = (unsigned char)chSrc[offset+x+2]
-                     -(unsigned char)chSrc[offset+x];
+              fTemp = (float)((unsigned char)chSrc[offset+x+2]
+                     -(unsigned char)chSrc[offset+x]);
               if ( fTemp >= 0 )
                     chMask[offset+x] = 0;
               else

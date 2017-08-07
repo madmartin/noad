@@ -17,9 +17,10 @@
 #include <time.h>
 #include <unistd.h>
 #include <execinfo.h>
+#include <signal.h>
+#include <stdarg.h>
 
 extern int SysLogLevel;
-
 #ifdef AVOID_TRASHING
 
 struct tUsageRange {
@@ -82,7 +83,7 @@ ssize_t ReadStream(int fd, void* Buffer, size_t Size)
      if (bytesRead > 0) {
         pos += bytesRead;
         StreamRanges[fd].end = pos;
-        posix_fadvise(fd, pos, READ_AHEAD, POSIX_FADV_WILLNEED);
+//         posix_fadvise(fd, pos, READ_AHEAD, POSIX_FADV_WILLNEED);
         StreamRanges[fd].ahead = pos + READ_AHEAD;
         }
      else {
@@ -158,61 +159,6 @@ int CloseStream(int fd)
   return close(fd);
 }
 
-#else
-int OpenStream(const char* PathName, int Flags, mode_t Mode)
-{
-  int retVal=open(PathName, Flags, Mode);
-  return retVal;
-}
-
-int OpenStream(const char* PathName, int Flags)
-{
-  int retVal=open(PathName, Flags);
-  return retVal;
-}
-
-ssize_t ReadStream(int filedes, void* buffer, size_t size)
-{
-  for (;;)
-  {
-    ssize_t p = read(filedes, buffer, size);
-    if (p < 0 && errno == EINTR)
-    {
-      dsyslog(LOG_INFO, "EINTR while reading from file handle %d - retrying", filedes);
-      continue;
-    }
-    return p;
-  }
-}
-
-ssize_t WriteStream(int filedes, const void* buffer, size_t size)
-{
-  ssize_t p = 0;
-  ssize_t written = size;
-  const unsigned char *ptr = (const unsigned char *)buffer;
-  while (size > 0)
-  {
-    p = write(filedes, ptr, size);
-    if (p < 0)
-    {
-      if (errno == EINTR)
-      {
-        dsyslog(LOG_INFO, "EINTR while writing to file handle %d - retrying", filedes);
-        continue;
-      }
-      break;
-    }
-    ptr  += p;
-    size -= p;
-  }
-  return p < 0 ? p : written;
-}
-
-int CloseStream(int fd)
-{
-  return close(fd);
-}
-
 #endif // AVOID_TRASHING
 
 
@@ -223,7 +169,7 @@ ssize_t safe_read(int filedes, void *buffer, size_t size)
     ssize_t p = read(filedes, buffer, size);
     if (p < 0 && errno == EINTR)
     {
-      dsyslog(LOG_INFO, "EINTR while reading from file handle %d - retrying", filedes);
+      dsyslog("EINTR while reading from file handle %d - retrying", filedes);
       continue;
     }
     return p;
@@ -242,7 +188,7 @@ ssize_t safe_write(int filedes, const void *buffer, size_t size)
     {
       if (errno == EINTR)
       {
-        dsyslog(LOG_INFO, "EINTR while writing to file handle %d - retrying", filedes);
+        dsyslog("EINTR while writing to file handle %d - retrying", filedes);
         continue;
       }
       break;
@@ -280,7 +226,7 @@ char *strcpyrealloc(char *dest, const char *src)
     if (dest)
       strcpy(dest, src);
     else
-      esyslog(LOG_ERR, "ERROR: out of memory");
+      esyslog( "ERROR: out of memory");
   }
   else
   {
@@ -453,7 +399,7 @@ bool isnumber(const char *s)
   return true;
 }
 
-const char *AddDirectory(const char *DirName, const char *FileName)
+cString AddDirectory(const char *DirName, const char *FileName)
 {
   static char *buf = NULL;
   delete buf;
@@ -489,10 +435,10 @@ bool DirectoryOk(const char *DirName, bool LogErrors)
       if (access(DirName, R_OK | W_OK | X_OK) == 0)
         return true;
       else if (LogErrors)
-        esyslog(LOG_ERR, "ERROR: can't access %s", DirName);
+        esyslog( "ERROR: can't access %s", DirName);
     }
     else if (LogErrors)
-      esyslog(LOG_ERR, "ERROR: %s is not a directory", DirName);
+      esyslog( "ERROR: %s is not a directory", DirName);
   }
   else if (LogErrors)
     LOG_ERROR_STR(DirName);
@@ -513,7 +459,7 @@ bool MakeDirs(const char *FileName, bool IsDirectory)
     struct stat fs;
     if (stat(s, &fs) != 0 || !S_ISDIR(fs.st_mode))
     {
-      dsyslog(LOG_INFO, "creating directory %s", s);
+      dsyslog( "creating directory %s", s);
       if (mkdir(s, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) == -1)
       {
         LOG_ERROR_STR(s);
@@ -560,15 +506,15 @@ bool RemoveFileOrDir(const char *FileName, bool FollowSymlinks)
               else if (n < size)
               {
                 l[n] = 0;
-                dsyslog(LOG_INFO, "removing %s", l);
+                dsyslog( "removing %s", l);
                 if (remove(l) < 0)
                   LOG_ERROR_STR(l);
               }
               else
-                esyslog(LOG_ERR, "ERROR: symlink name length (%d) exceeded anticipated buffer size (%d)", n, size);
+                esyslog( "ERROR: symlink name length (%d) exceeded anticipated buffer size (%d)", n, size);
               delete l;
             }
-            dsyslog(LOG_INFO, "removing %s", buffer);
+            dsyslog( "removing %s", buffer);
             if (remove(buffer) < 0)
               LOG_ERROR_STR(buffer);
             delete buffer;
@@ -582,7 +528,7 @@ bool RemoveFileOrDir(const char *FileName, bool FollowSymlinks)
         return false;
       }
     }
-    dsyslog(LOG_INFO, "removing %s", FileName);
+    dsyslog( "removing %s", FileName);
     if (remove(FileName) < 0)
     {
       LOG_ERROR_STR(FileName);
@@ -633,7 +579,7 @@ bool RemoveEmptyDirectories(const char *DirName, bool RemoveThis)
     closedir(d);
     if (RemoveThis && empty)
     {
-      dsyslog(LOG_INFO, "removing %s", DirName);
+      dsyslog("removing %s", DirName);
       if (remove(DirName) < 0)
       {
         LOG_ERROR_STR(DirName);
@@ -665,7 +611,7 @@ char *ReadLink(const char *FileName)
     TargetName = RealName;
   }
   else
-    esyslog(LOG_ERR, "ERROR: symlink's target name too long: %s", FileName);
+    esyslog( "ERROR: symlink's target name too long: %s", FileName);
   return TargetName ? strdup(TargetName) : NULL;
 }
 
@@ -683,7 +629,7 @@ bool SpinUpDisk(const char *FileName)
     { // the file does not exist
       timeval tp1, tp2;
       gettimeofday(&tp1, NULL);
-      int f = open(buf, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+      int f = open(buf, O_WRONLY | O_CREAT, DEFFILEMODE);
       // O_SYNC doesn't work on all file systems
       if (f >= 0)
       {
@@ -693,14 +639,14 @@ bool SpinUpDisk(const char *FileName)
         gettimeofday(&tp2, NULL);
         double seconds = (((long long)tp2.tv_sec * 1000000 + tp2.tv_usec) - ((long long)tp1.tv_sec * 1000000 + tp1.tv_usec)) / 1000000.0;
         if (seconds > 0.5)
-          dsyslog(LOG_INFO, "SpinUpDisk took %.2f seconds\n", seconds);
+          dsyslog( "SpinUpDisk took %.2f seconds\n", seconds);
         return true;
       }
       else
         LOG_ERROR_STR(buf);
     }
   }
-  esyslog(LOG_ERR, "ERROR: SpinUpDisk failed");
+  esyslog( "ERROR: SpinUpDisk failed");
   return false;
 }
 
@@ -760,7 +706,7 @@ bool cFile::Open(const char *FileName, int Flags, mode_t Mode)
 {
   if (!IsOpen())
     return Open(open(FileName, Flags, Mode));
-  esyslog(LOG_ERR, "ERROR: attempt to re-open %s", FileName);
+  esyslog( "ERROR: attempt to re-open %s", FileName);
   return false;
 }
 
@@ -780,15 +726,15 @@ bool cFile::Open(int FileDes)
           if (!files[f])
             files[f] = true;
           else
-            esyslog(LOG_ERR, "ERROR: file descriptor %d already in files[]", f);
+            esyslog( "ERROR: file descriptor %d already in files[]", f);
           return true;
         }
         else
-          esyslog(LOG_ERR, "ERROR: file descriptor %d is larger than FD_SETSIZE (%d)", f, FD_SETSIZE);
+          esyslog( "ERROR: file descriptor %d is larger than FD_SETSIZE (%d)", f, FD_SETSIZE);
       }
     }
     else
-      esyslog(LOG_ERR, "ERROR: attempt to re-open file descriptor %d", FileDes);
+      esyslog( "ERROR: attempt to re-open file descriptor %d", FileDes);
   }
   return false;
 }
@@ -903,6 +849,8 @@ bool cSafeFile::Close(void)
       result = false;
     }
     f = NULL;
+	 if( result )
+		 remove(fileName);
     if (result && rename(tempName, fileName) < 0)
     {
       LOG_ERROR_STR(fileName);
@@ -940,7 +888,7 @@ bool cLockFile::Lock(int WaitSeconds)
     time_t Timeout = time(NULL) + WaitSeconds;
     do
     {
-      f = open(fileName, O_WRONLY | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+      f = open(fileName, O_WRONLY | O_CREAT | O_EXCL, DEFFILEMODE);
       if (f < 0)
       {
         if (errno == EEXIST)
@@ -950,7 +898,7 @@ bool cLockFile::Lock(int WaitSeconds)
           {
             if (time(NULL) - fs.st_mtime > LOCKFILESTALETIME)
             {
-              esyslog(LOG_ERR, "ERROR: removing stale lock file '%s'", fileName);
+              esyslog( "ERROR: removing stale lock file '%s'", fileName);
               if (remove(fileName) < 0)
               {
                 LOG_ERROR_STR(fileName);
@@ -988,7 +936,7 @@ void cLockFile::Unlock(void)
     f = -1;
   }
   else
-    esyslog(LOG_ERR, "ERROR: attempt to unlock %s without holding a lock!", fileName);
+    esyslog( "ERROR: attempt to unlock %s without holding a lock!", fileName);
 }
 
 // --- cListObject -----------------------------------------------------------
@@ -1154,14 +1102,26 @@ int ReadFrame(int f, unsigned char *b, int Length, int Max)
     Length = Max; // this means we read up to EOF (see cIndex)
   else if (Length > Max)
   {
-    esyslog(LOG_ERR, "ERROR: frame larger than buffer (%d > %d)", Length, Max);
+    esyslog( "ERROR: frame larger than buffer (%d > %d)", Length, Max);
     Length = Max;
   }
-  int r = ReadStream(f,b,Length);
-  //int r = safe_read(f, b, Length);
+  if( f <= 0 )
+  {
+    esyslog( "ERROR: illegal file-handle %d", f);
+    esyslog( "maybe index.vdr is corrupted");
+    esyslog( "noad will be killed now ");
+    raise(SIGABRT);
+  }
+  int r = safe_read(f, b, Length);
   //int r = read( f,b,Length);
   if (r < 0)
+  {
     LOG_ERROR;
+    // nothing more can be done
+    // just kill myself
+    esyslog( "noad will be killed now (%d, %p, %d,%d)",f,b,Length,Max);
+    raise(SIGABRT);
+  }
   return r;
 }
 
@@ -1209,6 +1169,28 @@ int getVStreamID(int f)
   return iRet;
 }
 
+int getTSPID(int f)
+{
+  unsigned char buf[9400];// 50 TS-Pakete
+  lseek(f,0,SEEK_SET);
+  int r = read( f,buf,9400);
+  int i = 0;
+  int found = 0;
+  int iRet = 0;
+  while( i < r )
+  {
+		if (buf[i] != 0x47) 
+		{
+			fprintf (stderr, "bad sync byte\n");
+			i++;
+			continue;
+		}
+		iRet = ((buf[i+1] << 8) + buf[i+2]) & 0x1fff;
+		i+=188;
+  }
+  return iRet;
+}
+
 int make_pidfile(const char *dirname)
 {
   char *pidfilename = new char[ strlen(dirname)+10 ];
@@ -1222,16 +1204,16 @@ int make_pidfile(const char *dirname)
       fprintf(stderr,"There is already running an instance of noad for this recording!\n");
       fprintf(stderr,"If you feel that this is not true, you have to delete the file\n");
       fprintf(stderr,"%s manually\n",pidfilename);
-      esyslog(LOG_ERR, "There is already running an instance of noad for this recording!");
-      esyslog(LOG_ERR, "If you feel that this is not true, you have to delete the file");
-      esyslog(LOG_ERR, "%s manually",pidfilename);
+      esyslog( "There is already running an instance of noad for this recording!");
+      esyslog( "If you feel that this is not true, you have to delete the file");
+      esyslog( "%s manually",pidfilename);
       delete [] pidfilename;
       return -1;
     }
     else
     {
       int oldErrno = errno;
-      esyslog(LOG_ERR, "can't create pidfile: %m");
+      esyslog( "can't create pidfile: %m");
       errno = oldErrno;
       perror("can't create pidfile!");
       delete [] pidfilename;
@@ -1255,7 +1237,7 @@ pid_t processInfo(const char *dirname)
   if( pidf < 0 )
   {
     int oldErrno = errno;
-    esyslog(LOG_ERR, "can't open pidfile: %m");
+    esyslog( "can't open pidfile: %m");
     errno = oldErrno;
     perror("can't open pidfile");
     delete [] pidfilename;
@@ -1276,12 +1258,12 @@ pid_t processInfo(const char *dirname)
       char *s;
       if ((s = readline(p)) != NULL)
       {
-        esyslog(LOG_INFO, "pid info for %s: %s",buffer,s);
+        esyslog("pid info for %s: %s",buffer,s);
       }
       pclose(p);
     }
     else
-      esyslog(LOG_ERR, "Error while opening pipe (%s)",cmd);
+      esyslog( "Error while opening pipe (%s)",cmd);
     free(cmd);
   }
   delete [] pidfilename;
@@ -1305,7 +1287,7 @@ void dump2log (unsigned char * buf, unsigned char * end )
   int i = 20;
   while( buf < end )
   {
-    int sp = sprintf(dst,"%0.2X ",*buf);
+    int sp = sprintf(dst,"%.2X ",*buf);
     buf++;
     dst += sp;
     if(!--i)
@@ -1340,5 +1322,18 @@ void show_stackframe(bool bFork)
       fprintf(stderr, "[bt] %s\n", messages[i]);
     syslog(LOG_INFO, "[bt] %s\n", messages[i]);
   }
+}
+
+#define MAXSYSLOGBUF 256
+
+void syslog_with_tid(int priority, const char *format, ...)
+{
+  va_list ap;
+  char fmt[MAXSYSLOGBUF];
+  //snprintf(fmt, sizeof(fmt), "[%d] %s", cThread::ThreadId(), format);
+  snprintf(fmt, sizeof(fmt), "[%d] %s", getpid(), format);
+  va_start(ap, format);
+  vsyslog(priority, fmt, ap);
+  va_end(ap);
 }
 

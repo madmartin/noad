@@ -3,7 +3,7 @@
                              -------------------
     begin                : Sun Mar 10 2002
     copyright            : (C) 2002/2004 by theNoad #709GRW
-    email                : theNoad@SoftHome.net
+    email                : theNoad@ulmail.net
  ***************************************************************************/
 
 /***************************************************************************
@@ -27,9 +27,9 @@
 #include <syslog.h>
 #include <stdlib.h>
 
-#define esyslog(a...) void( (SysLogLevel > 0) ? syslog(a) : void() )
-#define isyslog(a...) void( (SysLogLevel > 1) ? syslog(a) : void() )
-#define dsyslog(a...) void( (SysLogLevel > 2) ? syslog(a) : void() )
+//#define esyslog(a...) void( (SysLogLevel > 0) ? syslog(a) : void() )
+//#define isyslog(a...) void( (SysLogLevel > 1) ? syslog(a) : void() )
+//#define dsyslog(a...) void( (SysLogLevel > 2) ? syslog(a) : void() )
 
 #include "noaddata.h"
 #include "ctoolbox.h"
@@ -40,7 +40,7 @@ int SysLogLevel = 1;
 #define IS_BOT_RIGHT (m_nLogoCorner == UNKNOWN || m_nLogoCorner == BOT_RIGHT)
 #define IS_BOT_LEFT  (m_nLogoCorner == UNKNOWN || m_nLogoCorner == BOT_LEFT)
 
-noadData::noadData()
+noadData::noadData() 
 {
   bYUVSource = true;
   bUseExternalMem = false;
@@ -50,11 +50,11 @@ noadData::noadData()
   m_nGrabWidth = GRAB_WIDTH;
   m_nGrabHeight = GRAB_HEIGHT;
   similarCutoff = (int)(m_nGrabWidth * m_nGrabHeight / 4 * .91);
-  dsyslog(LOG_INFO, "noadData similarCutoff is %ld", similarCutoff);
+  dsyslog( "noadData similarCutoff is %ld", similarCutoff);
 
 
   /** get logo settings */
-  m_fMainFilter = 0.9;
+  m_fMainFilter = (float)0.9;
   m_fRunFilter = 0.5;
   m_nTimeInterval = 500;
   m_nMaxAverage = 245;
@@ -79,6 +79,7 @@ noadData::noadData()
   extLogoSearch = false;
   // set video buffer first time to NULL
   video_buffer_mem = NULL;
+  yufbuf = NULL;
 
   #ifdef VNOAD
   for( int i = 0; i < NUMPICS; i++)
@@ -244,11 +245,11 @@ void noadData::setColorCorners()
         if ( IS_TOP_LEFT && x>=m_nBorderX && x<m_nBorderX+m_nSizeX )
         {
           tool.filter_tp( &m_chColorCorner0[count0++],
-            &video_buffer_mem[lc3], m_fRunFilter );
+            &video_buffer_mem[lc3]/*, m_fRunFilter*/ );
           tool.filter_tp( &m_chColorCorner0[count0++],
-            &video_buffer_mem[lc3+1], m_fRunFilter );
+            &video_buffer_mem[lc3+1]/*, m_fRunFilter*/ );
           tool.filter_tp( &m_chColorCorner0[count0++],
-            &video_buffer_mem[lc3+2], m_fRunFilter );
+            &video_buffer_mem[lc3+2]/*, m_fRunFilter*/ );
           #ifdef USE_RGB32
           count0++;
           #endif
@@ -257,11 +258,11 @@ void noadData::setColorCorners()
         if ( IS_TOP_RIGHT && x>=m_nGrabWidth-m_nBorderX-m_nSizeX && x< m_nGrabWidth-m_nBorderX )
         {
           tool.filter_tp( &m_chColorCorner1[count1++],
-            &video_buffer_mem[lc3],m_fRunFilter );
+            &video_buffer_mem[lc3]/*,m_fRunFilter*/ );
           tool.filter_tp( &m_chColorCorner1[count1++],
-            &video_buffer_mem[lc3+1], m_fRunFilter );
+            &video_buffer_mem[lc3+1]/*, m_fRunFilter*/ );
           tool.filter_tp( &m_chColorCorner1[count1++],
-            &video_buffer_mem[lc3+2], m_fRunFilter );
+            &video_buffer_mem[lc3+2]/*, m_fRunFilter*/ );
           #ifdef USE_RGB32
           count1++;
           #endif
@@ -274,11 +275,11 @@ void noadData::setColorCorners()
         if ( IS_BOT_LEFT && x>=m_nBorderX && x<m_nBorderX+m_nSizeX )
         {
           tool.filter_tp( &m_chColorCorner3[count3++],
-            &video_buffer_mem[lc3], m_fRunFilter );
+            &video_buffer_mem[lc3]/*, m_fRunFilter*/ );
           tool.filter_tp( &m_chColorCorner3[count3++],
-            &video_buffer_mem[lc3+1], m_fRunFilter );
+            &video_buffer_mem[lc3+1]/*, m_fRunFilter*/ );
           tool.filter_tp( &m_chColorCorner3[count3++],
-            &video_buffer_mem[lc3+2], m_fRunFilter );
+            &video_buffer_mem[lc3+2]/*, m_fRunFilter*/ );
           #ifdef USE_RGB32
           count3++;
           #endif
@@ -287,11 +288,11 @@ void noadData::setColorCorners()
         if ( IS_BOT_RIGHT && x>=m_nGrabWidth-m_nBorderX-m_nSizeX && x< m_nGrabWidth-m_nBorderX )
         {
           tool.filter_tp( &m_chColorCorner2[count2++],
-            &video_buffer_mem[lc3], m_fRunFilter );
+            &video_buffer_mem[lc3]/*, m_fRunFilter*/ );
           tool.filter_tp( &m_chColorCorner2[count2++],
-            &video_buffer_mem[lc3+1], m_fRunFilter );
+            &video_buffer_mem[lc3+1]/*, m_fRunFilter*/ );
           tool.filter_tp( &m_chColorCorner2[count2++],
-            &video_buffer_mem[lc3+2], m_fRunFilter );
+            &video_buffer_mem[lc3+2]/*, m_fRunFilter*/ );
           #ifdef USE_RGB32
           count2++;
           #endif
@@ -401,6 +402,59 @@ void noadData::setYUVGreyCorners()
      memcpy(&m_chGreyCorner2[count3],&video_buffer_mem[linestart+rightLogoOffset],m_nSizeX);
      count3 += m_nSizeX;
   }
+
+
+   int x,y, s_x;//, s_y;
+   int m_width = GRAB_WIDTH/5;
+   int m_height = GRAB_HEIGHT/4;
+
+   s_x = m_nGrabWidth-m_nBorderX-m_nSizeX;
+   
+   
+
+/*
+   switch(iGrabCorner)
+   {
+     case 1: s_x = data->m_nBorderX; linestart = data->m_nGrabWidth*data->m_nBorderYTop; break;
+     case 2: s_x = rightLogoOffset;  linestart = data->m_nGrabWidth*data->m_nBorderYTop; break;
+     case 3: s_x = data->m_nBorderX; linestart = data->m_nGrabWidth*bottStart; break;
+     case 4: s_x = rightLogoOffset;  linestart = data->m_nGrabWidth*bottStart; break;
+   }
+*/   
+
+   s_x = m_nBorderX; linestart = m_nGrabWidth*m_nBorderYTop;
+   for ( y=0; y<m_height/2-1; y++ )
+   {
+      int s_y = linestart/4+(y*(m_nGrabWidth/2))+s_x/2;
+      for ( x=0; x< m_width/2-1; x++ )
+      {
+			unsigned int pix = *(yufbuf->buf[2]+s_y+x);
+         #define ADDPIX(a,b) \
+            {int i = ((*a)-128 + b ); if(i > 255) i=255; *a = i;}
+         ADDPIX((m_chGreyCorner0+y*2*m_nSizeX+x*2),pix);
+         ADDPIX((m_chGreyCorner0+y*2*m_nSizeX+x*2+1),pix);
+         ADDPIX((m_chGreyCorner0+(y*2+1)*m_nSizeX+x*2),pix);
+         ADDPIX((m_chGreyCorner0+(y*2+1)*m_nSizeX+x*2+1),pix);
+      }
+   }
+
+   s_x = rightLogoOffset;  linestart = m_nGrabWidth*m_nBorderYTop;
+   for ( y=0; y<m_height/2-1; y++ )
+   {
+      int s_y = linestart/4+(y*(m_nGrabWidth/2))+s_x/2;
+      for ( x=0; x< m_width/2-1; x++ )
+      {
+         unsigned int pix = *(yufbuf->buf[2]+s_y+x);
+         #define ADDPIX(a,b) \
+            {int i = ((*a)-128 + b ); if(i > 255) i=255; *a = i;}
+         ADDPIX((m_chGreyCorner1+y*2*m_nSizeX+x*2),pix);
+         ADDPIX((m_chGreyCorner1+y*2*m_nSizeX+x*2+1),pix);
+         ADDPIX((m_chGreyCorner1+(y*2+1)*m_nSizeX+x*2),pix);
+         ADDPIX((m_chGreyCorner1+(y*2+1)*m_nSizeX+x*2+1),pix);
+      }
+   }
+
+   
 /*  if( logocb != NULL )
   {
     // set results to view
@@ -417,7 +471,7 @@ void noadData::setYUVGreyCorners()
   }*/
 }
 
-void writeInt( FILE *fd, const char */*name*/, int iVal)
+void writeInt( FILE *fd, const char * /*name*/, int iVal)
 {
   fwrite(&iVal, sizeof(int), 1, fd);
 }
@@ -428,7 +482,7 @@ int readInt( FILE *fd, const char *name, int *iVal, bool ignoredata = false)
      fread(&iDummy, sizeof(int), 1, fd );
   else
      fread(iVal, sizeof(int), 1, fd );
-//  dsyslog(LOG_INFO, "noadData Load %s %d", name, *iVal);
+//  dsyslog( "noadData Load %s %d", name, *iVal);
   return *iVal;
 }
 void noadData::saveCheckData( const char *name, bool bFullnameGiven )
@@ -443,7 +497,7 @@ void noadData::saveCheckData( const char *name, bool bFullnameGiven )
   }
   else
     strcpy( fname, name );
-  dsyslog(LOG_INFO, "noadData saveCheckData to %s", fname);
+  dsyslog( "noadData saveCheckData to %s", fname);
   fd = fopen(fname, "wb");
   if( fd )
   {
@@ -467,27 +521,27 @@ void noadData::saveCheckData( const char *name, bool bFullnameGiven )
     fclose( fd );
   }
   else
-    dsyslog(LOG_INFO, "noadData can't open %s", fname);
+    dsyslog( "noadData can't open %s", fname);
 }
 
 void noadData::logCheckData()
 {
-  dsyslog( LOG_INFO, "  m_nFilterInit %d", m_nFilterInit);
-  dsyslog( LOG_INFO, "  m_nFilterFrames %d", m_nFilterFrames);
-  dsyslog( LOG_INFO, "  m_nDif2Pictures %d", m_nDif2Pictures);
-  dsyslog( LOG_INFO, "  m_nMaxAverage %d", m_nMaxAverage);
-  dsyslog( LOG_INFO, "  m_nTimeInterval %d", m_nTimeInterval);
-  dsyslog( LOG_INFO, "  m_nSizeX %d", m_nSizeX);
-  dsyslog( LOG_INFO, "  m_nSizeY %d", m_nSizeY);
-  dsyslog( LOG_INFO, "  m_nBorderX %d", m_nBorderX);
-  dsyslog( LOG_INFO, "  m_nBorderYTop %d", m_nBorderYTop);
-  dsyslog( LOG_INFO, "  m_nBorderYBot %d", m_nBorderYBot);
-  dsyslog( LOG_INFO, "  m_nGrabHeight %d", m_nGrabHeight);
-  dsyslog( LOG_INFO, "  m_nGrabWidth %d", m_nGrabWidth);
-  dsyslog( LOG_INFO, "  m_nMinAverage %d", m_nMinAverage);
-  dsyslog( LOG_INFO, "  m_nCheckFrames %d", m_nCheckFrames);
-  dsyslog( LOG_INFO, "  m_nLogoCorner %d", m_nLogoCorner);
-  dsyslog( LOG_INFO, "  m_bFound %d", m_bFound);
+  dsyslog( "  m_nFilterInit %d", m_nFilterInit);
+  dsyslog( "  m_nFilterFrames %d", m_nFilterFrames);
+  dsyslog( "  m_nDif2Pictures %d", m_nDif2Pictures);
+  dsyslog( "  m_nMaxAverage %d", m_nMaxAverage);
+  dsyslog( "  m_nTimeInterval %d", m_nTimeInterval);
+  dsyslog( "  m_nSizeX %d", m_nSizeX);
+  dsyslog( "  m_nSizeY %d", m_nSizeY);
+  dsyslog( "  m_nBorderX %d", m_nBorderX);
+  dsyslog( "  m_nBorderYTop %d", m_nBorderYTop);
+  dsyslog( "  m_nBorderYBot %d", m_nBorderYBot);
+  dsyslog( "  m_nGrabHeight %d", m_nGrabHeight);
+  dsyslog( "  m_nGrabWidth %d", m_nGrabWidth);
+  dsyslog( "  m_nMinAverage %d", m_nMinAverage);
+  dsyslog( "  m_nCheckFrames %d", m_nCheckFrames);
+  dsyslog( "  m_nLogoCorner %d", m_nLogoCorner);
+  dsyslog( "  m_bFound %d", m_bFound);
   m_pCheckLogo->log();
 }
 
@@ -504,14 +558,14 @@ bool noadData::loadCheckData( const char *name, bool bFullnameGiven )
   }
   else
     strcpy( fname, name );
-  dsyslog(LOG_INFO, "noadData loadCheckData from %s", fname);
+  dsyslog( "noadData loadCheckData from %s", fname);
   fd = fopen(fname, "rb");
   if( fd )
   {
     readInt( fd, "m_nFilterInit", &m_nFilterInit,ignoreData);
-    dsyslog(LOG_INFO, "noadData Load %s %d", "m_nFilterInit", m_nFilterInit);
+    dsyslog( "noadData Load %s %d", "m_nFilterInit", m_nFilterInit);
     readInt( fd, "m_nFilterFrames", &m_nFilterFrames,ignoreData);
-    dsyslog(LOG_INFO, "noadData Load %s %d", "m_nFilterFrames", m_nFilterFrames);
+    dsyslog( "noadData Load %s %d", "m_nFilterFrames", m_nFilterFrames);
     readInt( fd, "m_nDif2Pictures", &m_nDif2Pictures,ignoreData);
     readInt( fd, "m_nMaxAverage", &m_nMaxAverage,ignoreData);
     readInt( fd, "m_nTimeInterval", &m_nTimeInterval,ignoreData);
@@ -528,7 +582,7 @@ bool noadData::loadCheckData( const char *name, bool bFullnameGiven )
 
 
     similarCutoff = (int)(m_nGrabWidth * m_nGrabHeight / 4 * .91);
-    dsyslog(LOG_INFO, "noadData similarCutoff is now %ld", similarCutoff);
+    dsyslog( "noadData similarCutoff is now %ld", similarCutoff);
 
     int iVal;
     m_bFound = readInt( fd, "m_bFound", &iVal) > 0;
@@ -544,21 +598,21 @@ bool noadData::loadCheckData( const char *name, bool bFullnameGiven )
     return true;
   }
   else
-    dsyslog(LOG_INFO, "noadData can't open %s", fname);
+    dsyslog( "noadData can't open %s", fname);
   return false;
 }
 
 void noadData::setGrabSize( int width, int height )
 {
-  dsyslog(LOG_INFO, "noadData setGrabSize from %d %d to %d %d", m_nGrabWidth,m_nGrabHeight,width, height);
+  dsyslog( "noadData setGrabSize from %d %d to %d %d", m_nGrabWidth,m_nGrabHeight,width, height);
   if( m_nGrabWidth != width || m_nGrabHeight != height )
   {
-    dsyslog( LOG_INFO, "init grabbing with %d %d = %d pixels", width, height, width*height);
+    dsyslog( "init grabbing with %d %d = %d pixels", width, height, width*height);
     m_nGrabWidth = width;
     m_nGrabHeight = height;
     initBuffer();
     similarCutoff = (int)(m_nGrabWidth * m_nGrabHeight / 4 * .91);
-    dsyslog(LOG_INFO, "noadData similarCutoff is now %ld", similarCutoff);
+    dsyslog( "noadData similarCutoff is now %ld", similarCutoff);
   }
 }
 
@@ -570,7 +624,7 @@ int noadData::countvals(unsigned char *_src[3], int line, int width, int /*heigh
   int iHalfLine = line>>1;
   int iHalfOffset = iHalfWidth*iHalfLine;
   unsigned char *src = _src[0] + width * line;
-  #ifdef VNOAD
+#ifdef VNOAD
   unsigned char *usrc = _src[1] + iHalfOffset;
   unsigned char *vsrc = _src[2] + iHalfOffset;
   #endif
@@ -802,7 +856,7 @@ void noadData::detectBlackLines(unsigned char *buf)
         if( iVal > cutval && ++iCutvalCount > 50 )
 	{
           bNonBlack = true;
-//          dsyslog(LOG_INFO, "ival(%d,%d) > cutval ", iVal,iCutvalCount);
+//          dsyslog( "ival(%d,%d) > cutval ", iVal,iCutvalCount);
 	  //logline(&video_buffer_mem[linestart],iPixCount);
 	}
         else
@@ -815,14 +869,14 @@ void noadData::detectBlackLines(unsigned char *buf)
             if( (iLineMax - iLineMin) > iMaxDiff )
 	    {
               bNonBlack = true;
-//              dsyslog(LOG_INFO, "diff(%d) > iMaxDiff ", (iLineMax - iLineMin));
+//              dsyslog( "diff(%d) > iMaxDiff ", (iLineMax - iLineMin));
               //logline(&video_buffer_mem[linestart],iPixCount);
 	    }
         }
       }
       if( !bNonBlack )
         m_nBlackLinesBottom++;
-      //dsyslog(LOG_INFO, "noadData detectBlackLines iLineMin=%d iLineMax=%d", iLineMin,iLineMax);
+      //dsyslog( "noadData detectBlackLines iLineMin=%d iLineMax=%d", iLineMin,iLineMax);
     }
 */
   }
@@ -836,7 +890,7 @@ void noadData::detectBlackLines(unsigned char *buf)
       {
         iLineSum += (unsigned char)video_buffer_mem[linestart+ii];
       }
-      //dsyslog(LOG_INFO, "noadData iLineSum %d ", iLineSum);
+      //dsyslog( "noadData iLineSum %d ", iLineSum);
       if( iLineSum > m_nGrabWidth*cutval )
         bNonBlack = true;
       else
@@ -898,7 +952,7 @@ void noadData::checkMonoFrame( int framenum, unsigned char **_src)
     ivCount += iSet[i];
 
 #ifdef VNOAD
-  dsyslog(LOG_INFO, "dif values in pic %d: %d %d %d s-count %3d",
+  dsyslog( "dif values in pic %d: %d %d %d s-count %3d",
     framenum, iyCount,iuCount,ivCount, iyCount+iuCount+ivCount);
 #endif
   m_nMonoFrameValue =  iyCount+iuCount+ivCount;
@@ -955,7 +1009,7 @@ bool noadData::CheckFrameIsBlank(int framenum, unsigned char **buf )
                 {
                   if (frame_ptr[yPos + x] > max_brightness)
                   {
-                      //dsyslog(LOG_INFO, "CheckFrameIsBlank of frame %d gives false(1) at %d %d with %d",framenum, x, y,frame_ptr[y * width + x] );
+                      //dsyslog( "CheckFrameIsBlank of frame %d gives false(1) at %d %d with %d",framenum, x, y,frame_ptr[y * width + x] );
                       return(false);
                   }
                   if (frame_ptr[yPos + x] > test_brightness)
@@ -976,12 +1030,12 @@ bool noadData::CheckFrameIsBlank(int framenum, unsigned char **buf )
             return(false);
         }
     }
-    //dsyslog(LOG_INFO, "CheckFrameIsBlank of frame %d gives true",framenum);
+    //dsyslog( "CheckFrameIsBlank of frame %d gives true",framenum);
     m_isMonoFrame = 1;
     return(true);
 }
 
-int noadData::GetAvgBrightness(int framenum, unsigned char **buf )
+int noadData::GetAvgBrightness(int /*framenum*/, unsigned char ** /*buf*/ )
 {
   int brightness = 0;
   int pixels = 0;
@@ -997,7 +1051,7 @@ int noadData::GetAvgBrightness(int framenum, unsigned char **buf )
       pixels++;
     }
   }
-  //dsyslog(LOG_INFO, "AvgBrightness of frame %d is %d",framenum, brightness/pixels);
+  //dsyslog( "AvgBrightness of frame %d is %d",framenum, brightness/pixels);
   return(brightness/pixels);
 }
 
@@ -1011,10 +1065,11 @@ void noadData::setUseExternalMem(bool b)
   bUseExternalMem = b;
 }
 
-void noadData::setExternalMem(char *extMem)
+void noadData::setExternalMem(char *extMem, mpeg2_fbuf_t *yufbuf)
 {
   setUseExternalMem(true);
   video_buffer_mem = extMem;
+  this->yufbuf = yufbuf;
   m_isMonoFrame = -1;
 }
 
@@ -1058,7 +1113,7 @@ bool noadData::areSimilar(simpleHistogram &hist1,simpleHistogram &hist2)
   {
     return(false);
   }
-  //dsyslog(LOG_INFO,"similarity is %d of %d, delta is %d",similar,similarCutoff,delta);
+  //dsyslog("similarity is %d of %d, delta is %d",similar,similarCutoff,delta);
 //  if( delta < 12000 )
 //    return(true);
 //  return(false);
@@ -1260,24 +1315,24 @@ void noadData::modifyPic(int /*framenum*/,unsigned char **_src)
   for( int i = 0; i < 256;i++)
     ivCount += iSet[i];
 
-//  dsyslog(LOG_INFO, "dif values in pic %d: s-count %3d",
+//  dsyslog( "dif values in pic %d: s-count %3d",
 //    framenum, iyCount+iuCount+ivCount);
 /*
-  dsyslog(LOG_INFO, "dif values in pic %d: y-diff %3d y-count %3d u-diff %3d u-count %3d v-diff %3d v-count %3d c-diff %3d c-count %3d s-count %3d",
+  dsyslog( "dif values in pic %d: y-diff %3d y-count %3d u-diff %3d u-count %3d v-diff %3d v-count %3d c-diff %3d c-count %3d s-count %3d",
     framenum,yMax-yMin,iyCount,uMax-uMin,iuCount,vMax-vMin,ivCount,cMax-cMin,icCount, iyCount+iuCount+ivCount);
 */
 /*
-  dsyslog(LOG_INFO, "dif values in pic %d: y %3d %3d %3d u %3d %3d %3d v %3d %3d %3d c = %3d %3d %3d %3d",
+  dsyslog( "dif values in pic %d: y %3d %3d %3d u %3d %3d %3d v %3d %3d %3d c = %3d %3d %3d %3d",
     framenum,yMin,yMax,iyCount,uMin,uMax,iuCount,vMin,vMax,ivCount,cMin,cMax,iColSum,icCount );
 */
 /*
-  dsyslog(LOG_INFO, "dif values in line %d: y %d u %d v %d  sum %d dy=%d, du=%d,dv=%d, f=%d, colsum=%d,dCol=%d",
+  dsyslog( "dif values in line %d: y %d u %d v %d  sum %d dy=%d, du=%d,dv=%d, f=%d, colsum=%d,dCol=%d",
     line,iyCount,iuCount,ivCount,iyCount+iuCount+ivCount,
     ySum/width-(border), uSum/width/2, vSum/width/2,
     iFaktor,iColSum,iColSum/(width-(border)));
 */
 /*
-  dsyslog(LOG_INFO, "dif in line %d: iycount %d f=%d, colsum=%d,dCol=%d",
+  dsyslog( "dif in line %d: iycount %d f=%d, colsum=%d,dCol=%d",
     line,iyCount,iFaktor,iColSum,iColSum/(width-(border)));
 */
   delete [] iSet;
@@ -1307,7 +1362,7 @@ void logline( unsigned char *src, int width)
   buf[0] = '\0';
   for( int i = 0; i < width; i++ )
      sprintf(&buf[i*3],"%02X ",src[i]);
-  dsyslog(LOG_INFO, "line %s",buf);
+  dsyslog( "line %s",buf);
   delete [] buf;
 }
 
@@ -1320,7 +1375,7 @@ void logcdiffs(unsigned char *src, int width, char *text)
     if( src[i] < iMin ) iMin = src[i];
     if( src[i] > iMax ) iMax = src[i];
   }
-  dsyslog(LOG_INFO, "%s min = %d, max = %d, diff = %d",text,iMin,iMax, iMax-iMin);
+  dsyslog( "%s min = %d, max = %d, diff = %d",text,iMin,iMax, iMax-iMin);
 }
 
 #ifdef VNOAD
@@ -1340,7 +1395,7 @@ void rgbline(unsigned char *_src, int /*line*/, int width, int height)
     r = y[i] + v[i/2];
     g = y[i] - 0.166667*u[i/2] - 0.5*v[i/2];
     b = y[i] + u[i/2];
-    dsyslog(LOG_INFO, "rgbline: %3d %3d %3d  -->  %3d %3d %3d",y[i],u[i/2],v[i/2],r,g,b);
+    dsyslog( "rgbline: %3d %3d %3d  -->  %3d %3d %3d",y[i],u[i/2],v[i/2],r,g,b);
     sprintf( &buf[strlen(buf)], "%02X%02X%02X ", r,g,b);
   }
   for( int i = width/2-5; i < width/2+5; i++ )
@@ -1348,7 +1403,7 @@ void rgbline(unsigned char *_src, int /*line*/, int width, int height)
     r = y[i] + v[i/2];
     g = y[i] - 0.166667*u[i/2] - 0.5*v[i/2];
     b = y[i] + u[i/2];
-    dsyslog(LOG_INFO, "rgbline: %3d %3d %3d  -->  %3d %3d %3d",y[i],u[i/2],v[i/2],r,g,b);
+    dsyslog( "rgbline: %3d %3d %3d  -->  %3d %3d %3d",y[i],u[i/2],v[i/2],r,g,b);
     sprintf( &buf[strlen(buf)], "%02X%02X%02X ", r,g,b);
   }
   for( int i = width-10; i < width; i++ )
@@ -1356,10 +1411,10 @@ void rgbline(unsigned char *_src, int /*line*/, int width, int height)
     r = y[i] + v[i/2];
     g = y[i] - 0.166667*u[i/2] - 0.5*v[i/2];
     b = y[i] + u[i/2];
-    dsyslog(LOG_INFO, "rgbline: %3d %3d %3d  -->  %3d %3d %3d",y[i],u[i/2],v[i/2],r,g,b);
+    dsyslog( "rgbline: %3d %3d %3d  -->  %3d %3d %3d",y[i],u[i/2],v[i/2],r,g,b);
     sprintf( &buf[strlen(buf)], "%02X%02X%02X ", r,g,b);
   }
-  dsyslog(LOG_INFO, "rgbline: %s",buf);
+  dsyslog( "rgbline: %s",buf);
   delete [] buf;
 }
 
@@ -1387,7 +1442,7 @@ int orgcountvals(unsigned char *_src[3], int line, int width, int /*height*/)
   int ivCount = 0;
   for( int i = 0; i < width/2;i++)
     ivCount += iSet[i];
-//  dsyslog(LOG_INFO, "dif values in line %d: y %d u %d v %d  sum %d",line,iyCount,iuCount,ivCount,iyCount+iuCount+ivCount);
+//  dsyslog( "dif values in line %d: y %d u %d v %d  sum %d",line,iyCount,iuCount,ivCount,iyCount+iuCount+ivCount);
   delete [] iSet;
 //  return (iyCount+iuCount+ivCount)/3;
   return iyCount;
@@ -1412,7 +1467,7 @@ void linesum(unsigned char *_src, int line, int width, int height)
   {
     iSum += src[i];
   }
-  dsyslog(LOG_INFO, "linesum(%d) = %d",line,iSum);
+  dsyslog( "linesum(%d) = %d",line,iSum);
 }
 
 

@@ -221,5 +221,13 @@ configure mit "--with-ffmpeg" aufzurufen, ggf. mit "--with-ffmpeginclude" und "-
 ffmpeg headern und libs setzen. Danach ein "make", und dann kann noad mit "--asd" aufgerufen werden.
 asd ist z.Z. noch nicht im online-scan integriert.
 
+Ab noad-0.6.1:
+Die File-IO-Routinen zum lesen der Aufnahme wurden nach einem patch von Ralf Müller neu implementiert. Die neuen
+Routinen vermeiden, das der File-Cache beim lesen einer Aufnahme vollläuft. Um die neuen Routinen zu aktivieren ist
+configure mit dem Zusatz "--with-avoid-trashing" aufzurufen. Die notwendigen Routinen sind allerdings erst ab 
+Kernel-Version 2.6.x aktiv. Wird ein Kernel 2.4.xx verwendet, gibt es beim compilieren eine Warnung: 
+"warning: posix_fadvise is not implemented and will always fail"
+Diese Warnung kann ignoriert werden.
+
 
 Fehlermeldungen, Anregungen, Hinweise und auch Erfahrungsberichte an: theNoad@SoftHome.net

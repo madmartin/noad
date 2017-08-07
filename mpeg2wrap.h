@@ -3,7 +3,7 @@
                              -------------------
     begin                : Son Nov 16 23:25:00 CET 2003
     copyright            : (C) 2003 by theNoad #709GRW
-    email                : theNoad@SoftHome.net
+    email                : theNoad@ulmail.net
  ***************************************************************************/
 
 /***************************************************************************
@@ -32,6 +32,7 @@ extern "C"
 #include "vdr_cl.h"
 
 #define DEMUX_PAYLOAD_START 1
+#define DEMUX_RESET 2
 
 // from mpeg2.h, Version 0.3.2pre:
 // workaround for different state-definitions
@@ -72,7 +73,14 @@ typedef struct audio_i
   uint32_t off;
 } AudioInfo;
 
-typedef int (* cbfunc)(void *rgb_buf, int width, int height, void *yufbuf);
+//typedef int (* cbfunc)(void *rgb_buf, int width, int height, void *yufbuf);
+#define YUVBUF_IS_VOID
+#ifdef YUVBUF_IS_VOID
+typedef void * YUVBUF;
+#else
+typedef const mpeg2_fbuf_t *YUVBUF;
+#endif
+typedef int (* cbfunc)(void *rgb_buf, int width, int height, YUVBUF buf);
 typedef int (* audiocbfunc)(int mode);
 typedef int (* playaudiocbfunc)(unsigned char *mbuf, int count);
 //typedef int (* conversionCallback)(mpeg2_info_t * info);
@@ -97,10 +105,15 @@ extern uint_64 videopts;
 extern bool havesilence;
 extern int lowvalcount;
 extern uint_64 audiopts;
+extern bool bTSFoundPayload;
+extern bool dodumpts;
+extern bool isOnlinescan;
 
 void decode_mpeg2 (uint8_t * current, uint8_t * end);
-int demux (uint8_t * buf, uint8_t * end, int flags);
-bool demuxFrame(cFileName *cfn, cNoadIndexFile *cIF, int index );
-bool demuxFrame(cFileName *cfn, uchar FileNumber, int FileOffset, int Length );
+void demux_reset(void);
+int demuxPES (uint8_t * buf, uint8_t * end, int flags);
+int demuxTS(uint8_t * buffer, uint8_t * end, int flags=0 );
+bool demuxFrame(cFileName *cfn, cNoadIndexFile *cIF, int index, int flags );
+bool demuxFrame(cFileName *cfn, uint16_t FileNumber, off_t FileOffset, int Length, int flags );
 
 #endif
