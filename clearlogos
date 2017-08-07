@@ -1,0 +1,13 @@
+#! /bin/sh
+# helper-script for noad
+# walks through the video-dirctory and delete
+# all logos produced by noad
+if test $# -lt 1
+then
+   echo "usage:"
+   echo "clearlogos <videodir>"
+   exit -1
+fi
+
+find $1 -follow -type f -name 'cur.logo' -exec rm '{}' ';'
+

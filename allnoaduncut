@@ -1,0 +1,18 @@
+#! /bin/sh
+# helper-script for noad
+# walks through the video-directory and calls noad
+# for every recording with the given parameters
+# WARNING this script calls noad with '-' as first parameter
+# which means it runs with normal priority
+# this could cause high system-usage
+# if you want to run noad with minor priority, use 'allnoadnice' instead
+if test $# -lt 1
+then
+   echo "usage:"
+   echo "allnoad <videodir> [additional_noad_args]"
+   exit -1
+fi
+vdir=${1}
+shift
+find $vdir -follow -type d -name '*.rec' ! -path '*/%*' -exec noad $* - '{}' ';'
+

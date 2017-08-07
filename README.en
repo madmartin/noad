@@ -1,0 +1,201 @@
+INFORMATION about the online-mode is at the end of this file.
+
+noad is a program for advertising-detection in vdr-recordings. It uses the 
+station-logos for the detetction and produces cutting-marks for the recording.
+
+You can use noad as a standalone-program or in conjunction with 
+vdr (use option --recording in vdr).
+
+The logo-detection is based on a program from Thorsten Janke, the original 
+program and the diplma thesis(in German) can be found 
+here: http://www.ktet.fh-muenster.de/ina/node1.html.
+
+noad works in three passes. First pass is the logo-detection. Second pass is a 
+logo-scan over the recording and sets marks whenever the logo disappears. 
+In the third pass, noad tries to refine the marks using e.g. detection of 
+blacklines at the top and bottom of the pictures.
+Another option is to find repeating sequences before and after the break and 
+move the marks depending on found repeats.
+Since Version 0.4.0 there is also an (experimental) option to use sound-switching 
+for ad-detection. This is based on the thesis that advertsing is never send in 
+dolby-digital. If you call noad with the parameter --ac3, it checks for ac3-sound 
+in the recording. If ac3-sound is found, the first pass will be done by sound-switch 
+detection, which is sometimes faster than the logo-scan.
+
+noad is written for ad-detection on german tv-stations. Other countries may have other 
+kinds of advertising, so you have to check by yourself if noad can be helpfull for you.
+
+Install:
+Before you can build noad, you have to install libmpeg2, version 0.3.1 or 0.4.0.
+(see http://libmpeg2.sourceforge.net)
+If you hav installed libmpeg2, just call configure/make/make install.
+
+Running noad:
+noad [options] cmd <record>
+options:
+-s <filename>   --statisticfile=<file>
+                name of the file for statistic-data
+-v              --verbose
+                increments the log-level, can be given multiple
+-b              --background
+                start noad as backround-process
+-p              --priority
+                priority when running as background-process [20...-20] default is 20
+-c              --comments
+                adds comments to the marks in marks.vdr
+-o              --overlap
+                try to detect repeating sequences before and after the break
+-a              --ac3
+                experimentel: use ac3-sound for ad-detection
+-j              --jumplogo
+                looks for vertikac drifted logos
+-O              --OSD
+                sends an OSD-Message to the running VDR-instance(localhost:2001) for Start and End
+-S              --savelogo
+                seves the detected logo for later usage
+-B              --backupmarks
+                saves an exsiting marks.vdr to marks0.vdr
+-n              --nelonen
+                  special behavior for finish stations
+-V              --version
+                shows the Version and exits
+
+                --markfile=<markfilename>
+                set a different markfile-name
+                
+                --online[=1|2] (default is 1)
+                  start noad immediately when called with "before" as cmd
+                  if online is 1, noad starts online for live-recordings
+                  only, online=2 starts noad online for every recording
+                  live-recordings are identified by having a '@' in the filename
+                  so the entry 'Mark instant recording' in the menu 'Setup - Recording'
+                  of the vdr should be set to 'yes'
+
+                --asd
+                  audio silence detection
+                  you have to compile noad with ffmpeg-support to use this (see configure --help)
+
+                
+cmd: one of
+       before      given from vdr, if used with the Option "-r" in vdr 
+                   noad exits immidiatly with this command
+       after       given from vdr, if used with the Option "-r" in vdr 
+                   noad starts the scan
+       -           dummy-parameter if called directly
+       nice        noad runs with low priority
+<record>    complete path of the recording that should be scanned
+
+
+Examples:
+  direct call, scan with normal priority:
+  noad - /video/Akte_x/2003-07-18.22.08.50.50.rec
+
+  direct call, scan with normal priority, write statistic-data to /video/noadstat:
+  noad --statisticfile=/video/noadstat -/video/Akte_x/2003-07-18.22.08.50.50.rec
+
+  direct call, run as background-process with low priority:
+  noad nice --background /video/Akte_X/Roland/2003-08-22.22.03.99.99.rec
+
+  Usage in conjunction with vdr:
+  vdr -r'noad [options]'
+
+HINT: noad needs write-acces into the recording-directory!
+
+Usage with VDR:
+noad can be called automatically from vdr after a recording is finished if vdr is started with
+the additional parameter -r'noad....'. If your system automatic shuts down after a recording, you should 
+take care that noad has done its work before shutting down the machine.
+Another way to use noad is an entry in the reccmds.conf, so that you can call noad via the recording-menu
+of vdr.
+Examples:
+call vdr so that noad is started after each recording:
+vdr <other vdr-Parameter> -r'/usr/local/src/noad-0.4.1/noad --statisticfile=/video0/noadstat'
+HINT: noad and its parameter have to be enclosed in single quotes.
+HINT: Don't give a cmd-parameter here, this will be done automatically by vdr!
+
+Entry in reccmds.conf:
+ad-scan: /usr/local/src/noad/noad nice --background -O -C -a -j --statisticfile=/video0/noadstat'
+HINT: You have to give a cmd-parameter here (nice oder -), and there MUST be the --background given,
+         else your vdr-watchdog will restart your vdr after some time!
+ 
+
+For working on your existing recordings, there are the following 3 scripts:
+allnoad
+allnoad <videodir> [additional_noad_args]
+  calls noad with the cmd "-" for all recordings in the dir <videodir>
+  Example:
+  allnoad /video --statisticfile=/video/noadstat -v
+
+allnoadnice
+allnoadnice <videodir> [noad-args]
+  calls noad with the cmd "nice" for all recordings in the dir <videodir>
+  Example:
+  allnoadnice /video --statisticfile=/video/noadstat --verbose --verbose
+
+allnewnoad
+allnewnoad - <videodir>  [additional_noad_args]
+  or
+allnewnoad nice <videodir>  [additional_noad_args]
+  calls noad with the cmd "-" or "nice" for all uncutted recordings in the dir <videodir>
+  where no marks.vdr exists. This script needs the helperscript "noadifnew"
+  
+These three scripts schould never be called withe the parameter "--background", else there is 
+a new instance of noad started for each recording!
+
+
+Statistics:
+If you call noad with "--statisticfile=<file>", some statistical data will be written into this file. 
+There will be a single line for each scanned recording. The last field of this line contains the text
+"add your comment here". This field can be used to add your comments about the succes of the scanning.
+Don't insert any newlines into this field! With the script "stat2html" these datas can be converted into 
+HTML-Format. Have a look into "mystat.html" to see how what information is provided.
+
+online-mode -- how does it work?
+If you want to run noad during the recording you hav to give the additional parameter '--online'. In this case
+noad starts scanning even if it is called with 'before' as the first parameter. If you just give '--online', the 
+online-scan will only be done if the current recording is an instant-recording. noad recognises this on the '@' in the 
+recording filename. This will only work if you have the entry 'Mark instant recording' in the menu 'Setup - Recording'
+set to yes (which is the default). If you want to run noad online on every recording you have to give '--online=2'.
+If noad is called from vdr with the cmd 'before', the recording-directory doesn't exist, so noad waits 60 seconds
+to let vdr create the directories. After that there is another delay until the first 3000 Frames (2 Minutes)  are 
+recorded. At this time noad starts the logo-detection (or the ac3-detection if the parameter '--ac3' is given).
+If the logo or a sound-change is detected, the first mark is set. From now on noad goes sleeping and wakes up
+every 15 second and scans the newly recorded frames.
+If you call noad with '--overlap' the overlap-detection will be done 250 seconds after an on-mark is found.
+If there are no new frames recorded for a while noad stops.
+
+noad vs noad
+If you call noad in the usual way via the '-r'-parameter of vdr it will be called twice, before and after the 
+recording. In this case the online-scan is still running at time the normal scan starts. If noad detects this there
+will be a delay up to 6 minutes to wait for the online-scan to end. After that, noad tries to stop the online-scan 
+via signal. AFter that the normal scan will be done. This behavior is implemented because the marks found in 
+online-mode might be not so good as the marks found in the normal scan. To let this work correctly noad has to be 
+called with the same online-parameters in both calls.
+
+noad online and vdr
+If you want to see a recording in timeshift-mode without ad's you have to patch your vdr to let this work.
+The mark-file has to be cyclic reloaded to use the marks found by the online-scan. Also the jumpplay-patch, which 
+is used to skip the marks during replay, has to be extended so it doesn't stop after the last mark.
+An extended jumpplay-patch can be found on the noad homepage. The patch is for vdr-1.3.7, if you use another 
+version of vdr you have to do the necessary changes by yourself.
+If you want to see a complete recording in timeshift-mode you should start your replay with a delay between
+15 and 30 Minutes.
+
+Hint:
+The online-scan is currently under construction. Check out the usability for your needs, there may be improvements 
+in the future. If you encounter any problems, please report to me.
+The statistik-values are not cerrect in the online-mode, so if you use the noad statistic feature you should
+use different statisc-files for the online-mode and the normal scans. This can be done by calling noad via 
+a helper-script which sets different parameters for the different noad-calls. An example how this can be done is 
+included (see noadcall.sh).
+
+noad 0.6.0:
+asd - audio silence detection
+Sometimes there are short audio breaks between different clips. noad can detect these short breaks and (somtimes) use 
+them to distinct between advertising/trailers and the normal recording. 
+To use this feature you need an installed libavcodec from ffmpeg. You have to configure noad with  "--with-ffmpeg",
+and may give the pathes to the include- and libryr-files with "--with-ffmpeginclude" and "--with-ffmpeglibdir".
+At this time, asd isn't intagrated in the online-scan.
+
+
+Send bug-reports and hints to: theNoad@SoftHome.net

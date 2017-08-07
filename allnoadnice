@@ -1,0 +1,14 @@
+#! /bin/sh
+# helper-script for noad
+# walks through the video-directory and calls noad
+# for every recording with the given parameters and 'nice'
+if test $# -lt 1
+then
+   echo "usage:"
+   echo "allnoadnice <videodir> [additional_noad_args]"
+   exit -1
+fi
+vdir=${1}
+shift
+find $vdir -follow -type d -name '*.rec' -exec noad $* nice '{}' ';'
+

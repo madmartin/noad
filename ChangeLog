@@ -1,0 +1,80 @@
+Version 0.6.0
+- add audio-silence-detection
+- add check for ac3-scan
+- fixed a bug in online-scan (wrong marks if there is a short part with ac3-sound
+  at the start of the recording)
+
+Version 0.5.3
+- change the way to find the mpeg2-headers in configure
+  look for pkg-config
+  else try /usr/include 
+  else try /usr/local/include
+- fixed a bug in restart scan after searching for a new logo in online mode
+- changed umask for create mark-files
+  
+Version 0.5.2
+- little speedup in blackline-detection 
+- change configure to avoid automatic compiling of toolies
+- add overlap-detection in online-mode
+
+Version 0.5.1
+- fixed a bug in scanRecord (online-mode only)
+- add logging-function for backtrace in case of errors
+
+Version 0.5.0
+- some code-cleanups
+- add Parameter --markfile to set a different markfile-name 
+- do logo redetection if no logo found after 12 minutes (Sea of Love, Kabel 1, 6.6.04)
+- fixed a bug in cSVDRPC::ReadCompleteReply()
+- fixed a bug in checkBlackFrameOnMark (Nuhr vom Feinsten, ProSieben, 28.06.04)
+- improvement of ac3-detection
+- introducing online-mode
+- fixed a bug in scanRecord (04.11.04)
+
+Version 0.4.2:
+- default nice-level changed to 19
+- fixed a bug in checkBlackFrameOnMark
+- fixed a bug in checkMarkPair
+- ignore last line in detectBlackLines (bottom)
+- fixed a bug in ac3 detection
+- added some helper-scripts from Andreas Lenz (noad_scripts.zip, see README inside zip-file)
+
+
+Version 0.4.1:
+- Fehlerbereinigung configure.ac 
+- start als Hintergrundprozess verbessert
+- pid-file zur Vermeidung von Doppelaufrufen eingeführt
+- Schrittweite für ac3-scan verringert
+- setzen von fehlerhaften Marken in checkBlacklineOnmark bereinigt
+- einige Script-Verbesserungen nach einem patch von Thomas Günther
+- Zusammenfassung der Versionen 0.3.2b und 0.4.0
+- add switch "nelonen" based on a patch from Esa Loukkola
+- add english readme
+
+Version 0.4.0:
+- overlap-detection
+- ac3 detection
+- scripte allnewnoad/noadifnew prüfen jetzt auf vorhandene marks.vdr
+- stat2html überarbeitet
+- OSD-Message
+- priority änderbar
+
+Version 0.3.4:
+- Verwendung von Automake/Autoconf ==> configure
+- Erkennung von vertikal verschobenen Logos
+- Priority-Level einstellbar per Parameter
+- Statistik-Format erweitert
+
+Version 0.3.3:
+- Kommentare zu den Marken in der marks.vdr
+- Erkennung von Wiederholungen vor/nach der Werbung
+- OSD-Nachrichten für Start und Ende von noad
+- Logo-Speicherung defaultmässig abgeschaltet
+- Versions-Nummer abrufbar
+
+Version 0.3.1:
+- Änderungen für libmpeg 0.3.2 pre-Release
+- Bereinigung div. Compiler-Warnings
+- Ausgabe div. Statistikwerte
+- script zum bearbeiteten aller noch nicht bearbeiteten Aufnahmen (allnewnoad)
+- script zum löschen aller gespeicherten logos (clearlogos)

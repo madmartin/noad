@@ -1,0 +1,17 @@
+new in noad 0.4.1:
+- configure improved
+- add english readme (README.en)
+- correct background-calling
+- some error-corrections
+- added specail switch for nelonen
+
+Neu in noad 0.4.0:
+- configure hinzugefügt
+- jumping-Logo-detection -- erkennt das Logo auch, wenn es vertikal versetzt angezeigt wird
+- overlap-Detection -- erkennt Wiederholungssequenzen vor/nach der Werbung
+                       und passt die Marken so an, das die Wiederholungssequenz weggeschnitten wird
+- ac3-detection -- erster Versuch einer Erkennung der Sound-Umschaltung von 5.1(Film) auf 2.0(Werbung)
+- priority-level einstellbar
+- OSD-Message für start/ende noad
+- Kommentare zu den Marken in der marks.vdr
+- scripte überarbeitet

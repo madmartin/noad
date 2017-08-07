@@ -1,0 +1,19 @@
+#! /bin/sh
+# helper-script for noad
+# walks through the video-dirctory and calls noad
+# for every uncutted recording where no 'marks.vdr'
+# is present
+# uses 'noadifnew' to do the work
+if test $# -lt 2
+then
+   echo "usage:"
+   echo "allnewnoad - <videodir>  [additional_noad_args]"
+   echo "or"
+   echo "allnewnoad nice <videodir>  [additional_noad_args]"
+   exit -1
+fi
+noadcmd=${1}
+vdir=${2}
+shift 2
+find $vdir -follow -type d -name '*.rec' -exec noadifnew $noadcmd '{}' $* ';'
+

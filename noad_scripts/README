@@ -1,0 +1,60 @@
+Scripts zum Aufrufen von noad
+
+Die folgenden Scripte erleichtern den Aufruf von noad 
+(automatische Schnittmarkensetzung fuer das VDR-Projekt).
+Da noad in der mir vorliegenden Version nicht als Plugin
+in den vdr eingebunden ist, herrscht bisweilen Unklarheit
+darueber, ob gerade ein Werbescan aktiv ist, und wenn ja 
+wie viele, sowie fuer welche Aufzeichnung.
+
+Die folgenden Scripte loesen diese Probleme in der Form,
+dass es moeglich ist, pro Film einen Werbescan zu starten 
+und ggf. separat wieder anzuhalten. Ausserdem kann man 
+Auskunft ueber die Anzahl der laufenden Werbefilter erhalten
+und den Inhalt der Schnittlisten ansehen.
+
+
+Installation:
+
+Die Datei "reccmds.conf" ist in das "/video-Verzeichnis" des
+vdr zu kopieren und erweitert das Befehlsmenue zu den 
+Aufzeichnungen um die Menuepunkte:
+
+Werbefilter starten...
+Werbefilter anhalten...
+Schnittliste ansehen
+Werbefilter Uebersicht
+Alle Werbefilter anhalten...
+
+
+
+Die Dateien:
+
+startnoad.sh	// startet einen Werbefilter fuer den gewaehlten Film
+stopnoad.sh	// haelt den Werbefilter fuer den gewaehlten Film an
+viewmarks.sh	// zeigt den Inhalt der  Schnittlistendatei an
+countnoad.sh	// zaehlt die Anzahl der laufenden Werbefilter
+
+
+... muessen vom vdr ausfuehrbar sein und sind in das Verzeichnis 
+"/usr/local/bin" zu kopieren. Dort muss sich ebenfalls noad befinden.
+Ansonsten muss man die Pfade entsprechend anpassen oder besser symbolische 
+Links auf die Dateien setzen.
+
+Die Scripte entstammen urspruenglich aus dem Paket commscan von
+Andreas Regel. Diese Scripte habe ich fuer das Paket noad entsprechend 
+angepasst. 
+
+Vielen Dank an die Entwickler von noad fuer dieses hilfreiche Paket und
+natuerlich an alle, die am vdr-Projekt arbeiten. 
+
+Meine Systemumgebung:
+
+Suse 7.3
+vdr 1.2.6
+diverse Plugins...
+
+Bei Fragen und Anregungen Email bitte an...
+
+Andreas Lenz <andreas.lenz@web.de>
+

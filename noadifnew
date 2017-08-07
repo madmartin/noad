@@ -1,0 +1,29 @@
+#! /bin/sh
+# helper-script for noad
+# walks through the video-directory and calls noad
+# for every recording without a 'marks.vdr'
+# this script is usually called from 'allnewnoad'
+if test $# -lt 2
+then
+   echo "usage:"
+   echo "noadifnew - <record>  [additional_noad_args]"
+   echo "or"
+   echo "noadifnew nice <record>  [additional_noad_args]"
+   exit -1
+fi
+fil="$2/marks.vdr"
+if  test -a $fil
+then
+  echo "noad already done for $2"
+else
+  file=`echo $2 | sed -e 's*/%**'`;
+  if [ $2 != $file ]
+  then
+    echo "$2 ist bereits geschnitten!"
+  else
+    noadcmd="$1"
+    vdir="$2"
+    shift 2
+    noad $noadcmd $vdir  $*
+  fi
+fi

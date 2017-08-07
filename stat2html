@@ -1,0 +1,160 @@
+#! /bin/sh
+# helper-script for noad
+# convert noad-statistic-file to html
+# changes:
+# add some more cols
+# automatic detetction of statisticlines from previous versions
+# sort the lines by recording-name and noad scan-date
+# add some calculations
+
+if test $# -lt 2
+then
+   echo "usage:"
+   echo "stat2html <statfile> <htmlfile> [videodir]"
+   exit -1
+fi
+# write html-header
+echo "<html>" > $2
+echo "<head>" >>$2
+echo "<meta http-equiv=\"content-type\" content=\"text/html; charset=ISO-8859-1\">" >>$2
+echo "</head>" >>$2
+echo "<body>" >> $2
+# write table header
+echo "<table border="1">" >> $2
+echo "<tr>" >> $2
+echo "<th valign=\"top\">Scan-Datum</th>" >> $2
+echo "<th valign=\"top\">Version</th>" >> $2
+echo "<th valign=\"top\">Blacklines<br>ac3<br>overlap</th>" >> $2
+echo "<th valign=\"top\">Aufl&ouml;sung</th>" >> $2
+echo "<th valign=\"top\">Gesamtframes<br/>(Laufzeit)</th>" >> $2
+echo "<th valign=\"top\">decodierte<br/>Frames</th>" >> $2
+echo "<th valign=\"top\">decodierte<br/>Frames<br/>f&uuml;r<br/>Logo- erkennung</th>" >> $2
+echo "<th valign=\"top\">Zeit<br/>f&uuml;r<br/>Logo- erkennung<br/>(Sek.)</th>" >> $2
+echo "<th valign=\"top\">decodierte<br/>Frames<br/>f&uuml;r<br/>Logo- pr&uuml;fung</th>" >> $2
+echo "<th valign=\"top\">Zeit<br/>f&uuml;r<br/>Logo- pr&uuml;fung<br/>(Sek.)</th>" >> $2
+echo "<th valign=\"top\">Gesamtzeit<br/>f&uuml;r<br/>Scan</th>" >> $2
+echo "<th valign=\"top\">Name der Aufzeichnung</th>" >> $2
+echo "<th valign=\"top\">Kommentar</th>" >> $2
+echo "</tr>" >> $2
+
+# cmd for kick out a given vidoeo-dirname
+if [ $# -gt 2 ]
+then
+  stripvdir="sed -e s*$3** -e s*//**g -e s*\;/*\;*"
+else
+  stripvdir="cat"
+fi
+
+# convert statfile from noad-0.3.2/0.3.2a
+gawk -F';' '{ if(NF > 10) printf("%s\n",$0); \
+              else {\
+                 for(i=1;i<=NF;i++) {\
+                   if(i==2){\
+                     printf("0.3.2;-;-;");\
+                   }\
+                   if(i!=NF)\
+                     printf("%s;",$i);\
+                   else\
+                     printf("%s",$i);\
+                 }\
+                 printf("\n");\
+                 }\
+            };' $1 |
+# convert statfile from intermediate version
+gawk -F';' '{ if(NF > 12) printf("%s\n",$0); \
+              else {\
+                 for(i=1;i<=NF;i++) {\
+                   if(i==2){\
+                     printf("0.3.2;");\
+                   }\
+                   if(i!=NF)\
+                     printf("%s;",$i);\
+                   else\
+                     printf("%s",$i);\
+                 }\
+                 printf("\n");\
+                 }\
+            };' |
+# convert total-scantime from secs to time and add a reminder for markpic in col 12
+gawk -F';' '{ for(i=1;i<11;i++) \
+  {printf("%s;",$i); } \
+  h=$11/3600; \
+  m=$11/60%60; \
+  s=$11%60; \
+  printf("%d:%02d:%02d;",h,m,s); \
+  for(j=12;j<=NF;j++) \
+  { printf("%s;",$j); } \
+  printf("\n"); }' |
+
+# sort input by recordingname and scan-date
+sed -e 's/,/;/' |
+sort -k 13,13 -k 2,2 -t';' |
+sed -e 's/;/,/' |
+
+# strip the video-dir out of the recording-name
+$stripvdir |
+
+# set alignments and change some special characters
+sed -e 's/^/<tr><td>/' \
+    -e 's/\//<br\/>/g'\
+    -e 's/,/<br\/>/'\
+    -e 's/ /<br\/>/'\
+    -e '/0.4.2/s/,/<br\/>/'\
+    -e '/0.4.2/s/,/<br\/>/'\
+    -e 's/;/<\/td><td align="right">/1'\
+    -e 's/;/<\/td><td align="right">/1'\
+    -e 's/;/<\/td><td align="right">/1' \
+    -e 's/;/<\/td><td align="right">/1' \
+    -e 's/;/<\/td><td align="right">/1' \
+    -e 's/;/<\/td><td align="right">/1' \
+    -e 's/;/<\/td><td align="right">/1' \
+    -e 's/;/<\/td><td align="right">/1' \
+    -e 's/;/<\/td><td align="right">/1' \
+    -e 's/;/<\/td><td align="right">/1' \
+    -e 's/;/<\/td><td valign=\"top\">/g'\
+    -e 's/(/<br\/>(/'\
+    -e 's/add your comment here//'\
+    -e 's/_/ /g' \
+    -e 's/#2E/./g' \
+    -e 's/#27/'\''/g' \
+    -e 's/#3A/:/g' \
+    -e 's/$/<\/td><\/tr>/' |
+
+# colorize rows for better reading
+gawk '{ if(NR%2==1) gsub("<tr>","<tr bgcolor=\"#f0f0f0\">"); printf("%s\n",$0); }' >> $2
+
+# add some statistics
+gawk -F';' '{ if(NF > 10) { \
+                totalframes += $5; scantime += $11; decFrames += $6 \
+              } \
+              else { \
+                totalframes += $2; scantime += $8; decFrames += $3 \
+              } \
+            }; \
+            END {\
+              stotal = totalframes/25; \
+              mtotal = stotal / 60 % 60;\
+              htotal = stotal / 3600;\
+              stotal %= 60; \
+              mscan = scantime / 60 % 60;\
+              hscan = scantime / 3600;\
+              sscan = scantime%60;\
+              printf("<tr><td></td><td></td><td></td><td></td>"\
+                         "<td align=\"right\" valign=\"top\">%d<br/>(%d:%02d:%02d)</td>"\
+                         "<td align=\"right\" valign=\"top\">%d<br/>%d%%<br/>%dfps</td>"\
+                         "<td></td>"\
+                         "<td></td>"\
+                         "<td></td>"\
+                         "<td></td>"\
+                         "<td align=\"right\" valign=\"top\">%d:%02d:%02d<br/>%d%%</td>"\
+                         "<td></td>"\
+                         "<td></td>", \
+                         totalframes,int(htotal),int(mtotal),int(stotal),\
+                         decFrames,decFrames*100/totalframes,decFrames/scantime,\
+                         hscan,mscan,sscan,scantime*100/(totalframes/25)) }' $1 >> $2
+
+# write table-end
+echo "</table>" >> $2
+echo "</body>" >> $2
+echo "</html>" >> $2
+

@@ -1,0 +1,39 @@
+#! /bin/sh
+# helper-script for noad
+# update statisticfile from noad-0.3.2/0.3.2a to 0.3.4
+
+if test $# -lt 2
+then
+   echo "usage:"
+   echo "statupd <statfile> <newstat>"
+   exit -1
+fi
+gawk -F';' '{ if(NF > 10) printf("%s\n",$0); \
+              else {\
+                 for(i=1;i<=NF;i++) {\
+                   if(i==2){\
+                     printf("0.3.2;-;-;");\
+                   }\
+                   if(i!=NF)\
+                     printf("%s;",$i);\
+                   else\
+                     printf("%s",$i);\
+                 }\
+                 printf("\n");\
+                 }\
+            };' $1 |
+gawk -F';' '{ if(NF > 12) printf("%s\n",$0); \
+              else {\
+                 for(i=1;i<=NF;i++) {\
+                   if(i==2){\
+                     printf("0.3.2;");\
+                   }\
+                   if(i!=NF)\
+                     printf("%s;",$i);\
+                   else\
+                     printf("%s",$i);\
+                 }\
+                 printf("\n");\
+                 }\
+            };' > $2
+

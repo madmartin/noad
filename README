@@ -1,0 +1,225 @@
+noad ist ein Programm, daß an Hand der Senderlogos eine Erkennung von
+Werbeeinblendungen vornimmt und Schnittmarken zum entfernen der Werbung erzeugt.
+noad kann direkt aufgerufen werden oder als command für vdr eingebunden
+werden(option -r oder --recording in vdr).
+Die Logo-Erkennung basiert auf einem Programm von Thorsten Janke, das Original-
+programm und die dazugehörige Diplomarbeit sind hier zu
+finden: http://www.ktet.fh-muenster.de/ina/node1.html.
+Neben der reinen Logo-Erkennung werden auch weitere visuelle Merkmale zur
+Erkennung der Werbeblöcke herangezogen. Bei Aufnahmen, die oben und unten
+schwarze Balken haben, werden dies dazu verwendet, die Schnittmarken besser zu
+positionieren. Bei Aufnahmen ohne diese Balken wird eine genauere Positionierung
+der Marken durch Schwarzbilderkennung versucht. Optional werden Wiederholungen
+von Filmsequenzen nach einer Werbeeinblendung gesucht und die Marken bei gefundener
+Wiederholungssequenz angepasst.
+Ab Version 0.4.0 ist auch eine Werbeerkennung an Hand der Sound-Umschaltungen 
+möglich. Ist der Parameter --ac3 angegeben, wird zuerst untersucht, ob die Aufnahme 
+ac3-sound enthält. Ist dies der Fall, wird an Stelle des Logo-Scans ein Sound-Scan 
+durchgeführt. Dieser ist deutlich schneller als der Logo-Scan.
+
+noad läuft als eigenständiges Programm und ist von der verwendeten VDR-Version
+unabhängig, solange die File-Formate von VDR nicht geändert werden.
+noad nutzt neben den eigentlichen mpeg-dateien (*.vdr) die Index-Datei von VDR und
+schreibt die Ergebnisse in die marks.vdr.
+
+Erzeugung:
+Vor dem erzeugen von noad ist die libmpeg2, Version 0.3.1 oder 0.4.0, zu installieren.
+(siehe http://libmpeg2.sourceforge.net)
+Danach einfach im Source-Verzeichnis den üblichen Dreisatz configure/make/make install aufrufen.
+
+Aufruf:noad [options] cmd <record>
+options:
+-s <filename>   --statisticfile=<file>
+                Name der datei, in der Statistik-Daten gespeichert werden
+-v              --verbose
+                erhöht den Log-Level, kann mehrfach angegeben werden
+-b              --background
+                lässt noad als Hintergrundprozess laufen
+-p              --priority
+                Priorität wenn noad als Hintergrundprozess läuft [20...-20] default 20
+-c              --comments
+                fügt Kommentare zu den Marken hinzu
+-o              --overlap
+                erkennt Wiederholungssequenzen vor/nach der Werbung
+-a              --ac3
+                experimentell: nutzt in Aufnahmen mit ac3-sound die
+                Sound-Umschaltungen 5.1/2.0 zur Erkennung von Werbeblöcken
+-j              --jumplogo
+                erkennt vertikal verschobene Senderlogos
+-O              --OSD
+                sendet eine OSD-Message an VDR(localhost:2001) für Start und Ende
+-S              --savelogo
+                speichert das erkannte Logo
+-B              --backupmarks
+                sichert eine vorhandene marks.vdr nach marks0.vdr
+-n              --nelonen
+                special behavior for finish stations
+-V              --version
+                zeigt die Versionsnummer und endet dann
+                
+                --markfile=<markfilename>
+                set a different markfile-name
+                
+                --online[=1|2] (default is 1)
+                  start noad immediately when called with "before" as cmd
+                  if online is 1, noad starts online for live-recordings
+                  only, online=2 starts noad online for every recording
+                  live-recordings are identified by having a '@' in the filename
+                  so the entry 'Mark instant recording' in the menu 'Setup - Recording'
+                  of the vdr should be set to 'yes'
+                  
+                --asd
+                  audio silence detection
+                  noad muß mit ffmpeg-support kompiliert sein (siehe configure --help)
+
+cmd: eins von
+       before      von vdr, wenn mit der Option "-r" in vdr eingebunden
+                   noad beendet sich sofort, wenn dieses cmd gegeben wird und
+                   --online nicht angegeben ist
+       after       von vdr, wenn mit der Option "-r" in vdr eingebunden
+       -           dummy-parameter für Direktaufruf
+       nice        noad läuft mit geringer Priorität
+<record>    vollständiger Pfad des Verzeichnisses mit der Aufnahme, die bearbeitet werden soll
+
+
+Beispiele:
+  Direktaufruf, Scan mit voller Prozessorleistung:
+  noad - /video/Akte_x/2003-07-18.22.08.50.50.rec
+
+  Direktaufruf, Scan mit voller Prozessorleistung, Statistikdaten nach /video/noadstat schreiben:
+  noad --statisticfile=/video/noadstat -/video/Akte_x/2003-07-18.22.08.50.50.rec
+
+  Direktaufruf, Scan als Hintergrundprozess mit geringer Prozessorleistung:
+  noad nice --background /video/Akte_X/Roland/2003-08-22.22.03.99.99.rec
+
+  Einbindung in VDR:
+  vdr -r'noad [options]'
+
+noad benötigt Schreibrechte in den Aufnahmeverzeichnissen!
+
+Einbindung in VDR:
+noad kann als Programm zur Nachbearbeitung einer Aufnahme über den Paramter -r beim Aufruf von VDR angegeben werden.
+Bei Systemen, die über den VDR automatisch abgeschaltet werden, ist zu beachten, daß der Rechner nicht
+runtergefahrenwerden sollte, solange noad noch aktiv ist. Wer noad lieber gezielt für einzelne Aufnahmen 
+starten möchte, kann sich einen passenden Eintrag in der reccmds.conf eintragen.
+Beispiele:
+vdr-Aufruf mit noad-Aufruf automatisch nach jeder Aufnahme:
+vdr <andere vdr-Parameter> -r'/usr/local/src/noad-0.4.1/noad --statisticfile=/video0/noadstat'
+BEACHTE: noad und die Parameter müssen in ' eingeschlossen sein.
+BEACHTE: Es wird kein Parameter 'cmd' angegeben, da vdr dies automatisch für uns erledigt
+
+Eintrag in der reccmds.conf:
+Werbung scannen: /usr/local/src/noad/noad nice --background -O -C -a -j --statisticfile=/video0/noadstat'
+BEACHTE: Hier muß ein cmd-Parameter angegeben sein (nice oder -), außerdem MUSS der Parameter --background angegeben 
+werden, da sonst der vdr-Watchdog nach einiger Zeit einen Neustart des vdr auslöst!
+ 
+
+
+Für das Bearbeiten vorhandener Aufnahmen sind 3 Scripte dabei:
+allnoad
+Aufruf: allnoad <videodir> [additional_noad_args]
+        ruft noad mit dem cmd "-" für alle vorhandenen Aufnahmen im Videoverzeichnis auf
+        allnoad /video --statisticfile=/video/noadstat -v
+
+allnoadnice
+Aufruf: allnoadnice <videodir> [noad-args]
+        ruft noad mit dem cmd "nice" für alle vorhandenen Aufnahmen im Videoverzeichnis auf
+        Beispiel:
+        allnoadnice /video --statisticfile=/video/noadstat --verbose --verbose
+
+allnewnoad
+Aufruf: allnewnoad - <videodir>  [additional_noad_args]
+        oder
+        allnewnoad nice <videodir>  [additional_noad_args]
+        ruft noad mit dem cmd "-" oder "nice" für alle ungeschnittenen Aufnahmen im Videoverzeichnis auf,
+        für die es keine Schnittmarkendatei gibt. Benötigt Zugriff auf das Script "noadifnew"
+Dies 3 Scripte sollten nicht mit dem Parameter "--background" aufgerufen werden, da sonst die Scans für
+alle Aufnahmen gleichzeitig gestartet werden.
+
+noad speichert das erkannte Logo im Verzeichnis der Aufnahme unter dem Namen "cur.logo". Dieses Logo
+wird bei einem erneuten Aufruf wiederverwendet, so daß die Logoerkennung dann entfallen kann.
+Ab Version 0.3.3 wird das Logo nur gespeichert, wenn der Parameter --savelogo angegeben wird.
+Die gespeicherten Logos können mit dem script "clearlogos" entfernt werden.
+
+Statistikdaten:
+Wird noad mit "--statisticfile=<file>" aufgerufen, werden in die angegebene Datei einige Statistikdaten
+geschrieben. Für jede gescannte Aufnahme wird eine Zeile in die Datei geschrieben. Das letzte Feld in der
+Zeile enthält immer den Text "add your comment here". Dieses Feld kann mit Bemerkungen über den Erfolg
+des Scans überschrieben werden, dabei dürfen keine Zeilenumbrüche eingefügt werden. Ab Version 0.3.4
+wurde die Statistik-Ausgabe von noad erweitert. Eine vorhandene Statistikdatei kann mit dem
+Script 'statupd' auf das neue Format umgestellt werden. Die Statisik-Daten könen mit dem Script
+"stat2html" in eine HTML-Datei umgewandelt werden. Dieses Script prüft bei der Umwandlung die  einzelnen
+Zeilen der Statistik-Datei und führt ggf. automatisch ein Update auf das neue Format durch. Die
+HTML-Ausgabe wurde um einige Summenfunktionen ergänzt und optisch etwas aufgefrischt.
+
+Zu den neuen Möglichkeiten:
+--overlap: Kann zu fehlerhaften Marken bei Sendungen mit relativ statischem Bildinhalt führen,
+           wie z.B. Harald Schmidt Show, sonst bisher gute Ergebnisse (Test: emergency room, Ausstrahlungen um 20:15)
+--ac3: Ist noch im Test-Stadium, kann/muß noch verbessert werden
+
+--markfile=<markfilename>
+  Mit diesem Parameter kann eine andere Mark-Datei angegeben werden. Dieser Parameter ist nur für Testzwecke 
+  gedacht.
+--online:
+  Wenn dieser Parameter angegeben ist, wird noad bei Aufruf mit cmd=before bereits während der Aufzeichnung
+  gestartet. Ist --online=2 angegeben, passiert dies bei jeder Aufnahme, sonst nur bei live-Aufnahmen.
+  Der online-scan startet ca. 2 Minuten nach Beginn der Aufnahme und wird danach alle 15 Sekunden fortgesetzt.
+
+noad online -- wie geht's?
+Um noad bereits während der laufenden Aufnahme zu starten ist als zusätzlicher Parameter --online anzugeben. Damit
+startet noad auch dann, wenn als cmd 'before' angegeben wird. Ohne zusätzliche Angaben wird noad dann nur für 
+live-Aufnahmen gestartet, diese erkennt noad daran, daß im Namen der Aufnahme ein '@' auftaucht. Dies funktioniert 
+jedoch nur, wenn im VDR im Menü Aufnahmen der Eintrag "Direktaufzeichnung markieren" auf 'ja' gesetzt ist. Möchte man
+noad bei jeder Aufnahme sofort mitlaufen lassen, so ist --online=2 anzugeben. 
+Wenn noad vom VDR mit dem cmd 'before' aufgerufen wird sind die Verzeichnisse für die Aufnahme noch nicht erstellt.
+Daher wartet noad zunächst 60 Sekunden, bis der VDR die Verzeichnisse erstellt und mit der Aufzeichnung begonnen hat.
+Anschliessend wird eine weitere Pause eingelegt, bis der VDR mind. 3000 Frames (2 Minuten) aufgezeichnet hat.
+Jetzt beginnt der scan in der üblichen Weise: je nach Einstellung wird versucht, das Logo zu finden bzw. zu erkennen, 
+ob in der Aufnahme ac3-sound auftaucht. 
+Wenn Logo oder ac3-sound erkannt wurden wird die erste Marke gesetzt. Danach wird der scan alle 15 Sekunden für die
+neu hinzugekommenen Frames fortgesetzt.
+Wird noad mit dem Parameter --overlap aufgerufen, wird 250 Sekunden nachdem eine On-Marke gesetzt wurde die 
+overlap-detection für die zueletzt gefundenen Marken durchgeführt
+Stellt noad fest das nach einer Pause keine neuen Frames hinzugekommen sind beendet es sich.
+
+noad vs noad
+Bei dem üblichen Ablauf (Aufruf von noad aus dem vdr) wird noad nach Ende einer Aufzeichnung vom VDR erneut mit
+dem cmd 'after' aufgerufen. Zu diesem Zeitpunkt wird aber i.A. die noad-Instanz, die mit 'before' aufgerufen wurde,
+noch aktiv sein. noad stellt dies fest und wartet bis zu 6 Minuten darauf, daß sich die vorherige Instanz beendet. 
+Geschieht dies nicht, wird versucht, die laufende Instanz per Signal zu beenden. Anschließend wird der normale
+scan durchgeführt. Damit dies funktioniert muß noad bei 'before' und 'after' mit den gleichen Einstellungen 
+für '--online' aufgerufen werden.
+
+noad online und vdr
+Damit man eine Aufnahme zeitversetzt ohne Werbung geniessen kann sind einige Änderungen am VDR vorzunehmen. 
+Bei der Wiedergabe muß die Schnittmarkendatei zyklisch neu eingelesen werden, damit die zwischenzeitlich von noad 
+gefundenen Marken verwendet werden. Dies sollte aber nur geschehen, wenn es sich bei der Wiedergabe um eine 
+laufende Aufnahme handelt. Bei Verwendung des jump-play-patches muß dieser so erweitert werden, daß die Wiedergabe 
+nach der letzten Marke nicht automatisch beendet wird, wenn es sich um eine laufende Aufnahme handelt.
+Diese Änderungen sind zusammen mit dem jump-play-patch als erweiterter jump-play-patch auf der noad-Seite
+zu finden. Der Patch liegt zur Zeit für den vdr-1.3.7 vor und muß ggf. von Hand angepasst werden.
+Mit dem jump-play-patch werden die in der Aufnahme gefundenen Werbeblöcke bei der Wiedergabe automatisch 
+übersprungen. 
+Um eine laufende Aufnahme werbefrei zu geniessen sollte man einen Zeitversatz, je nach Dauer der Sendung, 
+von 15-30 Minuten vorsehen.
+
+Hinweis:
+Der scan während einer laufenden Aufnahme ist z.Z. noch in der Entwicklung. Derzeit werden die Marken nur bei
+Logo-Wechsel oder sound-Wechsel gesetzt und ggf. durch die overlap-detection verbessert.
+Die Statistik-Daten werden z.Z. im online-Modus nicht korrekt geschrieben, wer die noad Statistik verwendet sollte
+für den online-scan eine separate Statistikdatei verwenden. Dies kann man dadurch erreichen daß man noad nicht direkt
+aus dem vdr aufruft sondern über ein kleines Aufruf-Script, das die Statistikdatei je nach Aufruf ändert. 
+Ein Beispielscript hierzu ist mitgeliefert (noadcall.sh).
+
+Ab noad 0.6.0:
+asd - audio silence detection
+Untersuchungen der Aufnahmen haben gezeigt, daß an den Schnittstellen von clips i.A. eine kurze Tonpause auftritt. 
+Diese Pause ist so kurz, daß sie bei der normalen Wiedergabe nicht bemerkt wird. noad kann diese kurzen Pausen im
+Audio-Stream erkennen und damit (manchmal) die Programmvorschau mit Logo vom eigentlichen Programm unterscheiden.
+Um asd zu nutzen, muss die libavcodec von ffmpeg installiert sein. Damit noad die libavcodec nutzt ist 
+configure mit "--with-ffmpeg" aufzurufen, ggf. mit "--with-ffmpeginclude" und "--with-ffmpeglibdir" die Pfade zu den 
+ffmpeg headern und libs setzen. Danach ein "make", und dann kann noad mit "--asd" aufgerufen werden.
+asd ist z.Z. noch nicht im online-scan integriert.
+
+
+Fehlermeldungen, Anregungen, Hinweise und auch Erfahrungsberichte an: theNoad@SoftHome.net
