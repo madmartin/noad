@@ -1,12 +1,17 @@
 #SUBDIRS = libvo
 
 noinst_LIBRARIES=libnoad.a
-libnoad_a_SOURCES=tools.cpp vdr_cl.cpp svdrpc.cpp tools.h vdr_cl.h svdrpc.h mpeg2wrap.cpp mpeg2wrap.h
+libnoad_a_SOURCES=tools.cpp vdr_cl.cpp svdrpc.cpp  \
+	tools.h vdr_cl.h svdrpc.h 
 
 bin_PROGRAMS=noad
-noad_SOURCES=cchecklogo.cpp ccontrol.cpp cgetlogo.cpp ctoolbox.cpp noad.cpp tnoad.cpp noaddata.cpp\
-	           audiotools.cpp main.cpp \
-	    	audiotools.h cchecklogo.h ccontrol.h cgetlogo.h ctoolbox.h noad.h tnoad.h noaddata.h videodir.h
+noad_SOURCES=audiotools.cpp cchecklogo.cpp ccontrol.cpp cgetlogo.cpp ctoolbox.cpp \
+		noad.cpp noaddata.cpp tnoad.cpp ffmpeg_decoder.cpp libmpeg2_decoder.cpp mpeg_decoder.cpp \
+	        main.cpp \
+	    	audiotools.h cchecklogo.h ccontrol.h cgetlogo.h ctoolbox.h \
+		noad.h tnoad.h noaddata.h videodir.h \
+		ffmpeg_decoder.h libmpeg2_decoder.h mpeg2wrap_ffmpeg.h mpeg_decoder.h 
+
 
 noad_LDADD=libnoad.a
 

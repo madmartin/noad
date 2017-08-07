@@ -26,27 +26,17 @@
   *@author Thorsten Janke
   */
 
-/** CToolBox contains functions for
-  * filter_tp and getting average
-  * of picture
-  */
-
-class CToolBox {
-
+// CToolBox contains functions for
+// filter_tp and getting average
+// of picture
+class CToolBox 
+{
 public:
-
-  /** constructor */
   CToolBox();
-  /** destructor */
   ~CToolBox();
-  /** filter_tp chSrc to chDest with nSize and
-    * feedback coefficient fC2
-    */
-  void filter_tp( char* chDest, char* chSrc, int nSize/*, float fC2*/);
-  /** returns average of chSrc with size nSize  */
-  int getAverage( char* chSrc, int nSize );	
-  /** filter one byte */
-  void filter_tp( char* chDest, char* chSrc/*, float fC2*/ );
+  void filter_tp( char* chDest, char* chSrc, int nSize);	// filter_tp chSrc to chDest with nSize
+  int getAverage( char* chSrc, int nSize );					// returns average of chSrc with size nSize  
+  void filter_tp( char* chDest, char* chSrc );				// filter one byte 
 };
 
 #endif

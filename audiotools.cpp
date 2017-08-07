@@ -4,6 +4,7 @@ bool havesilence = false;
 #ifdef HAVE_LIBAVCODEC
 
 #include "mpeg2wrap.h"
+#include "mpeg2wrap_ffmpeg.h"
 extern "C"
 {
    #include "libavcodec/avcodec.h"
@@ -49,7 +50,7 @@ AVCodecContext *codecContext= NULL;
 int64_t basepts=0;
 int64_t audiobasepts=0;
 //int64_t audiopts=0;
-extern uint_64 audiopts;
+extern uint64_t audiopts;
 int64_t audiosamples=0;
 uint8_t audio_in_buffer[8192];
 int in_buf_count = 0;
@@ -62,15 +63,17 @@ static unsigned int bitrates[3][16] =
 
 static uint32_t freq[4] = {441, 480, 320, 0};
 
-void my_av_dolog(void *ptr, int level, const char *fmt,va_list vl)
+void my_av_dolog(void * /*ptr*/, int level, const char *fmt,va_list vl)
 {
-  static char line[1024];
-  //va_list vl;
-  //va_start(vl,fmt);
-  vsnprintf( line,sizeof(line),fmt,vl);
-  //fprintf(stderr,line);
-  esyslog("ERROR decoding audio: %s (ignored)",line);
-  //va_end(vl);
+   if( level >= AV_LOG_ERROR )
+      return;
+   static char line[1024];
+   vsnprintf( line,sizeof(line),fmt,vl);
+   int iLen = strlen(line);
+   if( line[iLen-1] == '\n' )
+      line[iLen-1] = '\0';
+   //fprintf(stderr,line);
+   esyslog("ffmpeg(%d): %s",level,line);
 }
 
 void my_av_log(void*, int level,const char *fmt,...)

@@ -50,17 +50,12 @@ noadData::noadData()
   dsyslog( "noadData similarCutoff is %ld", similarCutoff);
 
 
-  /** get logo settings */
+  // get logo settings 
   m_fMainFilter = (float)0.9;
   m_fRunFilter = 0.5;
   m_nTimeInterval = 500;
   m_nMaxAverage = 245;
-  #ifdef VNOAD
-  if( bYUVSource )
-    m_nMinAverage = 20;
-  else
-  #endif
-    m_nMinAverage = 20;
+  m_nMinAverage = 20;
   m_nDif2Pictures = 2;
   m_nFilterFrames = 15;
   m_nCheckFrames = 80;
@@ -69,14 +64,11 @@ noadData::noadData()
   m_nBottomLinesToIgnore = 0;
   m_nBlackLinesTop = 0;
   m_nBlackLinesBottom = 0;
-  m_nBlackLinesLeft = 0;
-  m_nBlackLinesRight = 0;
   m_nMonoFrameValue = 0;
   m_isMonoFrame = -1;
   extLogoSearch = false;
   // set video buffer first time to NULL
-  video_buffer_mem = NULL;
-  yufbuf = NULL;
+  nyuvbuf = NULL;
 
   #ifdef VNOAD
   for( int i = 0; i < NUMPICS; i++)
@@ -96,7 +88,6 @@ noadData::noadData()
   videoDir = new char[2048];
   strcpy( videoDir, "/video" );
 
-  // free corner buffers
   m_chColorCorner3 = NULL;
   m_chColorCorner2 = NULL;
   m_chColorCorner1 = NULL;
@@ -126,11 +117,11 @@ noadData::~noadData()
     delete m_pCheckLogo;
   m_pCheckLogo = NULL;
   #ifdef VNOAD
-  clearPics();
+   //clearPics();
   #endif
 }
 
-// called to init the buffer when video told the document the maximum size
+// called to init the buffer when video size is known
 void noadData::initBuffer()
 {
   // free corner buffers
@@ -160,7 +151,6 @@ void noadData::initBuffer()
   if( m_nBottomLinesToIgnore > m_nBorderYBot )
     m_nBorderYBot = m_nBottomLinesToIgnore - m_nBorderYBot;
   m_nSizeX   = m_nGrabWidth / 5;
-//  m_nSizeY   = m_nGrabWidth / 5;
   m_nSizeY   = m_nGrabHeight / 4;
 
   // allocate memory for the color corners
@@ -222,7 +212,8 @@ void noadData::deleteTestlines( testlines** tl )
   *tl = NULL;
 }
 
-/** copy data into color corner buffer */
+// copy data into color corner buffer 
+/*
 void noadData::setColorCorners()
 {
   CToolBox tool;
@@ -235,61 +226,49 @@ void noadData::setColorCorners()
     for ( x = 0; x < m_nGrabWidth; x++ )
     {
       int lc3 = lCount*BYTES_PER_PIXEL;
-      /** the both top corners */
+      // the both top corners 
       if ( y>=m_nBorderYTop && y<m_nSizeY+m_nBorderYTop)
       {
-        //* top left corner */
+        // top left corner 
         if ( IS_TOP_LEFT && x>=m_nBorderX && x<m_nBorderX+m_nSizeX )
         {
-          tool.filter_tp( &m_chColorCorner0[count0++],
-            &video_buffer_mem[lc3]/*, m_fRunFilter*/ );
-          tool.filter_tp( &m_chColorCorner0[count0++],
-            &video_buffer_mem[lc3+1]/*, m_fRunFilter*/ );
-          tool.filter_tp( &m_chColorCorner0[count0++],
-            &video_buffer_mem[lc3+2]/*, m_fRunFilter*/ );
+          tool.filter_tp( &m_chColorCorner0[count0++], &video_buffer_mem[lc3] );
+          tool.filter_tp( &m_chColorCorner0[count0++], &video_buffer_mem[lc3+1] );
+          tool.filter_tp( &m_chColorCorner0[count0++], &video_buffer_mem[lc3+2] );
           #ifdef USE_RGB32
           count0++;
           #endif
         }
-        //* top right corner */
+        // top right corner 
         if ( IS_TOP_RIGHT && x>=m_nGrabWidth-m_nBorderX-m_nSizeX && x< m_nGrabWidth-m_nBorderX )
         {
-          tool.filter_tp( &m_chColorCorner1[count1++],
-            &video_buffer_mem[lc3]/*,m_fRunFilter*/ );
-          tool.filter_tp( &m_chColorCorner1[count1++],
-            &video_buffer_mem[lc3+1]/*, m_fRunFilter*/ );
-          tool.filter_tp( &m_chColorCorner1[count1++],
-            &video_buffer_mem[lc3+2]/*, m_fRunFilter*/ );
+          tool.filter_tp( &m_chColorCorner1[count1++], &video_buffer_mem[lc3] );
+          tool.filter_tp( &m_chColorCorner1[count1++], &video_buffer_mem[lc3+1] );
+          tool.filter_tp( &m_chColorCorner1[count1++], &video_buffer_mem[lc3+2] );
           #ifdef USE_RGB32
           count1++;
           #endif
         }
       }
-      /** the both bottom corners */
+      // the both bottom corners 
       if ( y>=m_nGrabHeight-m_nBorderYBot-m_nSizeY && y<m_nGrabHeight-m_nBorderYBot )
       {
-        //* bot left corner */
+        // bot left corner 
         if ( IS_BOT_LEFT && x>=m_nBorderX && x<m_nBorderX+m_nSizeX )
         {
-          tool.filter_tp( &m_chColorCorner3[count3++],
-            &video_buffer_mem[lc3]/*, m_fRunFilter*/ );
-          tool.filter_tp( &m_chColorCorner3[count3++],
-            &video_buffer_mem[lc3+1]/*, m_fRunFilter*/ );
-          tool.filter_tp( &m_chColorCorner3[count3++],
-            &video_buffer_mem[lc3+2]/*, m_fRunFilter*/ );
+          tool.filter_tp( &m_chColorCorner3[count3++], &video_buffer_mem[lc3] );
+          tool.filter_tp( &m_chColorCorner3[count3++], &video_buffer_mem[lc3+1] );
+          tool.filter_tp( &m_chColorCorner3[count3++], &video_buffer_mem[lc3+2] );
           #ifdef USE_RGB32
           count3++;
           #endif
         }
-        //* bot right corner */
+        // bot right corner 
         if ( IS_BOT_RIGHT && x>=m_nGrabWidth-m_nBorderX-m_nSizeX && x< m_nGrabWidth-m_nBorderX )
         {
-          tool.filter_tp( &m_chColorCorner2[count2++],
-            &video_buffer_mem[lc3]/*, m_fRunFilter*/ );
-          tool.filter_tp( &m_chColorCorner2[count2++],
-            &video_buffer_mem[lc3+1]/*, m_fRunFilter*/ );
-          tool.filter_tp( &m_chColorCorner2[count2++],
-            &video_buffer_mem[lc3+2]/*, m_fRunFilter*/ );
+          tool.filter_tp( &m_chColorCorner2[count2++], &video_buffer_mem[lc3] );
+          tool.filter_tp( &m_chColorCorner2[count2++], &video_buffer_mem[lc3+1] );
+          tool.filter_tp( &m_chColorCorner2[count2++], &video_buffer_mem[lc3+2] );
           #ifdef USE_RGB32
           count2++;
           #endif
@@ -299,11 +278,11 @@ void noadData::setColorCorners()
     }
   }
 }
-
+*/
 /** set the grey corners from color corners
   * use values for color components
   */
-void noadData::setGreyCorners( float fRed, float fGreen, float fBlue)
+/*void noadData::setGreyCorners( float fRed, float fGreen, float fBlue)
 {
   int x, y, n=0;
   int mb, mg, mr;
@@ -316,7 +295,7 @@ void noadData::setGreyCorners( float fRed, float fGreen, float fBlue)
       mb = n*BYTES_PER_PIXEL;
       mg = mb+1;
       mr = mg+1;
-      /** set corner top left */
+      /** set corner top left * /
       if( IS_TOP_LEFT )
       {
         fCompBlue  = (unsigned char)m_chColorCorner0[mb];
@@ -325,7 +304,7 @@ void noadData::setGreyCorners( float fRed, float fGreen, float fBlue)
         fSum = fRed*fCompRed + fGreen*fCompGreen + fBlue*fCompBlue;
         m_chGreyCorner0[n] = (int)fSum;
   	  }
-      /** set corner top right */
+      /** set corner top right * /
       if( IS_TOP_RIGHT )
       {
         fCompBlue  = (unsigned char)m_chColorCorner1[mb];
@@ -334,7 +313,7 @@ void noadData::setGreyCorners( float fRed, float fGreen, float fBlue)
         fSum = fRed*fCompRed + fGreen*fCompGreen + fBlue*fCompBlue;
         m_chGreyCorner1[n] = (int)fSum;
    	}
-      /** set corner bot right */
+      /** set corner bot right * /
       if( IS_BOT_RIGHT )
       {
         fCompBlue  = (unsigned char)m_chColorCorner2[mb];
@@ -343,7 +322,7 @@ void noadData::setGreyCorners( float fRed, float fGreen, float fBlue)
         fSum = fRed*fCompRed + fGreen*fCompGreen + fBlue*fCompBlue;
         m_chGreyCorner2[n] = (int)fSum;
    	}
-      /** set corner bot left */
+      /** set corner bot left * / 
       if( IS_BOT_LEFT )
       {
         fCompBlue  = (unsigned char)m_chColorCorner3[mb];
@@ -356,78 +335,70 @@ void noadData::setGreyCorners( float fRed, float fGreen, float fBlue)
     }
   }
 }
-
+*/
 /** sets the running corners */
 void noadData::setCorners()
 {
-  if ( video_buffer_mem != NULL )
+  if ( nyuvbuf != NULL )
   {
-    if( bYUVSource )
+    //if( bYUVSource )
       setYUVGreyCorners();
-    else
-    {
-      setColorCorners();
-      setGreyCorners( 0.3, 0.59, 0.11 );
-    }
+  //  else
+  //  {
+  //    setColorCorners();
+  //    setGreyCorners( 0.3f, 0.59f, 0.11f );
+  //  }
   }
 }
 
 // set the grey corners from YUV-Plane
 void noadData::setYUVGreyCorners()
 {
-  CToolBox tool;
+   //  TOCHECK
+   CToolBox tool;
 
-  int count0=0, count3=0;
-  int topend = m_nBorderYTop+m_nSizeY;
-  int bottStart = m_nGrabHeight-m_nBorderYBot-m_nSizeY;
-  int bottEnd = m_nGrabHeight-m_nBorderYBot;
-  register int linestart;
-  int rightLogoOffset = m_nGrabWidth-m_nBorderX-m_nSizeX;
-  for ( int y = m_nBorderYTop; y<topend; y++)
-  {
-     linestart = y*m_nGrabWidth;
-     //linestart = y*(GRAB_WIDTH+8);
-     memcpy(&m_chGreyCorner0[count0],&video_buffer_mem[linestart+m_nBorderX],m_nSizeX);
-     memcpy(&m_chGreyCorner1[count0],&video_buffer_mem[linestart+rightLogoOffset],m_nSizeX);
-     count0 += m_nSizeX;
-  }
-  for ( int y = bottStart; y<bottEnd; y++ )
-  {
-     linestart = y*m_nGrabWidth;
-     //linestart = y*(GRAB_WIDTH+16);
-     memcpy(&m_chGreyCorner3[count3],&video_buffer_mem[linestart+m_nBorderX],m_nSizeX);
-     memcpy(&m_chGreyCorner2[count3],&video_buffer_mem[linestart+rightLogoOffset],m_nSizeX);
-     count3 += m_nSizeX;
-  }
+   int count0 = 0, count3 = 0;
+   int topend = m_nBorderYTop+m_nSizeY;
+   int bottStart = m_nGrabHeight-m_nBorderYBot-m_nSizeY;
+   int bottEnd = m_nGrabHeight-m_nBorderYBot;
+   register int linestart;
+   int rightLogoOffset = m_nGrabWidth-m_nBorderX-m_nSizeX;
+   uint8_t *bufstart = nyuvbuf->buf[0];
+   int linewidth0 = nyuvbuf->linewidth[0];
+   int linewidth1 = nyuvbuf->linewidth[1];
+   for ( int y = m_nBorderYTop; y<topend; y++)
+   {
+      linestart = y*linewidth0;
+      memcpy(&m_chGreyCorner0[count0],&bufstart[linestart+m_nBorderX],m_nSizeX);
+      memcpy(&m_chGreyCorner1[count0],&bufstart[linestart+rightLogoOffset],m_nSizeX);
+      count0 += m_nSizeX;
+   }
+   for ( int y = bottStart; y<bottEnd; y++ )
+   {
+      linestart = y*linewidth0;
+      memcpy(&m_chGreyCorner3[count3],&bufstart[linestart+m_nBorderX],m_nSizeX);
+      memcpy(&m_chGreyCorner2[count3],&bufstart[linestart+rightLogoOffset],m_nSizeX);
+      count3 += m_nSizeX;
+   }
 
 
-   int x,y, s_x;//, s_y;
+   int x,y, s_x;
    int m_width = GRAB_WIDTH/5;
    int m_height = GRAB_HEIGHT/4;
 
-   s_x = m_nGrabWidth-m_nBorderX-m_nSizeX;
-   
-   
-
-/*
-   switch(iGrabCorner)
-   {
-     case 1: s_x = data->m_nBorderX; linestart = data->m_nGrabWidth*data->m_nBorderYTop; break;
-     case 2: s_x = rightLogoOffset;  linestart = data->m_nGrabWidth*data->m_nBorderYTop; break;
-     case 3: s_x = data->m_nBorderX; linestart = data->m_nGrabWidth*bottStart; break;
-     case 4: s_x = rightLogoOffset;  linestart = data->m_nGrabWidth*bottStart; break;
-   }
-*/   
-
-   s_x = m_nBorderX; linestart = m_nGrabWidth*m_nBorderYTop;
+   s_x = m_nBorderX; 
+   linestart = linewidth0*m_nBorderYTop;
+   uint8_t *bufstart2 = nyuvbuf->buf[2];
    for ( y=0; y<m_height/2-1; y++ )
    {
-      int s_y = linestart/4+(y*(m_nGrabWidth/2))+s_x/2;
+      int s_y = linestart/4+(y*linewidth1)+s_x/2;
       for ( x=0; x< m_width/2-1; x++ )
       {
-			unsigned int pix = *(yufbuf->buf[2]+s_y+x);
-         #define ADDPIX(a,b) \
-            {int i = ((*a)-128 + b ); if(i > 255) i=255; *a = i;}
+         unsigned int pix = *(bufstart2+s_y+x);
+
+#define ADDPIX(a,b) \
+         {int i = ((*a)-128 + b ); if(i > 255) i=255; *a = i;}
+
          ADDPIX((m_chGreyCorner0+y*2*m_nSizeX+x*2),pix);
          ADDPIX((m_chGreyCorner0+y*2*m_nSizeX+x*2+1),pix);
          ADDPIX((m_chGreyCorner0+(y*2+1)*m_nSizeX+x*2),pix);
@@ -435,43 +406,31 @@ void noadData::setYUVGreyCorners()
       }
    }
 
-   s_x = rightLogoOffset;  linestart = m_nGrabWidth*m_nBorderYTop;
+   s_x = rightLogoOffset;  
+   linestart = linewidth0*m_nBorderYTop;
    for ( y=0; y<m_height/2-1; y++ )
    {
-      int s_y = linestart/4+(y*(m_nGrabWidth/2))+s_x/2;
+      int s_y = linestart/4+(y*linewidth1)+s_x/2;
       for ( x=0; x< m_width/2-1; x++ )
       {
-         unsigned int pix = *(yufbuf->buf[2]+s_y+x);
-         #define ADDPIX(a,b) \
-            {int i = ((*a)-128 + b ); if(i > 255) i=255; *a = i;}
+         unsigned int pix = *(bufstart2+s_y+x);
+
+#define ADDPIX(a,b) \
+         {int i = ((*a)-128 + b ); if(i > 255) i=255; *a = i;}
+
          ADDPIX((m_chGreyCorner1+y*2*m_nSizeX+x*2),pix);
          ADDPIX((m_chGreyCorner1+y*2*m_nSizeX+x*2+1),pix);
          ADDPIX((m_chGreyCorner1+(y*2+1)*m_nSizeX+x*2),pix);
          ADDPIX((m_chGreyCorner1+(y*2+1)*m_nSizeX+x*2+1),pix);
       }
    }
-
-   
-/*  if( logocb != NULL )
-  {
-    // set results to view
-    //sprintf( m_pView->m_strHeadline, "found %d couples", nCouples );
-    //m_pView->update();
-    char *buffer = NULL;
-    asprintf(&buffer,"data set");
-    //logocb(99,buffer,video_buffer_mem,m_nSizeX,m_nSizeY);
-    logocb(0,buffer,m_chGreyCorner0,m_nSizeX,m_nSizeY);
-    logocb(1,buffer,m_chGreyCorner1,m_nSizeX,m_nSizeY);
-    logocb(2,buffer,m_chGreyCorner2,m_nSizeX,m_nSizeY);
-    logocb(3,buffer,m_chGreyCorner3,m_nSizeX,m_nSizeY);
-    delete buffer;
-  }*/
 }
 
 void writeInt( FILE *fd, const char * /*name*/, int iVal)
 {
   fwrite(&iVal, sizeof(int), 1, fd);
 }
+
 int readInt( FILE *fd, const char *name, int *iVal, bool ignoredata = false)
 {
   int iDummy;
@@ -479,9 +438,9 @@ int readInt( FILE *fd, const char *name, int *iVal, bool ignoredata = false)
      fread(&iDummy, sizeof(int), 1, fd );
   else
      fread(iVal, sizeof(int), 1, fd );
-//  dsyslog( "noadData Load %s %d", name, *iVal);
   return *iVal;
 }
+
 void noadData::saveCheckData( const char *name, bool bFullnameGiven )
 {
   FILE *fd;
@@ -639,7 +598,6 @@ int noadData::countvals(unsigned char *_src[3], int line, int width, int /*heigh
   for(int i = border; i < width-(border); i++)
   {
     iSet[src[i]] = 1;
-    //iSet[*src++] = 1;
     #ifdef VNOAD
     ySum += src[i];
     int y = src[i];
@@ -651,119 +609,73 @@ int noadData::countvals(unsigned char *_src[3], int line, int width, int /*heigh
   int iyCount = 0;
   for( int i = 0; i < width;i++)
     iyCount += iSet[i];
-  //memset( iSet,0,width*sizeof(int));
   unsigned char *src1 = _src[1]+iHalfOffset;
   unsigned char *src2 = _src[2]+iHalfOffset;
   for(int i = 0; i < iHalfWidth; i++)
   {
-    //iSet[src[i]] = 1;
     uSum += src1[i];
     vSum += src2[i];
-    //iSet[*src] = 1;
-    //uSum += *src++;
   }
-  //int iuCount = 0;
-  //for( int i = 0; i < iHalfWidth;i++)
-  //  iuCount += iSet[i];
-  //memset( iSet,0,width*sizeof(int));
-  //src = _src[2]+iHalfOffset;
-  //for(int i = 0; i < iHalfWidth; i++)
-  //{
-    //iSet[src[i]] = 1;
-    //vSum += src[i];
-    //iSet[*src] = 1;
-    //vSum += *src++;
-  //}
-  //int ivCount = 0;
   #ifdef VNOAD
   //int iFaktor = ySum/width-(border) + uSum/width/2 + vSum/width/2;
   #endif
-  //for( int i = 0; i < iHalfWidth;i++)
-  //  ivCount += iSet[i];
-  //delete [] iSet;
   int iRetval = iyCount;
   iRetval += abs( 128 - (uSum/(iHalfWidth)));
   iRetval += abs( 128 - (vSum/(iHalfWidth)));
   return iRetval;
 }
 
-int countvalsV(unsigned char *_src[3], bool isRight, int width, int height )
+int noadData::countvals(noadYUVBuf *yuvbuf, int line, int border)
 {
-	int lineSize = width;
-	int column;
-	int line;
-	int lumi;
-	int oldLumi = 0;
-	int startPos;
-  int start = isRight ? width-1 : 0;
-  int kMaxVert = 50;
-	int end = !isRight ? kMaxVert : start - kMaxVert;
-	int increment = isRight ? -1 : 1;
-	int black;
-	double ratio;
-	double oldRatio = 0.0;
-  int kMaxLineLuminance = 35;
-  int kFactor = 20;
-	column = start;
-	while (column != end)
-	{
-		lumi = 0;
-		black = 0;
-		for (line = 0; line < height; line++)
-		{
-			startPos = line * lineSize;
-			lumi += _src[0][startPos + column];
-			if (_src[0][startPos + column] < 21)
-				black++;
-		}
-		lumi /= height;
-		ratio = ((double) black) / ((double) height);
-		if (column == start)
-		{
-			/*
-      if (left)
-				firstCol = lumi;
-			else
-				lastCol = lumi;
-			*/
-      if (lumi > kMaxLineLuminance)
-				break;
-		}
-		else
-		{
-			if (oldRatio / ratio > 2.0)
-				break;
-			if (lumi > (kFactor * oldLumi) / 10)
-				break;
-			if (ratio < 0.7)
-			{
-				column = end;
-				break;
-			}
-		}
-		oldRatio = ratio;
-		oldLumi = lumi;
-		column += increment;
-	}
-/*
-	if (column != end)
-	{
-		if (left)
-			this->newBorder.left = column;
-		else
-			this->newBorder.right = start - column;
-	}
-*/
-	if (column != end)
-  {
-    if( isRight )
-      return start-column;
-    else
-      return column;
-  }
-  return 0;
-}
+  int iHalfWidth = yuvbuf->linewidth[1];
+  int iHalfLine = line>>1;
+  int iHalfOffset = iHalfWidth*iHalfLine;
+  unsigned char *src = yuvbuf->buf[0] + yuvbuf->linewidth[0] * line;
+#ifdef VNOAD
+  unsigned char *usrc = yuvbuf->buf[1] + iHalfOffset;
+  unsigned char *vsrc = yuvbuf->buf[2] + iHalfOffset;
+  #endif
+  memset( iSet,0,yuvbuf->width*2*sizeof(int));
 
+  border = 0;
+  #ifdef VNOAD
+  border = 0;
+  int ySum = 0;
+  int iColSum = 0;
+  #endif
+  
+  int uSum = 0;
+  int vSum = 0;
+  for(int i = border; i < yuvbuf->width - border; i++)
+  {
+    iSet[src[i]] = 1;
+    #ifdef VNOAD
+    ySum += src[i];
+    int y = src[i];
+    int u = usrc[i/2];
+    int v = vsrc[i/2];
+    iColSum += ((y+u+v)/3);
+    #endif
+  }
+  int iyCount = 0;
+  for( int i = 0; i < yuvbuf->width;i++)
+    iyCount += iSet[i];
+  unsigned char *src1 = yuvbuf->buf[1]+iHalfOffset;
+  unsigned char *src2 = yuvbuf->buf[2]+iHalfOffset;
+  for(int i = 0; i < iHalfWidth; i++)
+  {
+    uSum += src1[i];
+    vSum += src2[i];
+  }
+  #ifdef VNOAD
+  //int iFaktor = ySum/width-(border) + uSum/width/2 + vSum/width/2;
+  #endif
+  int iRetval = iyCount;
+  iRetval += abs( 128 - (uSum/(iHalfWidth)));
+  iRetval += abs( 128 - (vSum/(iHalfWidth)));
+  return iRetval;
+}
+/*
 void noadData::detectBlackLines(unsigned char *buf)
 {
   bool bNonBlack = false;
@@ -776,15 +688,12 @@ void noadData::detectBlackLines(unsigned char *buf)
   int i;
   int ii;
   int iBytesPerPixel = isYUVSource() ? 1 : BYTES_PER_PIXEL;
-  int cutval = isYUVSource() ? 20/*83*/ : 9;
-//  int iPixCount = m_nGrabWidth * iBytesPerPixel;
+  int cutval = isYUVSource() ? 20/*83* / : 9;
   if( isYUVSource() )
   {
     if( buf == NULL )
       return;
     unsigned char **bufs =(unsigned char **)buf;
-    //m_nBlackLinesTop2 = 8;
-    // start at line 9, sometimes lines above have garbage
     for( i = 8; i < m_nGrabHeight/2 && !bNonBlack; i++ )
     {
       if( countvals(bufs, i, m_nGrabWidth, m_nGrabHeight,m_nBorderX+m_nSizeX) > cutval )
@@ -807,75 +716,6 @@ void noadData::detectBlackLines(unsigned char *buf)
     m_nBlackLinesTop = m_nBlackLinesTop2;
     m_nBlackLinesBottom = m_nBlackLinesBottom2;
 
-    // not useful:
-    //m_nBlackLinesLeft = countvalsV(bufs, false, m_nGrabWidth, m_nGrabHeight );
-    //m_nBlackLinesRight = countvalsV(bufs, true, m_nGrabWidth, m_nGrabHeight );
-
-    // YUV-Blacklines:
-    // Y-Values <= cutval. max differenz inline <= maxdiff
-/*
-    int iMaxDiff = 150;
-    for( i = 0; i < m_nGrabHeight && !bNonBlack; i++ )
-    {
-      int linestart = i * iPixCount;
-      int iLineMin = 255;
-      int iLineMax = 0;
-      int iCutvalCount = 0;
-      for( ii = 0; (ii < iPixCount) && !bNonBlack; ii++ )
-      {
-        int iVal = (unsigned char)video_buffer_mem[linestart+ii];
-        if( iVal > cutval && ++iCutvalCount > 5 )
-          bNonBlack = true;
-        else
-        {
-          if( iVal > iLineMax )
-            iLineMax = iVal;
-          else if( iVal < iLineMin )
-            iLineMin = iVal;
-          if( ii > 5 )
-            if( (iLineMax - iLineMin) > iMaxDiff )
-              bNonBlack = true;
-        }
-      }
-      if( !bNonBlack )
-        m_nBlackLinesTop++;
-    }
-    bNonBlack = false;
-    for( i = m_nGrabHeight-1; i > 0 && !bNonBlack; i-- )
-    {
-      int linestart = i * iPixCount;
-      int iLineMin = 255;
-      int iLineMax = 0;
-      int iCutvalCount = 0;
-      for( ii = 0; (ii < iPixCount) && !bNonBlack; ii++ )
-      {
-        int iVal = (unsigned char)video_buffer_mem[linestart+ii];
-        if( iVal > cutval && ++iCutvalCount > 50 )
-	{
-          bNonBlack = true;
-//          dsyslog( "ival(%d,%d) > cutval ", iVal,iCutvalCount);
-	  //logline(&video_buffer_mem[linestart],iPixCount);
-	}
-        else
-        {
-          if( iVal > iLineMax )
-            iLineMax = iVal;
-          else if( iVal < iLineMin )
-            iLineMin = iVal;
-          if( ii > 5 )
-            if( (iLineMax - iLineMin) > iMaxDiff )
-	    {
-              bNonBlack = true;
-//              dsyslog( "diff(%d) > iMaxDiff ", (iLineMax - iLineMin));
-              //logline(&video_buffer_mem[linestart],iPixCount);
-	    }
-        }
-      }
-      if( !bNonBlack )
-        m_nBlackLinesBottom++;
-      //dsyslog( "noadData detectBlackLines iLineMin=%d iLineMax=%d", iLineMin,iLineMax);
-    }
-*/
   }
   else
   {
@@ -887,7 +727,6 @@ void noadData::detectBlackLines(unsigned char *buf)
       {
         iLineSum += (unsigned char)video_buffer_mem[linestart+ii];
       }
-      //dsyslog( "noadData iLineSum %d ", iLineSum);
       if( iLineSum > m_nGrabWidth*cutval )
         bNonBlack = true;
       else
@@ -908,6 +747,120 @@ void noadData::detectBlackLines(unsigned char *buf)
         m_nBlackLinesBottom++;
     }
   }
+}
+*/
+
+void noadData::detectBlackLines( noadYUVBuf *yuvbuf )
+{
+   bool bNonBlack = false;
+   m_nBlackLinesTop = 0;
+   m_nBlackLinesBottom = 0;
+   m_nBlackLinesTop2 = 0;
+   m_nBlackLinesBottom2 = 0;
+   int i;
+   int ii;
+   int iBytesPerPixel = 1;
+   int cutval = 20;
+   for( i = 8; i < m_nGrabHeight/2 && !bNonBlack; i++ )
+   {
+      if( countvals(yuvbuf, i, m_nBorderX+m_nSizeX) > cutval )
+         bNonBlack = true;
+      else
+      m_nBlackLinesTop2++;
+   }
+   m_nBlackLinesTop2 &= ~1;
+   bNonBlack = false;
+   for( i = m_nGrabHeight-2; i > 0 && i > m_nBlackLinesTop2 && !bNonBlack; i-- )
+   {
+      if( countvals(yuvbuf, i, m_nBorderX+m_nSizeX) > cutval )
+         bNonBlack = true;
+      else
+         m_nBlackLinesBottom2++;
+   }
+   if( m_nBlackLinesBottom2 &1 )
+      m_nBlackLinesBottom2--;
+
+   m_nBlackLinesTop = m_nBlackLinesTop2;
+   m_nBlackLinesBottom = m_nBlackLinesBottom2;
+}
+
+void noadData::ndetectBlackLines(int width, int height, unsigned char **buf)
+{
+#define MAXY 25
+  bool bNonBlack = false;
+  m_nBlackLinesTop = 0;
+  m_nBlackLinesBottom = 0;
+  int i;
+  unsigned char **bufs = buf;
+  unsigned char *line = buf[0];
+  for( i = 0; i < height/4 && !bNonBlack; i++ )
+  {
+	  for( int j = 0; j < width && !bNonBlack; j++)
+	  {
+		  if( line[j] > MAXY && line[j] != 255)
+			  bNonBlack = true;
+	  }
+	  if( !bNonBlack )
+		  m_nBlackLinesTop++;
+	  line += width;
+  }
+  if( m_nBlackLinesTop )
+	  m_nBlackLinesTop--;
+  bNonBlack = false;
+  line = buf[0]+width*(height-1);
+  for( i = height-1; i > height/4*3 && !bNonBlack; i-- )
+  {
+	  for( int j = 0; j < width && !bNonBlack; j++)
+	  {
+		  if( line[j] > MAXY && line[j] != 255)
+			  bNonBlack = true;
+	  }
+	  if( !bNonBlack )
+			  m_nBlackLinesBottom++;
+	  line -= width;
+  }
+  if( m_nBlackLinesBottom )
+	  m_nBlackLinesBottom--;
+}
+
+void noadData::ndetectBlackLines( noadYUVBuf *yuvbuf )
+{
+#define MAXY 25
+  bool bNonBlack = false;
+  m_nBlackLinesTop = 0;
+  m_nBlackLinesBottom = 0;
+  int i;
+  int height = yuvbuf->height;
+  int width = yuvbuf->width;
+  unsigned char *line = yuvbuf->buf[0];
+  for( i = 0; i < height/4 && !bNonBlack; i++ )
+  {
+	  for( int j = 0; j < width && !bNonBlack; j++)
+	  {
+		  if( line[j] > MAXY && line[j] != 255)
+			  bNonBlack = true;
+	  }
+	  if( !bNonBlack )
+		  m_nBlackLinesTop++;
+     line += yuvbuf->linewidth[0];
+  }
+  if( m_nBlackLinesTop )
+	  m_nBlackLinesTop--;
+  bNonBlack = false;
+  line = yuvbuf->buf[0]+yuvbuf->linewidth[0]*(height-1);
+  for( i = height-1; i > height/4*3 && !bNonBlack; i-- )
+  {
+	  for( int j = 0; j < width && !bNonBlack; j++)
+	  {
+		  if( line[j] > MAXY && line[j] != 255)
+			  bNonBlack = true;
+	  }
+	  if( !bNonBlack )
+			  m_nBlackLinesBottom++;
+	  line -= yuvbuf->linewidth[0];
+  }
+  if( m_nBlackLinesBottom )
+	  m_nBlackLinesBottom--;
 }
 
 void noadData::checkMonoFrame( int framenum, unsigned char **_src)
@@ -963,6 +916,7 @@ bool pointInRect(int x, int y, int left, int top, int right, int bottom)
   return false;
 }
 
+/*
 bool noadData::CheckFrameIsBlank(int framenum, unsigned char **buf )
 {
     m_isMonoFrame = 0;
@@ -1031,8 +985,80 @@ bool noadData::CheckFrameIsBlank(int framenum, unsigned char **buf )
     m_isMonoFrame = 1;
     return(true);
 }
+*/
 
-int noadData::GetAvgBrightness(int /*framenum*/, unsigned char ** /*buf*/ )
+bool noadData::CheckFrameIsBlank(int framenum, noadYUVBuf *yuvbuf )
+{
+    m_isMonoFrame = 0;
+    const unsigned int max_brightness = 135; // check this value, org was 120
+    const unsigned int test_brightness = 80;
+    const int pass_start[7] = {0, 4, 0, 2, 0, 1, 0};
+    const int pass_inc[7] = {8, 8, 4, 4, 2, 2, 1};
+    const int pass_ystart[7] = {0, 0, 4, 0, 2, 0, 1};
+    const int pass_yinc[7] = {8, 8, 8, 4, 4, 2, 2};
+    bool isDim = false;
+
+    int l, r, t, b;
+    l = r = t = b = 0;
+
+    m_pCheckLogo->  getLogoRect(l, t, r, b);
+    
+    int width = m_nGrabWidth;
+    int height = m_nGrabHeight;
+    int yPos;
+    if (!width || !height)
+        return(false);
+
+    if( l > 4 )
+      l -= 4;
+    if( t > 4 )
+      t -= 4;
+    if( b > 0 )
+      b += 4;
+    if( r > 0 )
+      r += 4;
+    unsigned char *frame_ptr = (unsigned char *)yuvbuf->buf[0];
+
+    // go through the image in png interlacing style testing if blank
+    for(int pass = 0; pass < 7; pass++)
+    {
+        for(int y = pass_ystart[pass]; y < height; y += pass_yinc[pass])
+        {
+            yPos = y * width;
+            for(int x = pass_start[pass]; x < width; x += pass_inc[pass])
+            {
+                if( !pointInRect(x,y,l,t,r,b) )
+                {
+                  if (frame_ptr[yPos + x] > max_brightness)
+                  {
+                      //dsyslog( "CheckFrameIsBlank of frame %d gives false(1) at %d %d with %d",framenum, x, y,frame_ptr[y * width + x] );
+                      return(false);
+                  }
+                  if (frame_ptr[yPos + x] > test_brightness)
+                      isDim = true;
+                }
+            }
+        }
+    }
+
+    // frame is dim so test average
+    if (isDim)
+    {
+        int avg = GetAvgBrightness(framenum,yuvbuf);
+
+        if (avg > 35)
+        {
+            //dyslog(LOG_INFO, "CheckFrameIsBlank of frame %d gives false(2)",framenum);
+            return(false);
+        }
+    }
+    //dsyslog( "CheckFrameIsBlank of frame %d gives true",framenum);
+    m_isMonoFrame = 1;
+    return(true);
+}
+
+/*
+int noadData::GetAvgBrightness(int /*framenum* /, unsigned char ** /*buf* / )
 {
   int brightness = 0;
   int pixels = 0;
@@ -1051,22 +1077,52 @@ int noadData::GetAvgBrightness(int /*framenum*/, unsigned char ** /*buf*/ )
   //dsyslog( "AvgBrightness of frame %d is %d",framenum, brightness/pixels);
   return(brightness/pixels);
 }
+*/
+
+int noadData::GetAvgBrightness(int framenum, noadYUVBuf *yuvbuf )
+{
+  int brightness = 0;
+  int pixels = 0;
+  int yPos;
+
+  unsigned char *frame_ptr = (unsigned char *)yuvbuf->buf[0];
+  for(int y = 0; y < m_nGrabHeight; y += 4)
+  {
+    yPos = y * m_nGrabWidth;
+    for(int x = 0; x < m_nGrabWidth; x += 4)
+    {
+      brightness += frame_ptr[yPos + x];
+      pixels++;
+    }
+  }
+  dsyslog( "AvgBrightness of frame %d is %d",framenum, brightness/pixels);
+  return(brightness/pixels);
+}
 
 void noadData::setUseExternalMem(bool b)
 {
   if( !bUseExternalMem )
   {
-    delete [] video_buffer_mem;
-    video_buffer_mem = NULL;
+    //delete [] video_buffer_mem;
+    //video_buffer_mem = NULL;
   }
   bUseExternalMem = b;
 }
 
-void noadData::setExternalMem(char *extMem, mpeg2_fbuf_t *yufbuf)
+/*
+void noadData::setExternalMem(char *extMem, mpeg2_fbuf_tu *yuvbuf)
 {
   setUseExternalMem(true);
   video_buffer_mem = extMem;
-  this->yufbuf = yufbuf;
+  this->yufbuf = yuvbuf;
+  m_isMonoFrame = -1;
+}
+*/
+
+void noadData::setExternalMem(noadYUVBuf *yuvbuf)
+{
+  setUseExternalMem(true);
+  nyuvbuf = yuvbuf;
   m_isMonoFrame = -1;
 }
 
@@ -1082,11 +1138,11 @@ void noadData::resetSceneChangeDetection()
 
 void noadData::getHistogram(simpleHistogram &dest)
 {
-  unsigned char *frame_ptr = (unsigned char *)getVideoBuffer();
+   unsigned char *frame_ptr = (unsigned char *)nyuvbuf->buf[0];
   memset(dest, 0, sizeof(simpleHistogram));
   for(register int y = 0; y < m_nGrabHeight; y += 2 )
   {
-    int linestart = y * m_nGrabWidth;
+      int linestart = y * nyuvbuf->linewidth[0];
     for(register int x = 0; x < m_nGrabWidth; x += 2 )
       dest[frame_ptr[linestart + x]]++;
   }
@@ -1095,7 +1151,6 @@ void noadData::getHistogram(simpleHistogram &dest)
 bool noadData::areSimilar(simpleHistogram &hist1,simpleHistogram &hist2)
 {
   long similar = 0;
-//  long delta = 0;
 
   for(register int i = 0; i < 256; i++)
   {
@@ -1103,105 +1158,96 @@ bool noadData::areSimilar(simpleHistogram &hist1,simpleHistogram &hist2)
       similar += hist1[i];
     else
       similar += hist2[i];
-//    delta += abs(hist1[i]-hist2[i]);
   }
-  //if (similar < (m_nGrabWidth * m_nGrabHeight / 4 * .91))
   if (similar < similarCutoff)
-  {
     return(false);
-  }
-  //dsyslog("similarity is %d of %d, delta is %d",similar,similarCutoff,delta);
-//  if( delta < 12000 )
-//    return(true);
-//  return(false);
   return(true);
 }
 
 // analyzes every 1 out of 4 pixels (every other column in every other row)
 bool noadData::CheckSceneHasChanged(void)
 {
-  sceneHasChanged = false;
-//    unsigned char *frame_ptr = (unsigned char *)getVideoBuffer();
-    if (!m_nGrabWidth || !m_nGrabHeight)
-        return(false);
+	sceneHasChanged = false;
+	if (!m_nGrabWidth || !m_nGrabHeight)
+		return(false);
 
-    if (lastHistogram[0] == -1)
-    {
-      getHistogram(lastHistogram);
-      return(false);
-    }
+	if (lastHistogram[0] == -1)
+	{
+		getHistogram(lastHistogram);
+		return(false);
+	}
 
-    memcpy(lastHistogram, histogram, sizeof(histogram));
+	memcpy(lastHistogram, histogram, sizeof(histogram));
 
-    // compare current frame with last frame here
-    getHistogram(histogram);
-    if (lastFrameWasSceneChange)
-    {
-        memcpy(lastHistogram, histogram, sizeof(histogram));
-        return(false);
-    }
+	// compare current frame with last frame here
+	getHistogram(histogram);
+	if (lastFrameWasSceneChange)
+	{
+		memcpy(lastHistogram, histogram, sizeof(histogram));
+		return(false);
+	}
 
-    if( !areSimilar(histogram,lastHistogram) )
-    {
-       memcpy(lastHistogram, histogram, sizeof(histogram));
-       sceneHasChanged = true;
-       return(true);
-    }
-    return(false);
+	if( !areSimilar(histogram,lastHistogram) )
+	{
+		memcpy(lastHistogram, histogram, sizeof(histogram));
+		sceneHasChanged = true;
+		return(true);
+	}
+	return(false);
 }
 
 #ifdef VNOAD
-void noadData::storePic(int n)
-{
-  if( n < 0 || n > (NUMPICS-1) )
-    return;
-  //if( video_buffer_mem2 != NULL )
-  //  delete [][] video_buffer_mem2;
-  if( video_buffer_mem2[n] == NULL )
-  {
-    video_buffer_mem2[n] = new char[m_nGrabWidth*m_nGrabHeight];
-    video_buffer_mem3[n] = new char[m_nGrabWidth*m_nGrabHeight];
-  }
-  memcpy(video_buffer_mem2[n],video_buffer_mem,m_nGrabWidth*m_nGrabHeight);
-  switch( m_nLogoCorner )
-  {
-    case UNKNOWN:   break;
-    case TOP_LEFT:  break;
-    case TOP_RIGHT:
-      for( int i = m_nBorderYTop; i < m_nBorderYTop + m_nGrabHeight/5; i++)
-      {
-        for( int ii = m_nGrabWidth-m_nBorderX; ii < m_nGrabWidth; ii++)
-          video_buffer_mem2[n][i*m_nGrabWidth+ii] = 0;
-      }
-    break;
-    case BOT_RIGHT: break;
-    case BOT_LEFT:  break;
-  }
-}
-
-void noadData::storeCompPic()
-{
-  if( iCompPics < NUMPICS-1 )
-    memcpy(video_buffer_mem3[iCompPics++],video_buffer_mem,m_nGrabWidth*m_nGrabHeight);
-  else
-  {
-    for( int i = 1; i < NUMPICS; i++)
-      video_buffer_mem3[i-1] = video_buffer_mem3[i];
-    memcpy(video_buffer_mem3[iCompPics],video_buffer_mem,m_nGrabWidth*m_nGrabHeight);
-  }
-}
-
-void noadData::clearPics()
-{
-  for( int i = 0; i < NUMPICS; i++)
-  {
-    if( video_buffer_mem2[i] != NULL )
-      delete [] video_buffer_mem2[i];
-    if( video_buffer_mem3[i] != NULL )
-      delete [] video_buffer_mem3[i];
-  }
-  iCompPics = 0;
-}
+//void noadData::storePic(int n)
+//{
+//  if( n < 0 || n > (NUMPICS-1) )
+//    return;
+//  //if( video_buffer_mem2 != NULL )
+//  //  delete [][] video_buffer_mem2;
+//  if( video_buffer_mem2[n] == NULL )
+//  {
+//    video_buffer_mem2[n] = new char[m_nGrabWidth*m_nGrabHeight];
+//    video_buffer_mem3[n] = new char[m_nGrabWidth*m_nGrabHeight];
+//  }
+//  memcpy(video_buffer_mem2[n],video_buffer_mem,m_nGrabWidth*m_nGrabHeight);
+//  switch( m_nLogoCorner )
+//  {
+//    case UNKNOWN:   break;
+//    case TOP_LEFT:  break;
+//    case TOP_RIGHT:
+//      for( int i = m_nBorderYTop; i < m_nBorderYTop + m_nGrabHeight/5; i++)
+//      {
+//        for( int ii = m_nGrabWidth-m_nBorderX; ii < m_nGrabWidth; ii++)
+//          video_buffer_mem2[n][i*m_nGrabWidth+ii] = 0;
+//      }
+//    break;
+//    case BOT_RIGHT: break;
+//    case BOT_LEFT:  break;
+//  }
+//}
+//
+//void noadData::storeCompPic()
+//{
+//  if( iCompPics < NUMPICS-1 )
+//    memcpy(video_buffer_mem3[iCompPics++],video_buffer_mem,m_nGrabWidth*m_nGrabHeight);
+//  else
+//  {
+//    for( int i = 1; i < NUMPICS; i++)
+//      video_buffer_mem3[i-1] = video_buffer_mem3[i];
+//    memcpy(video_buffer_mem3[iCompPics],video_buffer_mem,m_nGrabWidth*m_nGrabHeight);
+//  }
+//}
+//
+//void noadData::clearPics()
+//{
+//  for( int i = 0; i < NUMPICS; i++)
+//  {
+//    if( video_buffer_mem2[i] != NULL )
+//      delete [] video_buffer_mem2[i];
+//    if( video_buffer_mem3[i] != NULL )
+//      delete [] video_buffer_mem3[i];
+//  }
+//  iCompPics = 0;
+//}
 
 int countBits(unsigned char c)
 {
@@ -1215,30 +1261,30 @@ int countBits(unsigned char c)
   return iRet;
 }
 
-int noadData::checkPics()
-{
-  int iRet = 0;
-  int size = m_nGrabWidth*m_nGrabHeight;
-  int iDelta = 0;
-  int iCount = 0;
-  storeCompPic();
-  if( iCompPics < NUMPICS-1 )
-    return 2000000000;
-  for( int i = 0; i < NUMPICS; i++)
-  {
-    if( video_buffer_mem2[i] != NULL )
-    {
-      iCount++;
-      iDelta = 0;
-      for( int j = 0; j < size; j++ )
-       //iDelta += countBits(video_buffer_mem2[i][j] ^ video_buffer_mem[j]);
-       iDelta += abs(video_buffer_mem2[i][j]-(video_buffer_mem[j]&video_buffer_mem2[i][j]));
-      iDelta /= size;
-      iRet += iDelta;
-    }
-  }
-  return iRet/iCount;
-}
+//int noadData::checkPics()
+//{
+//  int iRet = 0;
+//  int size = m_nGrabWidth*m_nGrabHeight;
+//  int iDelta = 0;
+//  int iCount = 0;
+//  storeCompPic();
+//  if( iCompPics < NUMPICS-1 )
+//    return 2000000000;
+//  for( int i = 0; i < NUMPICS; i++)
+//  {
+//    if( video_buffer_mem2[i] != NULL )
+//    {
+//      iCount++;
+//      iDelta = 0;
+//      for( int j = 0; j < size; j++ )
+//       //iDelta += countBits(video_buffer_mem2[i][j] ^ video_buffer_mem[j]);
+//       iDelta += abs(video_buffer_mem2[i][j]-(video_buffer_mem[j]&video_buffer_mem2[i][j]));
+//      iDelta /= size;
+//      iRet += iDelta;
+//    }
+//  }
+//  return iRet/iCount;
+//}
 
 void noadData::modifyPic(int /*framenum*/,unsigned char **_src)
 {

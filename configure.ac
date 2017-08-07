@@ -10,12 +10,13 @@ dnl ---------------------------------------------------------------------------
 dnll initialisation
 dnl ---------------------------------------------------------------------------
 AC_PREREQ(2.57)
-AC_INIT(noad, 0.7.3, theNoad@ulmail.net)
+AC_INIT(noad, 0.8.0, theNoad@ulmail.net)
 AM_INIT_AUTOMAKE(dist-bzip2)
 AC_CONFIG_SRCDIR([cchecklogo.cpp])
 AC_CONFIG_HEADER([config.h])
 AC_DEFINE(_GNU_SOURCE, 1, [Define for setting a GNU environment])
 
+AC_DEFINE(FFMPEGDECODING,1,[Define for ffmpeg_using])
 
 dnl ---------------------------------------------------------------------------
 # Checks for programs.
@@ -156,16 +157,33 @@ LDFLAGS="$ffmpeglibdir $LDFLAGS"
 dnl ---------------------------------------------------------------------------
 dnl check that libavcodec is usable   
 dnl ---------------------------------------------------------------------------
-if test "$withffmpeg" == "1"; then
-  AC_SUBST(LIBAVCODEC,"-lavcodec")
-  AC_CHECK_LIB([avcodec],[avcodec_init],[AC_SUBST(HAVE_LIBAVCODEC,1) AC_SUBST(LIBS,"$LIBS $LIBAVCODEC ") ])
+dnl AC_SUBST(ffmpegok,0)
+dnl if test "$withffmpeg" == "1"; then
+dnl   AC_SUBST(LIBAVCODEC,"-lavcodec")
+dnl   AC_CHECK_LIB([avcodec],[avcodec_init],[AC_SUBST(HAVE_LIBAVCODEC,1) AC_SUBST(LIBS,"$LIBS $LIBAVCODEC ") AC_SUBST(ffmpegok,1)])
+dnl fi
+
+dnl if test "$ffmpegok" == "0"; then
+dnl if test "$withffmpeg" == "1"; then
+dnl   AC_SUBST(LIBAVCODEC,"-lavcodec")
+dnl   AC_CHECK_LIB([avcodec],[avcodec_register_all],[AC_SUBST(HAVE_LIBAVCODEC,1) AC_SUBST(LIBS,"$LIBS $LIBAVCODEC ") AC_SUBST(ffmpegok,1)])
+dnl fi
+dnl fi
+
+# Need libavcodec 52.26.0 for avcodec_decode_video2
+PKG_CHECK_MODULES(  FFMPEG, libavutil libavformat [libavcodec >= 52.0.0], HAVE_FFMPEG=yes)
+if test "$HAVE_FFMPEG" == "yes"; then
+AC_SUBST(HAVE_LIBAVCODEC,1) 
+AC_SUBST(LIBS,"$LIBS $LIBAVCODEC ") 
+AC_SUBST(ffmpegok,1)
 fi
-
-
-
-
-
+AC_SUBST(FFMPEG_CFLAGS)
+AC_SUBST(FFMPEG_LIBS)
+AC_SUBST(LIBS,"$LIBS $FFMPEG_LIBS ") 
    
+echo FFMPEG_CFLAGS are $FFMPEG_CFLAGS
+echo FFMPEG_LIBS are $FFMPEG_LIBS
+
 dnl ---------------------------------------------------------------------------
 dnl check for feature ImageMagick++
 dnl ---------------------------------------------------------------------------
@@ -304,6 +322,8 @@ AC_ARG_WITH(libmpeg2-static,
    [AC_SUBST(LIBMPEGX,"-Xlinker -Bstatic $pkgmpeglib -Xlinker -Bdynamic")])
 
 LDFLAGS="$LDFLAGS -rdynamic"
+CFLAGS="$CFLAGS -DFFMPEGDECODING"
+CPPFLAGS="$CPPFLAGS -DFFMPEGDECODING -g"
 
 dnl ---------------------------------------------------------------------------
 dnl check for libmpeg2

@@ -23,12 +23,18 @@
 #endif
 #include <inttypes.h>
 
+#define FFMPEG_DECODER 1
+#define LIBMPEG2_DECODER 2
+extern int default_Decoder; 
 
 #include "mpeg2wrap.h"
-extern YUVBUF volatile lastYUVBuf;  // last yuvbuf from StdCallBack
+#include "mpeg2wrap_ffmpeg.h"
+extern noadYUVBuf lastYUVBuf;  // last yuvbuf from StdCallBack
 #include "vdr_cl.h"
 #include "noaddata.h"
 #include "ccontrol.h"
+#include "ffmpeg_decoder.h"
+#include "libmpeg2_decoder.h"
 
 // in vdr_cl.h #define FRAMESPERSEC 25
 // in vdr_cl.h #define FRAMESPERMIN (FRAMESPERSEC*60)
@@ -64,6 +70,7 @@ extern YUVBUF volatile lastYUVBuf;  // last yuvbuf from StdCallBack
 
 extern noadData *ndata;
 extern CControl* cctrl;
+extern MPEGDecoder *decoder;
 
 //statistic data
 extern int totalFrames;
@@ -96,17 +103,15 @@ extern bool useAudioDetection;
 extern bool logoJumpDetection;
 extern bool isNelonen;
 
-bool detectBlacklines(int _index, int iFramesToCheck, cFileName *cfn, int& iTopLines, int& iBottomLines);
-bool detectBlacklines(cMarks *marks, cFileName *cfn, int& iTopLines, int& iBottomLines);
-void setCB_Func( cbfunc f );
-cbfunc getCB_Func(void);
 
-bool StdCallBack(void *buffer, int width, int height, YUVBUF );
-int simpleCallback( void *buffer, int width, int height, YUVBUF );
-int drawCallback( void *buffer, int width, int height, YUVBUF );
-int BlacklineCallback( void *buffer, int width, int height, YUVBUF );
-int BlackframeCallback( void *buffer, int width, int height, YUVBUF );
-int checkCallback( void *buffer, int width, int height, YUVBUF );
+typedef void(*fcbSizeChanged)(int width, int height);
+bool StdCallBack( noadYUVBuf* yuvbuf );
+int simpleCallback( noadYUVBuf* yuvbuf );
+int LogoDetectCallback( noadYUVBuf* yuvbuf );
+int BlacklineCallback( noadYUVBuf* yuvbuf );
+int BlackframeCallback( noadYUVBuf* yuvbuf );
+int checkCallback( noadYUVBuf* yuvbuf );
+int nBlacklineCallback( noadYUVBuf* yuvbuf );
 
 bool checkLogo(cFileName *cfn, int startpos);
 bool checkLogoShort(cFileName *cfn, int startpos);
@@ -128,9 +133,8 @@ bool checkBlacklineOnMark( cMarks *marks, cMark *m, cFileName *cfn, bool bForwar
 bool checkBlackFrameOnMark( cMarks *marks, cMark *m, cFileName *cfn, bool bForward, int iCheckTime );
 void checkOnMarks(cMarks *marks, cFileName *cfn);
 bool checkBlackFramesOnMarks(cMarks *marks, cFileName *cfn);
-bool detectBlacklines(cMarks *marks, cFileName *cfn, int& iTopLines, int& iBottomLines);
-bool detectBlacklines(cMarks *marks, cFileName *cfn, int& iTopLines, int& iBottomLines);
 bool detectBlacklines(int _index, int iFramesToCheck, cFileName *cfn, int& iTopLines, int& iBottomLines);
+bool detectBlacklines(cMarks *marks, cFileName *cfn, int& iTopLines, int& iBottomLines);
 bool checkBlacklineOnMarks(cMarks *marks, cFileName *cfn);
 void cleanInactiveMarks(cMarks *marks);
 void cleanActiveMarks(cMarks *marks);
@@ -139,9 +143,6 @@ void pass2a(cMarks *marks, cFileName *cfn);
 const char *getVersion();
 
 int audiocallback(int mode);
-bool detect_ac3_51(int StartFrame);
-int find_ac3start( int iStart, int iEnd, int mode2Find);
-int findVideoByPTS(uint_64 apts, int iStartFrame);
 #ifdef HAVE_LIBAVCODEC
 void pass3(cMarks *marks, cFileName *cfn);
 #endif
@@ -153,9 +154,16 @@ void clearStats();
 int checkScenecheckOnMark( cMarks *marks, cMark *m );
 void checkMarksOnIFrames(noadData *thedata, const char *fName);
 void checkMarkPair(cMark **m_org, cMarks *marks, cFileName *cfn);
-
+int getIFrameFor(cIndexFile* cIF, int iFrame);
 #ifdef VNOAD
 int scanRecord( int iNumFrames, cMarks *marks = NULL );
+typedef void (* infocbfunc)(const char*info1, const char *info2);
+extern infocbfunc info_callback;
+void setInfoCallback(infocbfunc infocb);
+void info(const char*info1, const char *info2);
+#define INFO(a,b) info(a,b)
+#else
+#define INFO(a,b)
 #endif
 
 #endif

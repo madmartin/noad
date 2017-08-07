@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 #include "cchecklogo.h"
 #include "noaddata.h"
 
@@ -29,8 +30,8 @@ CCheckLogo::CCheckLogo( noadData* data ){
 
   m_pData = data;
 
-  // allocate and set memory of view analyse data **************
   #ifdef VNOAD
+  // allocate and set memory of view analyse data 
   m_chAnalyseDataSize = m_pData->m_nSizeX*m_pData->m_nSizeY;
   m_chAnalyseData = new unsigned char[m_chAnalyseDataSize];
   memset(m_chAnalyseData, 0, m_chAnalyseDataSize);
@@ -43,13 +44,6 @@ CCheckLogo::CCheckLogo( noadData* data ){
   m_linehook = NULL;
   m_chCornerData = NULL;
 
-/*
-  //  create and set the view object ************************************
-  m_pView = new CCheckLogoView( / *m_pDoc, * /m_pData, parent );
-  m_pView->m_chPicture = m_chAnalyseData;
-  m_pView->setGeometry( 0, 0, m_pData->m_nSizeX+20, m_pData->m_nSizeY+20 );
-  m_pView->show();
-*/
   // init the logo and nologo counter
   m_nLogo = 0;
   m_nNoLogo = 0;
@@ -68,15 +62,13 @@ CCheckLogo::~CCheckLogo()
   delete [] m_chAnalyseData2;
   delete [] m_chAnalyseData3;
   #endif
-//  delete m_pView;
   if( m_linehook )
     m_pData->deleteTestlines( &m_linehook );
 
 }
 
-/** void CCheckLogo::newData()
-  * called from parent object to show that there are new data available
-  */
+// void CCheckLogo::newData()
+// called from parent object to show that there are new data available
 void CCheckLogo::newData()
 {
   if(!m_linehook)
@@ -86,17 +78,18 @@ void CCheckLogo::newData()
   }
   // call the checkTestlines function to check logo status
   int okPairs = checkTestlines( m_chCornerData, m_linehook, iLineOffset, iXOffset );
+
   if( isLogo )
   {
     totalPairsOk += okPairs;
     totalChecks++;
     deltaPairsOk = totalPairsOk/totalChecks;
   }
+
   if( !isLogo && m_linehook !=  NULL && m_pData->extLogoSearch )
   {
     logocbfunc oldlogocb = logocb;
     logocb = 0;
-    //syslog( LOG_INFO,"CCheckLogo::newData new lineOffset is %d over %d", iLineOffset,m_linehook->line);
     // save treschold during ex-scan
     int localTreshold = iTreshold;
     iTreshold = 0;
@@ -128,169 +121,162 @@ void CCheckLogo::newData()
       logocb = oldlogocb;
     }
     iTreshold = localTreshold;
-
   }
 }
 
 #define MIN_DIFF 5
 int CCheckLogo::checkTestlines( char* chSrc, struct testlines* tl, int yoffset, int /*xoffset*/ )
 {
-  //syslog(LOG_INFO,"CCheckLogo::checkTestlines %p %p %d %d",chSrc, tl, yoffset, xoffset);
-  int sizeY = m_pData->m_nSizeY;
-  int sizeX = m_pData->m_nSizeX;
-  #ifdef VNOAD
-  //  copy picture to analyse view picture 
-  if( m_chAnalyseDataSize != sizeX*sizeY )
-	  exit(-1);
-  memcpy( m_chAnalyseData, chSrc, sizeX*sizeY );
-  memset(m_chAnalyseData2, 255, sizeX*sizeY);
-  memset(m_chAnalyseData3, 128, sizeX*sizeY);
-  #endif
-  
-  int nSumPair=0, nRestPair=0, nUnknown=0;
-  int line;
-  bool bUnknown = false, bLogo = false, bNoLogo = false;
-  testpair* pair = NULL;
-  float fTempPos, fTempNeg;
-  // ** do it while lines available
-  while ( tl ) {
-    line = tl->line;
-    pair = tl->pair;
-    while ( pair )
-    {
-      int aLineOffset = m_pData->m_nSizeX*(line);
-      int xpos = pair->x_pos;
-      int xneg = pair->x_neg;
-		#ifdef VNOAD
-			if( aLineOffset+xpos >= m_chAnalyseDataSize  )
+   int sizeX = m_pData->m_nSizeX;
+#ifdef VNOAD
+   int sizeY = m_pData->m_nSizeY;
+
+   //  copy picture to analyse view picture
+	if( m_chAnalyseDataSize != sizeX*sizeY )
+		exit(-1);
+	memcpy( m_chAnalyseData, chSrc, sizeX*sizeY );
+	memset(m_chAnalyseData2, 255, sizeX*sizeY);
+	memset(m_chAnalyseData3, 128, sizeX*sizeY);
+#endif
+
+	int nSumPair=0, nRestPair=0, nUnknown=0;
+	int line;
+	bool bUnknown = false, bLogo = false, bNoLogo = false;
+	testpair* pair = NULL;
+	float fTempPos, fTempNeg;
+	while ( tl ) 
+	{
+		line = tl->line;
+		pair = tl->pair;
+		while ( pair )
+		{
+			int xpos = pair->x_pos;
+			int xneg = pair->x_neg;
+
+#ifdef VNOAD
+         int aLineOffset = m_pData->m_nSizeX*(line);
+         if( aLineOffset+xpos >= m_chAnalyseDataSize  )
 				exit(-1);
 			if( aLineOffset+xneg >= m_chAnalyseDataSize  )
 				exit(-1);
 			if( xneg < 0 || aLineOffset < 0 )
 				exit(-1);
-      m_chAnalyseData3[aLineOffset+xpos] = 255;
-      m_chAnalyseData3[aLineOffset+xneg] = 0;
-      #endif
-		int lineOffset = sizeX*(line+yoffset);
-      nSumPair++;
-      fTempPos = (float)((unsigned char)chSrc[lineOffset+xpos+2]
-               - (unsigned char)chSrc[lineOffset+xpos]);
-      fTempNeg = (float)((unsigned char)chSrc[lineOffset+xneg+2]
-               - (unsigned char)chSrc[lineOffset+xneg]);
-      if ( fTempPos >= MIN_DIFF && fTempNeg <= -MIN_DIFF ){
-         // ** the considered pair is ok *************
-         nRestPair++;
-			#ifdef VNOAD
-         // set them to the view 
-         m_chAnalyseData[aLineOffset+xpos] = 255;
-         m_chAnalyseData[aLineOffset+xneg] = 255;
-         m_chAnalyseData2[aLineOffset+xpos] = 0;
-         m_chAnalyseData2[aLineOffset+xneg] = 0;
-         #endif
-      }
-      else {
-        // check if the area is to dark or to bright 
-        // check both points of pos and neg positions 
-        if ( (unsigned char)chSrc[lineOffset+xpos] >   200 ||
-             (unsigned char)chSrc[lineOffset+xpos+1] > 200 ||
-             (unsigned char)chSrc[lineOffset+xneg] >   200 ||
-             (unsigned char)chSrc[lineOffset+xneg+1] > 200 )
-                   nUnknown++;
-		
-     }
-     pair = pair->next;
-    }
-   	tl= tl->next;
-  }
-  if( logocb != NULL )
-  {
-    #ifdef VNOAD
-    // set the views headline string
-    char *buffer = NULL;
-    asprintf( &buffer, " %d/%d - %d unknown ",
-                                  nRestPair, nSumPair, nUnknown );
-    // update the view
-    //m_pView->update();
-    logocb(0,buffer,m_chAnalyseData,sizeX,sizeY);
-    delete buffer;
-    logocb(1,0,m_chAnalyseData2,sizeX,sizeY);
-    logocb(2,0,m_chAnalyseData3,sizeX,sizeY);
-    #endif
-  }
-//   m_pView->m_chPicture = m_chAnalyseData;
-   // set the views headline string
-//   sprintf( m_pView->m_strHeadline, " %d/%d - %d unknown ", nRestPair, nSumPair, nUnknown );
-   // update the view		
-//   m_pView->update();
+			m_chAnalyseData3[aLineOffset+xpos] = 255;
+			m_chAnalyseData3[aLineOffset+xneg] = 0;
+#endif
 
-    int CutOff = nSumPair/3;
-    if( yoffset != iLineOffset )
-    {
-      CutOff = (nSumPair*8)/10;
-    }
-   // decide the logo status
-   if ( nRestPair >= CutOff ) {
-      bLogo=true;
-   }
-   // dont check the unknown sum if logo is
-   // always detected
-   else {
-      if ( nUnknown > CutOff )
-           bUnknown = true;
-      else
-         bNoLogo = true;
-   }
+			int lineOffset = sizeX*(line+yoffset);
+			nSumPair++;
+			fTempPos = (float)((unsigned char)chSrc[lineOffset+xpos+2]
+			- (unsigned char)chSrc[lineOffset+xpos]);
+			fTempNeg = (float)((unsigned char)chSrc[lineOffset+xneg+2]
+			- (unsigned char)chSrc[lineOffset+xneg]);
+			if ( fTempPos >= MIN_DIFF && fTempNeg <= -MIN_DIFF )
+			{
+				// the considered pair is ok 
+				nRestPair++;
 
-   if( yoffset != iLineOffset )
-   {
-     if ( bLogo )
-       isLogo = true;
-     else
-       isLogo = false;
-   }
-   else
-   {
-     if ( bUnknown )
-     {
-        #ifdef xVNOAD
-        emit unknown();
-        #endif
-     }
-     else {
-       if ( bLogo ) {
-          m_nLogo++;
-          // threshold of iTreshold times
-          if ( m_nLogo > iTreshold ) {
-              #ifdef xVNOAD
-              emit logo();
-              #endif
-              isLogo = true;
-              m_nNoLogo = 0;
-          }
-       }
-       if ( bNoLogo ) {
-           m_nNoLogo++;
-           // threshold of iTreshold times
-           if ( m_nNoLogo > iTreshold ) {
-               isLogo = false;
-               #ifdef xVNOAD
-               emit nologo();
-               #endif
-               m_nLogo = 0;
-           }
-       }
-    }
-  }
-  //syslog(LOG_INFO, "CCheckLogo::checkTestlines%3d %3d %3d", nSumPair,nRestPair,nUnknown);
-	
- return nRestPair;		
+#ifdef VNOAD
+				// set them to the view 
+				m_chAnalyseData[aLineOffset+xpos] = 255;
+				m_chAnalyseData[aLineOffset+xneg] = 255;
+				m_chAnalyseData2[aLineOffset+xpos] = 0;
+				m_chAnalyseData2[aLineOffset+xneg] = 0;
+#endif
+			}
+			else {
+				// check if the area is to dark or to bright 
+				// check both points of pos and neg positions 
+				if ( (unsigned char)chSrc[lineOffset+xpos] >   200 ||
+					(unsigned char)chSrc[lineOffset+xpos+1] > 200 ||
+					(unsigned char)chSrc[lineOffset+xneg] >   200 ||
+					(unsigned char)chSrc[lineOffset+xneg+1] > 200 )
+					nUnknown++;
+
+			}
+			pair = pair->next;
+		}
+		tl= tl->next;
+	}
+	if( logocb != NULL )
+	{
+#ifdef VNOAD
+		// set the views headline string
+		char *buffer = NULL;
+		asprintf( &buffer, " %d/%d - %d unknown ",
+			nRestPair, nSumPair, nUnknown );
+		// update the view
+		//m_pView->update();
+		logocb(0,buffer,m_chAnalyseData,sizeX,sizeY);
+		delete buffer;
+		logocb(1,0,m_chAnalyseData2,sizeX,sizeY);
+		logocb(2,0,m_chAnalyseData3,sizeX,sizeY);
+#endif
+	}
+
+	int CutOff = nSumPair/3;
+	if( yoffset != iLineOffset )
+	{
+		CutOff = (nSumPair*8)/10;
+	}
+	// decide the logo status
+	if ( nRestPair >= CutOff ) 
+	{
+		bLogo=true;
+	}
+	// dont check the unknown sum if logo is
+	// always detected
+	else 
+	{
+		if ( nUnknown > CutOff )
+			bUnknown = true;
+		else
+			bNoLogo = true;
+	}
+
+	if( yoffset != iLineOffset )
+	{
+		if ( bLogo )
+			isLogo = true;
+		else
+			isLogo = false;
+	}
+	else
+	{
+		if ( bUnknown )
+		{
+		}
+		else 
+		{
+			if ( bLogo ) 
+		 {
+			 m_nLogo++;
+			 // threshold of iTreshold times
+			 if ( m_nLogo > iTreshold ) 
+			 {
+				 isLogo = true;
+				 m_nNoLogo = 0;
+			 }
+			}
+			if ( bNoLogo ) 
+		 {
+			 m_nNoLogo++;
+			 // threshold of iTreshold times
+			 if ( m_nNoLogo > iTreshold ) 
+			 {
+				 isLogo = false;
+				 m_nLogo = 0;
+			 }
+			}
+		}
+	}
+	return nRestPair;		
 }
 
-/** void CCheckLogo::reset()
-  * called to delete possible testlines
-  */
-void CCheckLogo::reset(){
-
+// void CCheckLogo::reset()
+// called to delete possible testlines
+void CCheckLogo::reset()
+{
   m_linehook = NULL;
   m_nLogo = 0;
   m_nNoLogo = 0;
@@ -300,11 +286,6 @@ void CCheckLogo::reset(){
   // set the view back to black and headline to no data
   memset( m_chAnalyseData,0, m_pData->m_nSizeY*m_pData->m_nSizeX );
   #endif
-//  m_pView->m_chPicture = m_chAnalyseData;
-//  sprintf( m_pView->m_strHeadline, "no data" );
-  // update it
-//  m_pView->update();
-
 }
 
 void CCheckLogo::setLineHook( struct testlines* testlines )
@@ -429,12 +410,10 @@ void CCheckLogo::getLogoRect(int &left, int &top, int &right, int &bottom)
   }
 }
 
-/** called to get a new allocated testine */
+// called to get a new allocated testine 
 testlines* CCheckLogo::new_testline( int line )
 {
-
-  //dsyslog(LOG_INFO, "CGetLogo::new_testline(%d)", line);
-  // ** allocate new memory for a testline *****************
+  // allocate new memory for a testline
   testlines* temp = new testlines[sizeof(struct testlines)];
 	
   temp->line = line;

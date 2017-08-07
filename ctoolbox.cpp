@@ -27,71 +27,41 @@ CToolBox::~CToolBox()
 {
 }
 
-/** CToolBox::filter_tp( char... )
-  * filter_tp chSrc to chDest with nSize and
-  * feedback coefficient fC2
-  */
-void CToolBox::filter_tp( char* chDest, char* chSrc, int nSize/*, float fC2*/){
-
-  #if 1
-  int nRun;
-   unsigned char fData;;
-   unsigned char fFilterData;
-  for ( nRun= 0; nRun< nSize; nRun++ ) {
-      fData = (unsigned char) chSrc[nRun];
-      fFilterData = (unsigned char) chDest[nRun];
-      fFilterData = (fData >> 1)
-               + (fFilterData>>1);
-      chDest[nRun] = (int)fFilterData;			
-   }
-  #else
-  int nRun;
-  float fData, fFilterData;
-		
-  for ( nRun= 0; nRun< nSize; nRun++ ) {
-      fData = (unsigned char) chSrc[nRun];
-      fFilterData = (unsigned char) chDest[nRun];
-      fFilterData = (1- fC2)* fData
-                     + fC2* fFilterData;
-      if ( fFilterData > 255 )
-        fFilterData = 255;
-      chDest[nRun] = (int)fFilterData;			
-  }
-  #endif
+// CToolBox::filter_tp( char... )
+// filter_tp chSrc to chDest with nSize and
+// feedback coefficient fC2
+void CToolBox::filter_tp( char* chDest, char* chSrc, int nSize)
+{
+	int nRun;
+	unsigned char fData;;
+	unsigned char fFilterData;
+	for ( nRun= 0; nRun< nSize; nRun++ ) 
+	{
+		fData = (unsigned char) chSrc[nRun];
+		fFilterData = (unsigned char) chDest[nRun];
+		fFilterData = (fData >> 1)
+			+ (fFilterData>>1);
+		chDest[nRun] = (int)fFilterData;			
+	}
 }
 
-/**	returns average of chSrc with size nSize  */
-int CToolBox::getAverage( char* chSrc, int nSize ){
-
+//	returns average of chSrc with size nSize  
+int CToolBox::getAverage( char* chSrc, int nSize )
+{
   float fSum = 0;
 
   for( int i=0; i< nSize; i++ )
     fSum += chSrc[i];
-
   fSum = fSum / (nSize) ;
-
- return (int)fSum;
-
+  return (int)fSum;
 }
 
-/** filter one byte */
-void CToolBox::filter_tp( char* chDest, char* chSrc /*, float fC2*/ ){
-
-  #if 1
+// filter one byte 
+void CToolBox::filter_tp( char* chDest, char* chSrc)
+{
    unsigned char fData = (unsigned char) *chSrc;
    unsigned char fFilterData = (unsigned char) *chDest;
    fFilterData = (fData >> 1)
                + (fFilterData>>1);
    *chDest = fFilterData;			
-  #else
-  float fData, fFilterData;
-		
-   fData = (unsigned char) *chSrc;
-   fFilterData = (unsigned char) *chDest;
-   fFilterData = (1- fC2)* fData
-               + fC2* fFilterData;
-   if ( fFilterData > 255 )
-      fFilterData = 255;
-   *chDest = (int)fFilterData;			
-   #endif
 }

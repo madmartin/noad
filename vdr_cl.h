@@ -43,7 +43,7 @@ typedef unsigned char uchar;
 
 #define RESUMEFILESUFFIX  DIR_DELIM"resume%s%s"
 #ifdef SUMMARYFALLBACK
-#define SUMMARYFILESUFFIX  DIR_DELIM"summary.vdr"
+#define SUMMARYFILESUFFIX DIR_DELIM"summary.vdr"
 #endif
 #define INFOFILESUFFIX    DIR_DELIM"info"
 #define MARKSFILESUFFIX   DIR_DELIM"marks"
@@ -67,7 +67,6 @@ typedef unsigned char uchar;
 #define TS_SIZE               188
 // The maximum size of a single frame (up to HDTV 1920x1080):
 #define MAXFRAMESIZE  (KILOBYTE(1024) / TS_SIZE * TS_SIZE) // multiple of TS_SIZE to avoid breaking up TS packets
-// The maximum size of a single frame:
 
 #define FRAMESPERSEC 25
 #define FRAMESPERMIN (FRAMESPERSEC*60)
@@ -96,6 +95,7 @@ private:
   cUnbufferedFile *file;
   int fileNumber;
   char *fileName, *pFileNumber;
+  char *dirname;
   bool record;
   bool blocking;
   bool isPesRecording;
@@ -103,12 +103,13 @@ public:
   cFileName(const char *FileName, bool Record, bool Blocking = false, bool IsPesRecording = false);
   ~cFileName();
   const char *Name(void) { return fileName; }
+  const char *dirName(void) { return dirname; }
   int Number(void) { return fileNumber; }
   cUnbufferedFile *Open(void);
   void Close(void);
   cUnbufferedFile *SetOffset(int Number, off_t Offset = 0);
   cUnbufferedFile *NextFile(void);
-  int File() { return file->get_fd(); }
+  int File() { return file ? file->get_fd():-1; }
   bool isPES() { return isPesRecording; }
 };
 
@@ -192,10 +193,9 @@ class cNoadIndexFile : public cIndexFile
   char *fileNameEx;
   int sizeEx, lastEx;
   tIndexEx *indexEx;
-//  #ifdef VNOAD
   int interval;
   int lastGetValue;
-//  #endif
+  int64_t fileSize;
 public:
   cNoadIndexFile(const char *FileName, bool Record, bool IsPesRecording);
   ~cNoadIndexFile();
@@ -203,20 +203,14 @@ public:
   bool Get(int Index, uint16_t *FileNumber, off_t *FileOffset, bool *Independent = NULL, int *Length = NULL);
   // ohne CatchUp !!!
   int GetNextIFrame(int Index, bool Forward, uint16_t *FileNumber = NULL, off_t *FileOffset = NULL, int *Length = NULL, bool StayOffEnd = false);
-  //int Get(uint16_t FileNumber, off_t FileOffset);
   bool setIndexEx( int index, int _isLogo, int _blackTop, int _blackBottom);
   void logIndexEx();
-//  #ifdef VNOAD
   bool CatchUp(int Index = -1);
   void setInterval(int newInterval) { interval = newInterval; }
   int Last(void) { return getLast(); }
   int getLast();
-/*  
-  #else
-  int Last(void) { return last; }
-  bool CatchUp(int Index = -1) { return cIndexFile::CatchUp(Index); }
-  #endif
-*/
+  int64_t getVideoFileSize();
+  int getIndexForFilepos(int64_t pos);
 };
 
 
@@ -232,9 +226,10 @@ public:
   char *comment;
   cMark(int Position = 0, const char *Comment = NULL, double FramesPerSecond = DEFAULTFRAMESPERSECOND);
   virtual ~cMark();
-  cString ToText(bool bWithNewline = true);
+  cString ToText(bool bWithNewline = true, bool bWithFrame = false);
   bool Parse(const char *s);
   bool Save(FILE *f);
+  //noad:
   bool isChecked() { return checked; }
   void setChecked(bool b) { checked = b; }
 };
@@ -362,7 +357,9 @@ public:
   int getActiveFrames(int totalFrames);
   bool hasUncheckedMarks();
   cMark *GetLast() { return Last(); }
+  int posOff(cMark *m);
 };
+
 class cRecording : public cListObject {
 protected:
   mutable int resume;
@@ -420,13 +417,6 @@ public:
 
 bool isPESRecording(const char *filename);
 
-#ifdef VNOAD
-class cNoAdMarks : public cMarks
-{
-public:
-  bool Load(const char *RecordingFileName, bool AllowComments = false);
-};
-#endif
 
 cString IndexToHMSF(int Index, bool WithFrame = false, double FramesPerSecond = DEFAULTFRAMESPERSECOND);
 int HMSFToIndex(const char *HMSF, double FramesPerSecond = DEFAULTFRAMESPERSECOND);

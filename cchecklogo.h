@@ -28,9 +28,7 @@
 /**
   *@author Thorsten Janke
   */
-//#include "mynoaddoc.h"
-//#include "noaddata.h"
-//#include "cchecklogoview.h"
+
 class noadData;
 
 /** The CCheckLogo class is able to check the status of tv logo
@@ -39,16 +37,11 @@ class noadData;
 class CCheckLogo
 {
 public:
-	/** the constructor of the class gets the document pointer doc
-    * and the pointer to the main view
-    */
   CCheckLogo( noadData* data );
-  /** destructor */
   ~CCheckLogo();
-   /** called from parent object to show that there are new data available */
-  void newData();
-  /** called to delete possible testlines */
-  void reset();
+   
+  void newData(); // called from parent object to show that there are new data available 
+  void reset();	// called to delete possible testlines 
 
   void setLineHook( struct testlines* );
   void setCornerData( char* );
@@ -62,16 +55,12 @@ public:
   int getTreshold() { return iTreshold; }
   void getLogoRect(int &left, int &top, int &right, int &bottom);
 private:
-  /** check all reference diversions in the updated picture,
-    * decide the logo status at the moment and emit the membership signal
-    */
   int iLineOffset;
   int iXOffset;
+  // check all reference diversions in the updated picture,
+  // decide the logo status at the moment and emit the membership signal
   int checkTestlines( char* chSrc, struct testlines*	 tl, int lineOffset=0, int xOffset=0 );
-  /** pointer to the view */
-//  CCheckLogoView* m_pView;
-  /** pointer to the document */
-//  MyNoadDoc* m_pDoc;
+
   noadData* m_pData;
   #ifdef VNOAD
   //  temp buffer of data to show 
@@ -80,14 +69,11 @@ private:
   unsigned char* m_chAnalyseData3;
   int  m_chAnalyseDataSize;
   #endif
-  // value of detected nologo one after another 
-  int m_nNoLogo;
-  // value of detected logo one after another 
-  int m_nLogo;
-  // pointer to the testpoints 
-  struct testlines* m_linehook;
-  // pointer to the picture corner which is set from ccontrol 
-  char* m_chCornerData;
+  
+  int m_nNoLogo;						// value of detected nologo one after another 
+  int m_nLogo;							// value of detected logo one after another 
+  struct testlines* m_linehook;	// pointer to the testpoints 
+  char* m_chCornerData;				// pointer to the picture corner which is set from ccontrol 
   int iTreshold;
   
   long totalPairsOk;
@@ -95,14 +81,9 @@ private:
   int totalChecks;
 
 public:
-  // signal logo emitted if logo is detected 
-  void logo();
-  // signal nologo emitted of no logo detected 
-  void nologo();
-  // signal unknown emitted if there are not enough
-  // test pairs available at the moment
-  //   -> the picture is to bright !
-  void unknown();
+  void logo();		// signal logo emitted if logo is detected 
+  void nologo();	// signal nologo emitted of no logo detected 
+  void unknown(); // signal unknown emitted if there are not enough test pairs available at the moment
 };
 
 #endif

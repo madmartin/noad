@@ -83,6 +83,14 @@ cFileName::cFileName(const char *FileName, bool Record, bool Blocking, bool IsPe
     return;
   }
   strcpy(fileName, FileName);
+  
+  dirname = new char[strlen(FileName) + 1];
+  if (!dirname)
+  {
+    esyslog("ERROR: can't copy file name '%s'", fileName);
+    return;
+  }
+  strcpy(dirname, FileName);
   pFileNumber = fileName + strlen(fileName);
   SetOffset(1);
 }
@@ -91,6 +99,7 @@ cFileName::~cFileName()
 {
   Close();
   delete [] fileName;
+  delete [] dirname;
 }
 
 cUnbufferedFile *cFileName::Open(void)
@@ -557,6 +566,7 @@ cNoadIndexFile::cNoadIndexFile(const char *FileName, bool Record, bool IsPesReco
   indexEx = NULL;
   interval = 0;
   lastGetValue = 0;
+  fileSize = -1;
   #ifdef VNOAD
   if (FileName)
   {
@@ -802,6 +812,44 @@ bool cNoadIndexFile::CatchUp(int Index)
   }
   return bRet;
 }
+
+int64_t cNoadIndexFile::getVideoFileSize()
+{
+	if( fileSize == -1 )
+	{
+		fileSize = 0;
+		int index = 0;
+		uint16_t FileNumber;
+		off_t FileOffset;
+		int Length;
+		while( index < Last() )
+		{
+			Get(index++,&FileNumber, &FileOffset, NULL, &Length);
+			fileSize += Length;
+		}
+	}
+	return fileSize;
+}
+
+int cNoadIndexFile::getIndexForFilepos(int64_t pos)
+{
+	int64_t filePos = 0;
+	int index = 0;
+	uint16_t FileNumber;
+	off_t FileOffset;
+	int Length;
+	while( index < Last() )
+	{
+		if( filePos > pos )
+			return index-1;
+		else if( filePos == pos )
+			return index;
+		Get(index++,&FileNumber, &FileOffset, NULL, &Length);
+		filePos += Length;
+	}
+	return -1;
+}
+
 //#endif
 
 // --- cMark -----------------------------------------------------------------
@@ -823,9 +871,12 @@ cMark::~cMark()
   free(comment);
 }
 
-cString cMark::ToText(bool bWithNewline)
+cString cMark::ToText(bool bWithNewline, bool bWithFrame)
 {
-  return cString::sprintf("%s%s%s%s", (const char *)IndexToHMSF(position, true, framesPerSecond), comment ? " " : "", comment ? comment : "",bWithNewline?"\n":"");
+	if( bWithFrame )
+		return cString::sprintf("%s(%d)%s%s%s", (const char *)IndexToHMSF(position, true, framesPerSecond), position, comment ? " " : "", comment ? comment : "", bWithNewline?"\n":"");
+	else
+		return cString::sprintf("%s%s%s%s", (const char *)IndexToHMSF(position, true, framesPerSecond), comment ? " " : "", comment ? comment : "", bWithNewline?"\n":"");
   /*
   free(buffer);
   asprintf(&buffer, "%s%s%s%s", (const char *)IndexToHMSF(position, true), comment ? " " : "", comment ? comment : "",bWithNewline?"\n":"" );
@@ -877,7 +928,6 @@ bool cMarks::Load(const char *RecordingFileName, double FramesPerSecond, bool Is
   return false;
 }
 
-/*
 bool cMarks::ReLoad()
 {
 	if (cConfig<cMark>::Load()) 
@@ -887,7 +937,6 @@ bool cMarks::ReLoad()
 	}
 	return false;
 }
-*/
 
 bool bMarksBackupDone = false;
 bool cMarks::Backup(const char *RecordingFileName)
@@ -1016,9 +1065,27 @@ int cMarks::getActiveFrames(int totalFrames)
   return iRet;
 }
 
+int cMarks::posOff(cMark *_m)
+{
+  int iRet = 0;
+  cMark *m = GetNext(-1);
+  if( m == NULL )
+	  return -1;
+  while( m )
+  {
+	  if( m == _m )
+		  return iRet;
+      m = Next(m);
+		iRet++;
+  }
+  return -1;
+}
+
+
 #ifdef VNOAD
 // --- cNoAdMarks ----------------------------------------------------------------
 
+/*
 bool cNoAdMarks::Load(const char *RecordingFileName, bool AllowComments)
 {
   const char *MarksFile = AddDirectory(RecordingFileName, NOADMARKSFILESUFFIX);
@@ -1029,6 +1096,7 @@ bool cNoAdMarks::Load(const char *RecordingFileName, bool AllowComments)
   }
   return false;
 }
+*/
 #endif
 
 cString IndexToHMSF(int Index, bool WithFrame, double FramesPerSecond)
@@ -1093,10 +1161,10 @@ static char *ExchangeChars(char *s, bool ToFileSystem)
                   case '0' ... '9':
                   case 'a' ... 'z':
                   case 'A' ... 'Z':
-                  case '�': case '�':
-                  case '�': case '�':
-                  case '�': case '�':
-                  case '�':
+                  case 'ä': case 'Ä':
+                  case 'ö': case 'Ö':
+                  case 'ü': case 'Ü':
+                  case 'ß':
                        break;
                   // characters that can be mapped to other characters:
                   case ' ': *p = '_'; break;
@@ -1910,24 +1978,26 @@ cString &cString::Truncate(int Index)
 
 cString cString::sprintf(const char *fmt, ...)
 {
-  va_list ap;
-  va_start(ap, fmt);
-  char *buffer;
-  if (!fmt || vasprintf(&buffer, fmt, ap) < 0) {
-     esyslog("error in vasprintf('%s', ...)", fmt);
-     buffer = strdup("???");
-     }
-  va_end(ap);
-  return cString(buffer, true);
+	va_list ap;
+	va_start(ap, fmt);
+	char *buffer;
+	if (!fmt || vasprintf(&buffer, fmt, ap) < 0) 
+	{
+		esyslog("error in vasprintf('%s', ...)", fmt);
+		buffer = strdup("???");
+	}
+	va_end(ap);
+	return cString(buffer, true);
 }
 
 cString cString::sprintf(const char *fmt, va_list &ap)
 {
-  char *buffer;
-  if (!fmt || vasprintf(&buffer, fmt, ap) < 0) {
-     esyslog("error in vasprintf('%s', ...)", fmt);
-     buffer = strdup("???");
-     }
-  return cString(buffer, true);
+	char *buffer;
+	if (!fmt || vasprintf(&buffer, fmt, ap) < 0) 
+	{
+		esyslog("error in vasprintf('%s', ...)", fmt);
+		buffer = strdup("???");
+	}
+	return cString(buffer, true);
 }
 

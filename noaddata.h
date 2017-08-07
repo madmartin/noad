@@ -18,12 +18,24 @@
 #ifndef NOADDATA_H
 #define NOADDATA_H
 #include <stdio.h>
-//#include <linux/videodev.h>
 #include "cchecklogo.h"
+#include "inttypes.h"
+#include "yuvbuf.h"
+
+typedef struct 
+{
+	uint8_t * buf[3];
+	uint8_t * igno;
+} mpeg2_fbuf_tu;
+
 #include "mpeg2wrap.h"
+
+#include "mpeg2wrap_ffmpeg.h"
 
 #define GRAB_WIDTH  768
 #define GRAB_HEIGHT 576
+//#define GRAB_WIDTH  1280
+//#define GRAB_HEIGHT 720
 
 // defines for positions, etc.
 #define TOP_LEFT  0
@@ -33,6 +45,7 @@
 #define UNKNOWN   4
 #define ALL			5
 
+// LOGO-Status
 #define STAT_LEARN	0
 #define STAT_LOGO    1
 #define STAT_NOLOGO	2
@@ -108,60 +121,41 @@ extern logocbfunc logocb; // in cgetlogo.cpp
 
 class noadData
 {
-  bool bYUVSource;
-  bool bUseExternalMem;
-  int *iSet; // f�r countvals
+   bool bYUVSource;
+   bool bUseExternalMem;
+   int *iSet;					// für countvals
 public:
   noadData();
   ~noadData();
 public:
-  /** init value of main filter */
-  int m_nFilterInit;
-  /** num of frames before data analyse */
-  int m_nFilterFrames;
-  /** minimum dif between 2 following pictures [%] */
-  int m_nDif2Pictures;
-  /** filter only up to this average */
-  int m_nMaxAverage;
-  /** data of running grey corner bot left */
-  char* m_chGreyCorner3;
-  /** data of running grey corner bot right */
-  char* m_chGreyCorner2;
-  /** data of running grey corner top right */
-  char* m_chGreyCorner1;
-  /** data of runnig grey corner top left */
-  char* m_chGreyCorner0;
-  /** data of running color corner bot left */
-  char* m_chColorCorner3;
-  /** data of running color corner bot right */
-  char* m_chColorCorner2;
-  /** data of running color corner top right */
-  char* m_chColorCorner1;
-  /** data of running color corner top left */
-  char* m_chColorCorner0;
-  /** running feedback filter coef. */
-  float m_fRunFilter;
-  /** main feedback filter coef. */
-  float m_fMainFilter;
-  /** time in msec between 2 ref pictures */
-  int m_nTimeInterval;
-  /** size of corner square X */
-  int m_nSizeX;
-  /** size of corner square Y */
-  int m_nSizeY;
-  /** size of border arround picture */
-  int m_nBorderX;	// left and right
-  int m_nBorderYTop; // top and bottom
-  int m_nBorderYBot; // top and bottom
-  /**  height of grabbing frame*/
-  int m_nGrabHeight;
-  /**  width of grabbing frame*/
-  int m_nGrabWidth;
-  /** char pointer to grabbed memory */
-  bool extLogoSearch;
+   int m_nFilterInit;			// init value of main filter 
+   int m_nFilterFrames;		// num of frames before data analyse 
+   int m_nDif2Pictures;		// minimum dif between 2 following pictures [%] 
+   int m_nMaxAverage;			// filter only up to this average 
+   char* m_chGreyCorner3;	// data of running grey corner bot left 
+   char* m_chGreyCorner2;	// data of running grey corner bot right 
+   char* m_chGreyCorner1;	// data of running grey corner top right 
+   char* m_chGreyCorner0;	// data of runnig grey corner top left 
+   char* m_chColorCorner3;	// data of running color corner bot left 
+   char* m_chColorCorner2;	// data of running color corner bot right 
+   char* m_chColorCorner1;	// data of running color corner top right 
+   char* m_chColorCorner0;	// data of running color corner top left 
+   float m_fRunFilter;		// running feedback filter coef. 
+   float m_fMainFilter;		// main feedback filter coef. 
+   int m_nTimeInterval;		// time in msec between 2 ref pictures 
+   int m_nSizeX;				// size of corner square X 
+   int m_nSizeY;				// size of corner square Y 
+   // size of border arround picture 
+   int m_nBorderX;				// left and right
+   int m_nBorderYTop;			// top and bottom
+   int m_nBorderYBot;			// top and bottom
+   int m_nGrabHeight;			// height of grabbing frame
+   int m_nGrabWidth;			// width of grabbing frame
+
+   bool extLogoSearch;
+
 private:
-  char* video_buffer_mem;
-  mpeg2_fbuf_t *yufbuf;
+  noadYUVBuf *nyuvbuf;
   
 public:
   #ifdef VNOAD
@@ -170,36 +164,25 @@ public:
   int iCompPics;
   #endif
   
-  /** set test corner only if average is greater than
-    * this value */
-  int m_nMinAverage;
-  /** number of frames the testlines have to live */
-  int m_nCheckFrames;
+  int m_nMinAverage;		// set test corner only if average is greater than this value 
+  int m_nCheckFrames;	// number of frames the testlines have to live 
 
-  // called to clean the testline list
-  void deleteTestlines( testlines** tl );
-  // called to init the buffer when video told the document the maximum size
-  void initBuffer();
+  void deleteTestlines( testlines** tl ); // called to clean the testline list
+  void initBuffer();								// called to init the buffer when video told the document the maximum size
 
   // set source-format
   void setYUVSource() { bYUVSource = true; }
-  void setRGBSource() { bYUVSource = false; }
+  //void setRGBSource() { bYUVSource = false; }
   bool isYUVSource() { return bYUVSource == true; }
-  // copy RGB-data into color corner buffer
-  void setColorCorners();
-  // set the grey corners from color corners
-  // use values for color components
-  void setGreyCorners( float fRed, float fGreen, float fBlue);
-  // set the grey corners from YUV-Plane
-  void setYUVGreyCorners();
-  // sets the running corners
-  void setCorners();
-  /** detected logo corner */
-  int m_nLogoCorner;
-  /**  is set to true if logo has found */
-  bool m_bFound;
-  /** pointer to the logo check object */
-  CCheckLogo* m_pCheckLogo;
+
+  
+  //void setColorCorners();		// copy RGB-data into color corner buffer
+  //void setGreyCorners( float fRed, float fGreen, float fBlue);// set the grey corners from color corners
+  void setYUVGreyCorners();	// set the grey corners from YUV-Plane
+  void setCorners();				// sets the running corners
+  int m_nLogoCorner;				// detected logo corner 
+  bool m_bFound;					// is set to true if logo has found 
+  CCheckLogo* m_pCheckLogo;	// pointer to the logo check object 
 
   char *videoDir;
 
@@ -211,13 +194,21 @@ public:
   int m_nBlackLinesBottom2;
   int m_nMonoFrameValue;
   int m_isMonoFrame;
-  int m_nBlackLinesLeft;
-  int m_nBlackLinesRight;
+
   void detectBlackLines( unsigned char *buf = NULL );
+  void detectBlackLines( noadYUVBuf *yuvbuf );
+
+  void ndetectBlackLines( int width, int height, unsigned char **buf );
+  void ndetectBlackLines( noadYUVBuf *yuvbuf );
+
   void checkMonoFrame( int framenum, unsigned char **buf );
   int isBlankFrame() { return m_isMonoFrame ==1; }
-  bool CheckFrameIsBlank(int framenum, unsigned char **buf );
+
+  //bool CheckFrameIsBlank(int framenum, unsigned char **buf );
+  bool CheckFrameIsBlank(int framenum, noadYUVBuf *yuvbuf );
+
   int GetAvgBrightness(int framenum, unsigned char **buf );
+  int GetAvgBrightness(int framenum, noadYUVBuf *yuvbuf );
   void saveCheckData( const char *name, bool bFullnameGiven = false );
   void logCheckData();
   bool loadCheckData( const char *name, bool bFullnameGiven = false );
@@ -226,9 +217,8 @@ public:
 
   void setUseExternalMem(bool b);
   bool isUseExternalMem() { return bUseExternalMem; }
-  void setExternalMem(char *extMem, mpeg2_fbuf_t *yufbuf);
-  void setExternalMem(void *extMem, mpeg2_fbuf_t *yufbuf=NULL) { setExternalMem((char*)extMem,yufbuf); }
-  char *getVideoBuffer() { return video_buffer_mem; }
+  void setExternalMem(noadYUVBuf *nyuvbuf);
+  noadYUVBuf *getYUVBuf() { return nyuvbuf; }
 
   void resetSceneChangeDetection();
   void getHistogram(simpleHistogram &dest);
@@ -242,11 +232,12 @@ public:
   simpleHistogram histogram;
   simpleHistogram lastHistogram;
   int countvals(unsigned char *_src[3], int line, int width, int height, int border);
+  int countvals(noadYUVBuf *yuvbuf, int line, int border);
 
   #ifdef VNOAD
   void storePic(int n);
   void storeCompPic();
-  void clearPics();
+  //void clearPics();
   void modifyPic(int framenum,unsigned char **dest);
   void testFunc(int framenum,unsigned char **_src);
   int checkPics();

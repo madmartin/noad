@@ -163,7 +163,7 @@ void cleanUp(void)
   rm_pidfile(recDir);
 }
 
-int main(int argc, char *argv[], char *envp[])
+int main(int argc, char *argv[], char * /*envp[]*/)
 {
   openlog("noad", LOG_PID | LOG_CONS, LOG_USER);
   //
@@ -216,6 +216,7 @@ int main(int argc, char *argv[], char *envp[])
       {"pass3only",0,0,7},
 		{"svdrphost",1,0,8},
       {"svdrpport",1,0,9},      
+      {"decoder",1,0,13},
       {0, 0, 0, 0}
     };
 
@@ -372,6 +373,15 @@ int main(int argc, char *argv[], char *envp[])
           return 2;
         }
       break;
+      case 13:
+        if( strcmp(optarg, "ffmpeg") == 0 )
+			  default_Decoder = FFMPEG_DECODER;
+        else if( strcmp(optarg, "libmpeg2") == 0 )
+			  default_Decoder = LIBMPEG2_DECODER;
+		  else 
+			  fprintf(stderr, "noad: unknown decoder %s, use %s instead\n", optarg, default_Decoder==FFMPEG_DECODER? "ffmpeg" : "libmepg2");
+        break;
+
       default:
         printf ("? getopt returned character code 0%o ?(option_index %d)\n", c,option_index);
     }
@@ -655,7 +665,9 @@ int main(int argc, char *argv[], char *envp[])
          "  if given, only the third pass is done, which\n"
          "  is the pass with audio silence detection\n"
          "  this parameter is only usefull if there are already\n"
-         "  some marks in the \"marks.vdr\" for this recording\n"
+         "  some marks in the \"marks.vdr\" for this recording\n");
+
+printf(  "--decoder[ffmpeg|libmpeg2] (default is ffmpeg)\n"
          //"-C              --scenechangedetection\n"
          //"                  use scene-change-detection\n"
          "\ncmd: one of\n"
