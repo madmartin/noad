@@ -14,9 +14,8 @@ noinst_PROGRAMS=@PICSRC@ @TOOLSRC@
 EXTRA_PROGRAMS=markpics showindex
 
 markpics_SOURCES=markpics.cpp
-markpics_LDADD=libnoad.a
-markpics_LDFLAGS=-lMagick++
-
+markpics_LDADD=libnoad.a -lMagick++
+markpics_CXXFLAGS=@markpiccxxflags@
 showindex_SOURCES=showindex.cpp
 showindex_LDADD=libnoad.a
 

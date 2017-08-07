@@ -6,14 +6,37 @@ bool havesilence = false;
 #include "mpeg2wrap.h"
 extern "C"
 {
-   #include "avcodec.h"
+   #include "libavcodec/avcodec.h"
 }
 
+// from libavutil/intreadwrite.h:
+#define AV_RB32(x)  ((((const uint8_t*)(x))[0] << 24) | \
+                     (((const uint8_t*)(x))[1] << 16) | \
+                     (((const uint8_t*)(x))[2] <<  8) | \
+                      ((const uint8_t*)(x))[3]) 
+//...
+// from libavcodec/mpegaudio.h:
+/* fast header check for resync */
+static inline int ff_mpa_check_header(uint32_t header){
+    /* header */
+    if ((header & 0xffe00000) != 0xffe00000)
+        return -1;
+    /* layer check */
+    if ((header & (3<<17)) == 0)
+        return -1;
+    /* bit rate */
+    if ((header & (0xf<<12)) == 0xf<<12)
+        return -1;
+    /* frequency */
+    if ((header & (3<<10)) == 3<<10)
+        return -1;
+    return 0;
+} 
+//...
 #define MIN_LOWVALS 3
 #define CUT_VAL 10
 int lowvalcount = 0;
 double lastsampleoffset=0.0;
-//bool havesilence = false;
 uint8_t *inbuf_ptr;
 int out_size, size, len;
 AudioInfo _ai;
@@ -22,13 +45,15 @@ int pr = 1;
 
 uint8_t *outbuf=NULL;
 AVCodec *codec=NULL;
-AVCodecContext *c= NULL;
+AVCodecContext *codecContext= NULL;
 int64_t basepts=0;
 int64_t audiobasepts=0;
 //int64_t audiopts=0;
 extern uint_64 audiopts;
 int64_t audiosamples=0;
-
+uint8_t audio_in_buffer[8192];
+int in_buf_count = 0;
+static bool av_codec_initialised = false;
 
 static unsigned int bitrates[3][16] =
 {{0,32,64,96,128,160,192,224,256,288,320,352,384,416,448,0},
@@ -37,13 +62,34 @@ static unsigned int bitrates[3][16] =
 
 static uint32_t freq[4] = {441, 480, 320, 0};
 
+void my_av_dolog(void *ptr, int level, const char *fmt,va_list vl)
+{
+  static char line[1024];
+  //va_list vl;
+  //va_start(vl,fmt);
+  vsnprintf( line,sizeof(line),fmt,vl);
+  //fprintf(stderr,line);
+  esyslog("ERROR decoding audio: %s (ignored)",line);
+  //va_end(vl);
+}
+
+void my_av_log(void*, int level,const char *fmt,...)
+{
+  va_list vl;
+  va_start(vl,fmt);
+  my_av_dolog(NULL,0,fmt,vl);
+  va_end(vl);
+}
 
 void initAVCodec()
 {
+  if( av_codec_initialised )
+	  return;
   // init libavcodec(ffmpeg)
   /* must be called before using avcodec lib */
   avcodec_init();
 
+  av_log_set_callback(my_av_dolog);
   /* register all the codecs (you can also register only the codec
      you wish to have smaller code */
   avcodec_register_all();
@@ -56,23 +102,26 @@ void initAVCodec()
     fprintf(stdout, "codec not found\n");
   }
 
-  c= avcodec_alloc_context();
+  codecContext = avcodec_alloc_context();
 
   /* open it */
-  if (avcodec_open(c, codec) < 0) 
+  if (avcodec_open(codecContext, codec) < 0)
   {
     fprintf(stderr, "could not open codec\n");
   }
 
   outbuf = (uint8_t *)malloc(AVCODEC_MAX_AUDIO_FRAME_SIZE);
+
+  av_codec_initialised = true;
         
 }
 
 void exitAVCodec()
 {
   free(outbuf);
-  avcodec_close(c);
-  free(c);
+  avcodec_close(codecContext);
+  av_free(codecContext);
+  av_codec_initialised = false;
 }
 
 int scan_audio_stream_0(unsigned char *mbuf, int count)
@@ -97,15 +146,35 @@ int scan_audio_stream_0(unsigned char *mbuf, int count)
   int16_t chan2 = 0;
 //  int16_t chan1t = 0;
 //  int16_t chan2t = 0;
-  long size = count;
-  inbuf_ptr = mbuf;
+  uint8_t *buf = mbuf;
+  uint32_t header;
+  if( in_buf_count == 0 )
+  {
+	 header = AV_RB32(buf); 
+	 while( count-- && ff_mpa_check_header(header) < 0 )
+	 {
+		 buf++;
+		 header = AV_RB32(buf); 
+	 }
+	 if( count <= 0 )
+		 return -1;
+  }
+  memcpy(&audio_in_buffer[in_buf_count],buf,count);
+  in_buf_count += count;
+  long size = in_buf_count;
+  inbuf_ptr = audio_in_buffer;
+
   while (size > 0) 
   {
-    len = avcodec_decode_audio2(c, (short *)outbuf, &out_size, 
-                                  inbuf_ptr, size);
+    out_size = AVCODEC_MAX_AUDIO_FRAME_SIZE;
+    len = avcodec_decode_audio2(codecContext, (short *)outbuf, &out_size,
+                                  inbuf_ptr, 576/*size*/);
     if (len < 0) 
     {
-      fprintf(stderr, "Error while decoding\n");
+      //fprintf(stderr, "Error while decoding audio\n\n");
+		esyslog("Error while decoding audio (ignored)");
+      resetAudioBuffer();
+      size=0;
       break;
     }
 //    SDL_PauseAudio(0);
@@ -175,7 +244,8 @@ int scan_audio_stream_0(unsigned char *mbuf, int count)
 //        SDL_PauseAudio(0);
         while( audioRingBuffer->Available() > 12000 )
           SDL_Delay(10);
-#endif      /*
+#endif      
+		 /*
       if( (audio_len+out_size) > AUDIO_BUF_SIZE )
       {
         // play audio
@@ -194,6 +264,13 @@ int scan_audio_stream_0(unsigned char *mbuf, int count)
     size -= len;
     inbuf_ptr += len;
   }
+  if( size > 0 )
+  {
+     in_buf_count = size;
+     memmove(audio_in_buffer,inbuf_ptr,size);
+  }
+  else
+     in_buf_count = 0;
   if( havesilence || (lowvalcount > MIN_LOWVALS) )
   {
     lowvalcount = 0;
@@ -272,6 +349,11 @@ int scan_audio_stream_0(unsigned char *mbuf, int count)
   ai->mode = headr[3]>>6;
   //fprintf(stderr,"mode: %d\n", ai->mode);
   return c;
+}
+
+void resetAudioBuffer()
+{
+   in_buf_count = 0;
 }
 
 #endif // HAVE_LIBAVCODEC

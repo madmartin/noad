@@ -6,7 +6,7 @@
 
 using namespace std;
 
-int SysLogLevel=3;
+static int SysLogLevel=3;
 bool showGOPsize = false;
 #define BYTES_TO_READ 30
 int doShowIndex(const char * filename)
@@ -119,6 +119,7 @@ int doShowIndex(const char * filename)
   }
   delete cIF;
   delete cfn;
+  return 0;
 }
 
 void usage(void)

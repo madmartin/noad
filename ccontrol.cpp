@@ -23,9 +23,6 @@
 
 extern int SysLogLevel;
 
-//#define esyslog(a...) void( (SysLogLevel > 0) ? syslog(a) : void() )
-//#define isyslog(a...) void( (SysLogLevel > 1) ? syslog(a) : void() )
-//#define dsyslog(a...) void( (SysLogLevel > 2) ? syslog(a) : void() )
 
 CControl::CControl( noadData* data )
 {

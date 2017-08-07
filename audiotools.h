@@ -16,6 +16,7 @@
 void initAVCodec();
 void exitAVCodec();
 int scan_audio_stream_0(unsigned char *mbuf, int count);
+void resetAudioBuffer();
 
 #endif // HAVE_LIBAVCODEC
 #endif // __AUDIOTOOLS_H__

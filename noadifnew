@@ -12,7 +12,8 @@ then
    exit -1
 fi
 fil="$2/marks.vdr"
-if  test -a $fil
+filts="$2/marks"
+if [ -e $fil -o -e $filts ]
 then
   echo "noad already done for $2"
 else

@@ -2,6 +2,7 @@
 #include <time.h>
 #include <math.h>
 #include <stdarg.h>
+#include "config.h"
 
 #define RECEXT       ".rec"
 #define DELEXT       ".del"
@@ -29,6 +30,14 @@ const char *VideoDirectory = VIDEODIR;
 
 char MarksfileSuffix[256] = MARKSFILESUFFIX;
  
+bool setMarkfileSuffix(bool bIsPESFile)
+{
+  if(MarksfileSuffix!=NULL)
+    releaseMarkfileName();
+  sprintf(MarksfileSuffix,"%s%s","marks", bIsPESFile ? ".vdr" :"");
+  return 0;
+}
+
 bool setMarkfileName(const char *mname, bool bIsPESFile)
 {
   const char *name;
@@ -281,7 +290,7 @@ cIndexFile::cIndexFile(const char *FileName, bool Record, bool IsPesRecording)
             delta = sizeof(tIndexTs) - delta;
             esyslog("ERROR: invalid file size (%ld) in '%s'", buf.st_size, fileName);
           }
-          esyslog("INFO--->: sizeof(tIndexTs) %d, sizeof(tIndexPes) %d", sizeof(tIndexTs), sizeof(tIndexPes));
+          //esyslog("INFO--->: sizeof(tIndexTs) %d, sizeof(tIndexPes) %d", sizeof(tIndexTs), sizeof(tIndexPes));
           last = (buf.st_size + delta) / sizeof(tIndexTs) - 1;
           if (!Record && last >= 0)
           {
@@ -409,6 +418,8 @@ bool cIndexFile::CatchUp(int Index)
                 f = -1;
                 break;
               }
+                     if (isPesRecording)
+                        ConvertFromPes(&index[last + 1], newLast - last);
               last = newLast;
             }
             else
@@ -814,7 +825,7 @@ cMark::~cMark()
 
 cString cMark::ToText(bool bWithNewline)
 {
-  return cString::sprintf("%s%s%s\n", (const char *)IndexToHMSF(position, true, framesPerSecond), comment ? " " : "", comment ? comment : "");
+  return cString::sprintf("%s%s%s%s", (const char *)IndexToHMSF(position, true, framesPerSecond), comment ? " " : "", comment ? comment : "",bWithNewline?"\n":"");
   /*
   free(buffer);
   asprintf(&buffer, "%s%s%s%s", (const char *)IndexToHMSF(position, true), comment ? " " : "", comment ? comment : "",bWithNewline?"\n":"" );
@@ -1082,10 +1093,10 @@ static char *ExchangeChars(char *s, bool ToFileSystem)
                   case '0' ... '9':
                   case 'a' ... 'z':
                   case 'A' ... 'Z':
-                  case 'ä': case 'Ä':
-                  case 'ö': case 'Ö':
-                  case 'ü': case 'Ü':
-                  case 'ß':
+                  case 'ï¿½': case 'ï¿½':
+                  case 'ï¿½': case 'ï¿½':
+                  case 'ï¿½': case 'ï¿½':
+                  case 'ï¿½':
                        break;
                   // characters that can be mapped to other characters:
                   case ' ': *p = '_'; break;
@@ -1200,7 +1211,7 @@ cRecording::cRecording(const char *FileName)
   sortBuffer = NULL;
   fileName = strdup(FileName);
   FileName += strlen(VideoDirectory) + 1;
-  char *p = strrchr(FileName, '/');
+  const char *p = strrchr(FileName, '/');
 
   name = NULL;
   summary = NULL;
@@ -1620,7 +1631,9 @@ cUnbufferedFile *OpenVideoFile(const char *FileName, int Flags)
 // --- cUnbufferedFile -------------------------------------------------------
 
 #ifndef _MSC_VER
+#if (HAVE_POSIX_FADVISE==1 )
 #define USE_FADVISE
+#endif
 #endif
 
 #define WRITE_BUFFER KILOBYTE(800)

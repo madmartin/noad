@@ -52,13 +52,20 @@ options:
 -O              --OSD
                 sends an OSD-Message to the running VDR-instance(localhost:2001) for Start and End
 -S              --savelogo
-                seves the detected logo for later usage
+                saves the detected logo for later usage
 -B              --backupmarks
-                saves an exsiting marks.vdr to marks0.vdr
+                saves an existing marks.vdr to marks0.vdr
 -n              --nelonen
                   special behavior for finish stations
 -V              --version
                 shows the Version and exits
+
+               --svdrphost=<ip-address>
+                 set the IP-address used for OSD Messages
+                 (default: localhost)
+               --svdrpport=<tcp-port>
+                 set the TCP-Port used for OSD Messages
+                 (default: 2001)\n"
 
                 --markfile=<markfilename>
                 set a different markfile-name

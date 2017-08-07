@@ -48,7 +48,7 @@ bool bOnMarksOnly = false;
 
 extern "C"
 {
-  static const char *VERSIONSTRING = "0.6.1";
+  static const char *VERSIONSTRING = "0.7.2";
 }
 
 #ifdef VNOAD
@@ -226,7 +226,6 @@ int drawCallback( void *buffer, int width, int height, void *yufbuf )
     if(cctrl == NULL )
     {
       cctrl = new CControl(ndata);
-      dsyslog("drawCallback: cctrl created");
     }
     ndata->detectBlackLines((unsigned char *)yufbuf);
     ulTopBlackLines += ndata->m_nBlackLinesTop;
@@ -236,7 +235,6 @@ int drawCallback( void *buffer, int width, int height, void *yufbuf )
     if( ndata->m_bFound == false )
     {
       cctrl->newData();
-      dsyslog("drawCallback: cctrl->newdata called");
     }
     else
     {
@@ -252,7 +250,6 @@ int drawCallback( void *buffer, int width, int height, void *yufbuf )
       fCallBack(iCurrentDecodedFrame,buffer,width,height, yufbuf);
     #endif
   }
-  dsyslog("drawCallback: StdCallBack returns 0");
   return 0;
 }
 
@@ -1992,6 +1989,7 @@ int scanRecord( int iNumFrames, cMarks *_marks )
   #ifndef VNOAD
   // open the cIndexFile for the record
   bool isPES = isPESRecording(filename);
+  setMarkfileSuffix(isPES);
   cIF = new cNoadIndexFile(filename,false, isPES);
   if( cIF == NULL )
     return -1;
@@ -2014,6 +2012,15 @@ int scanRecord( int iNumFrames, cMarks *_marks )
     delete cIF;
     return -1;
   }
+  int _isHDTV = isHDTV(cfn->File());
+  if( _isHDTV )
+  {
+    esyslog("looks like HDTV, can't handle this file, give up");
+    delete cfn;
+    delete cIF;
+    return -1;
+  }
+
   demux_track = getVStreamID(cfn->File());
   if( isPES )
 		demux_pid = 0;
@@ -2050,7 +2057,7 @@ int scanRecord( int iNumFrames, cMarks *_marks )
   {
     char logoname[2048];
     strcpy( logoname, filename);
-    strcat( logoname, "\\cur.logo" );
+    strcat( logoname, "/cur.logo" );
 
     if( !detectLogo(cfn,logoname) )
     {
@@ -2396,6 +2403,7 @@ int checkScenecheckOnMark( cMarks *marks, cMark *m )
 void checkMarksOnIFrames(noadData * /*thedata*/, const char *fName)
 {
   bool isPES = isPESRecording(fName);
+  setMarkfileSuffix(isPES);
   cIF = new cNoadIndexFile(fName,false,isPES);
   cMarks marks;
   marks.Load(fName);
@@ -2954,7 +2962,10 @@ void checkMarkByAudio(cMark **m_org, cMarks *marks, cFileName *cfn)
   uint_64 lastsilenceaudiopts = 0;
   int iLastSilenceFrame = 0;
   int numsilence = 0;
+  bTSFoundPayload = false;
+  int flags = DEMUX_RESET;
   
+  resetAudioBuffer();
   cMark *mnext = marks->GetNext(m->position);
   if( mnext && iEndFrame > mnext->position )
       iEndFrame = mnext->position - 20;
@@ -2963,7 +2974,7 @@ void checkMarkByAudio(cMark **m_org, cMarks *marks, cFileName *cfn)
   havesilence = false;
   lowvalcount = 0;
   bTSFoundPayload = false;
-  while(  (iCurrentFrame <= cIF->Last() && iCurrentFrame <= iEndFrame) )
+  while(  (iCurrentFrame < cIF->Last() && iCurrentFrame <= iEndFrame) )
   {
     demuxFrame(cfn, cIF, iCurrentFrame++,bTSFoundPayload ? 0 : DEMUX_RESET );
     iCurrentDecodedFrame = iCurrentFrame-1;

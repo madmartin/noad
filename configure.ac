@@ -10,7 +10,7 @@ dnl ---------------------------------------------------------------------------
 dnll initialisation
 dnl ---------------------------------------------------------------------------
 AC_PREREQ(2.57)
-AC_INIT(noad, 0.7.0, theNoad@ulmail.net)
+AC_INIT(noad, 0.7.2, theNoad@ulmail.net)
 AM_INIT_AUTOMAKE(dist-bzip2)
 AC_CONFIG_SRCDIR([cchecklogo.cpp])
 AC_CONFIG_HEADER([config.h])
@@ -111,20 +111,34 @@ AC_ARG_WITH(ffmpeg,
 
 AC_SUBST(HAVE_AVCHEADER,0)
 if test "$withffmpeg" == "1"; then
+
+AC_SUBST(pkgffmpeginc)
+AC_SUBST(pkgffmpeglibdir)
+AC_SUBST(pkgffmpeglib)
+AC_SUBST(pkgffmpegconfigured,0)
+AC_MSG_CHECKING(for libavcodec with pkg-config)
+if ( ( pkg-config --exists libavcodec ) > /dev/null 2>&1 ); then
+  AC_MSG_RESULT(configure from pkg-config)
+  libavcodecinc="`pkg-config --cflags libavcodec`"
+  libavcodecdir="`pkg-config --libs-only-L libavcodec`"
+  libavcodeclib="`pkg-config --libs-only-l libavcodec`"
+  AC_SUBST(pkgffmpegconfigured,1)
+else
   AC_MSG_CHECKING(for libavcodec(ffmpeg))
-  AC_CHECK_FILE(${defprefix}/include/ffmpeg/avcodec.h,
-    [AC_SUBST(libavcodecinc,"-I${defprefix}/include/ffmpeg")],
-    [AC_SUBST(libavcodecinc,"-I/usr/include/ffmpeg")])
+  AC_CHECK_FILE(${defprefix}/include/libavcodec/avcodec.h,
+    [AC_SUBST(libavcodecinc,"-I${defprefix}/include/libavcodec")],
+    [AC_SUBST(libavcodecinc,"-I/usr/include/libavcodec")])
   AC_CHECK_FILE(${defprefix}/lib/libavcodec.so,
     [AC_SUBST(libavcodecdir,"-L${defprefix}/lib")],
     [AC_SUBST(libavcodecdir,"-L/usr/local/lib")])
+fi
 fi
 
 dnl override include-dir for ffmpeg if user has given a different dir
 AC_SUBST(ffmpegincoverridden,0)
 AC_ARG_WITH(ffmpeginclude,
    AC_HELP_STRING([--with-ffmpeginclude=DIR], 
-     [directory with ffmpeg header-files [[PREFIX/ffmpeg|/usr/include/ffmpeg]]]),
+     [directory with ffmpeg header-files [[pkg-config|PREFIX/libavcodec|/usr/include/libavcodec]]]),
    [AC_SUBST(libavcodecinc,"-I$with_ffmpeginclude") AC_SUBST(ffmpegincoverridden,1) ])
 CPPFLAGS="$libavcodecinc $CPPFLAGS"
 
@@ -133,7 +147,7 @@ dnl override lib-dir for libavcodec if user has given a different dir
 dnl ---------------------------------------------------------------------------
 AC_SUBST(ffmpegliboverridden,0)
 AC_ARG_WITH(ffmpeglibdir,
-   AC_HELP_STRING([--with-ffmpeglibdir=DIR], [directory with ffmpeg library-files [[PREFIX/lib|/usr/lib]]]),
+   AC_HELP_STRING([--with-ffmpeglibdir=DIR], [directory with ffmpeg library-files [[pkg-config|PREFIX/lib|/usr/lib]]]),
    [AC_SUBST(ffmpeglibdir,"-L$with_ffmpeglibdir") AC_SUBST(ffmpegliboverridden,1)],
    [AC_SUBST(ffmpeglibdir,"$libavcodecdir")])
 LDFLAGS="$ffmpeglibdir $LDFLAGS"
@@ -141,8 +155,10 @@ LDFLAGS="$ffmpeglibdir $LDFLAGS"
 dnl ---------------------------------------------------------------------------
 dnl check that libavcodec is usable   
 dnl ---------------------------------------------------------------------------
-AC_SUBST(LIBAVCODEC,"-lavcodec")
-AC_CHECK_LIB([avcodec],[avcodec_init],[AC_SUBST(HAVE_LIBAVCODEC,1) AC_SUBST(LIBS,"$LIBS $LIBAVCODEC ") ])
+if test "$withffmpeg" == "1"; then
+  AC_SUBST(LIBAVCODEC,"-lavcodec")
+  AC_CHECK_LIB([avcodec],[avcodec_init],[AC_SUBST(HAVE_LIBAVCODEC,1) AC_SUBST(LIBS,"$LIBS $LIBAVCODEC ") ])
+fi
 
 
 
@@ -157,11 +173,33 @@ AC_ARG_WITH(magick,
    havemagick="1",
    havemagick="0")
 
+AC_SUBST(pkgmagickinc)
+AC_SUBST(pkgmagicklibdir)
+AC_SUBST(pgkmagicklib)
+AC_SUBST(pkgmagickflags)
 AC_SUBST(PICSRC,"")
+AC_SUBST(markpiccxxflags)
+AC_MSG_CHECKING(for Magick++ with pkg-config)
+if ( ( pkg-config --exists Magick++ ) > /dev/null 2>&1 ); then
+  AC_MSG_RESULT(configure Magick++ with pkg-config)
+  pkgmagickinc="`pkg-config --cflags-only-I Magick++`"
+  pkgmagicklibdir="`pkg-config --libs-only-L Magick++`"
+  pkgmagicklib="`pkg-config --libs Magick++`"
+  pkgmagickflags="`pkg-config --cflags-only-other Magick++`"
+  markpiccxxflags="$pkgmagickinc $pkgmagickflags"
+  echo "pkgmagicinc is $pkgmagickinc"
+  echo "markpiccxxflags are $markpiccxxflags"
+else
+  AC_MSG_RESULT(no configure with std-values)
+fi
+
+dnl AC_SUBST(pkgmagicklib)
+dnl AC_SUBST(pkgmagickflags)
 AC_MSG_CHECKING(for Magick++(2))
 CFLAGS=$ac_save_CFLAGS
 ac_save_CXXFLAGS="$CXXFLAGS"
-CXXFLAGS="$CXXFLAGS -lMagick++"
+dnl CXXFLAGS="$CXXFLAGS -lMagick++"
+CXXFLAGS="$CXXFLAGS $pkgmagickinc $pkgmagickflags $pkgmagicklibdir $pkgmagicklib"
 AC_COMPILE_IFELSE([
 AC_LANG_PROGRAM([#include <Magick++.h>
 using namespace Magick;
@@ -185,15 +223,16 @@ test $withtools -eq 1 && TOOLSRC="showindex"
 
 dnl ---------------------------------------------------------------------------
 dnl check for request "avoid trashing"
+dnl now done by posix_fadvise, see below
 dnl ---------------------------------------------------------------------------
-AC_ARG_WITH(avoid-trashing,
-   AC_HELP_STRING([--with-avoid-trashing],[avoid filesystem trashing (uses posix_fadvise)]),
-   haveposixfadvise="1",
-   haveposixfadvise="0")
-if test "$haveposixfadvise" == "1"; then 
-CPPFLAGS="$CPPFLAGS -DAVOID_TRASHING"
-fi
 
+dnl ---------------------------------------------------------------------------
+dnl check for posix_fadvise 
+dnl can posix_fadvise be used
+dnl ---------------------------------------------------------------------------
+AC_CHECK_DECLS(posix_fadvise, [], [], [
+#include <fcntl.h>])
+AC_CHECK_FUNCS([posix_fadvise])
 
 dnl ---------------------------------------------------------------------------
 # Checks for header files.
@@ -220,7 +259,7 @@ dnl ---------------------------------------------------------------------------
 dnl ---------------------------------------------------------------------------
 AC_FUNC_CLOSEDIR_VOID
 AC_FUNC_FORK
-AC_FUNC_MALLOC
+#AC_FUNC_MALLOC
 #AC_FUNC_REALLOC
 AC_FUNC_SELECT_ARGTYPES
 AC_FUNC_STAT
@@ -237,7 +276,7 @@ if test "$withffmpeg" == "1"; then
   dnl check for a usable avcodec.h 
   dnl have to strip the "-I" from libavcodecinc for doing this
   AC_SUBST(avcincpath,`echo $libavcodecinc|sed -e s*-I**`)
-  AC_CHECK_HEADER([$avcincpath/avcodec.h],
+  AC_CHECK_HEADER([$avcincpath/libavcodec/avcodec.h],
     [AC_SUBST(HAVE_AVCHEADER,1)],
     [AC_SUBST(HAVE_AVCHEADER,0)])
 fi #endif
@@ -310,12 +349,12 @@ else
     echo " this is noad Version $VERSION"
     echo " configured for libmpeg2 Version $LIBMPEG_VERSION"
     if test $pkgconfigured -eq 1; then
-      echo " --configuration taken from pkg-config"
+      echo " --libmpeg2 configuration taken from pkg-config"
     fi
     if test $mpegincoverridden -eq 0; then
-      echo " --taking mpeg-includes from $mpeginc"
+      echo " --using mpeg-includes from $mpeginc"
     else
-      echo " --taking mpeg-includes from user-defined dir $mpeginc"
+      echo " --using mpeg-includes from user-defined dir $mpeginc"
     fi
     if test $mpegliboverridden -eq 0; then
       echo " --using mpeg-library from $mpeglibdir"
@@ -327,6 +366,9 @@ else
     if test "$withffmpeg" == "1" -a "$HAVE_LIBAVCODEC" == "1" ;
     then
       echo " configured with ffmpeg-support"
+      if test $pkgffmpegconfigured -eq 1; then
+        echo " --libavcodec configuration taken from pkg-config"
+      fi
       echo " --using libavcodec.h from $avcincpath"
       echo " --using libavcodec from $ffmpeglibdir"
     else

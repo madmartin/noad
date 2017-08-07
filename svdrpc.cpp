@@ -17,6 +17,10 @@
 //#define _GNU_SOURCE
 
 #include "svdrpc.h"
+int SVDRPPort = 2001;
+char *SVDRPHost = "127.0.0.1";
+
+
 #include <arpa/inet.h>
 #include <ctype.h>
 #include <fcntl.h>
@@ -31,6 +35,7 @@
 #include <errno.h>
 #include "tools.h"
 
+
 // --- cSocket ---------------------------------------------------------------
 
 cSocket::~cSocket()
@@ -40,10 +45,11 @@ cSocket::~cSocket()
 
 void cSocket::Close(void)
 {
-  if (sock >= 0) {
-     close(sock);
-     sock = -1;
-     }
+  if (sock >= 0) 
+  {
+    close(sock);
+    sock = -1;
+  }
 }
 
 bool cSocket::Open(int Port)
@@ -51,39 +57,44 @@ bool cSocket::Open(int Port)
   dsyslog( "cSocket::Open, port = %d",Port );
   port = Port;
   sock = -1;
-  if (sock < 0) {
+  if (sock < 0) 
+  {
      // create socket:
      sock = socket(PF_INET, SOCK_STREAM, 0);
-     if (sock < 0) {
-        perror("socket");
+     if (sock < 0) 
+     {
+        esyslog("cSocket::Open (socket) %s",strerror(errno));
         port = 0;
         return false;
-        }
+     }
      // make it non-blocking:
      int oldflags = fcntl(sock, F_GETFL, 0);
-     if (oldflags < 0) {
-        perror("fcntl-GET");
+     if (oldflags < 0) 
+     {
+        esyslog("cSocket::Open (fcntl-GET): %s",strerror(errno));
         return false;
-        }
+     }
      oldflags |= O_NONBLOCK;
-     if (fcntl(sock, F_SETFL, oldflags) < 0) {
-        perror("fcntl-SET");
+     if (fcntl(sock, F_SETFL, oldflags) < 0) 
+     {
+        esyslog("cSocket::Open (fcntl-SET): %s",strerror(errno));
         return false;
-        }
+     }
      //ToDo: make Socket-keep-alive...
   }
   dsyslog("cSocket::Open ok" );
   return true;
 }
 
-int cSocket::Connect(void)
+int cSocket::Connect(char *Host)
 {
-  dsyslog("cSocket::Connect" );
-  if (Open(port)) {
+  dsyslog("cSocket::Connect to %s", Host );
+  if (Open(port)) 
+  {
      struct sockaddr_in name;
      name.sin_family = AF_INET;
      name.sin_port = htons(port);
-     name.sin_addr.s_addr = 0x0100007f;
+     name.sin_addr.s_addr = inet_addr(Host);
      uint size = sizeof(name);
      errno=0;
      int result = connect(sock, (struct sockaddr *)&name, size);
@@ -93,7 +104,7 @@ int cSocket::Connect(void)
      }
      else
      {
-        perror("connect");
+        esyslog("cSocket::Connect: %s",strerror(errno));
      }
   }
   return -1;
@@ -103,10 +114,10 @@ int cSocket::Connect(void)
 
 bool cSVDRPC::Connected()
 {
-	if(filedes==-1)
-		return false;
-	else
-		return true;
+  if(filedes==-1)
+    return false;
+  else
+    return true;
 }
 
 cSVDRPC::~cSVDRPC()
@@ -114,12 +125,12 @@ cSVDRPC::~cSVDRPC()
   Close();
 }
 
-void cSVDRPC::Open(int Port)
+void cSVDRPC::Open(char *Host ,int Port)
 {
   dsyslog("cSVDRPC::Open port is %d",Port );
   name[0]=0;
   if (socket.Open(Port))
-    filedes = socket.Connect();
+    filedes = socket.Connect(Host);
   else
     filedes = -1;
   outstandingReply=1;
@@ -130,37 +141,39 @@ void cSVDRPC::Close(void)
 {
   dsyslog("cSVDRPC::Close" );
   close(filedes);
-	socket.Close();
+  socket.Close();
   filedes=-1;
 }
 
 bool cSVDRPC::Send(const char *s, int length)
 {
   dsyslog("cSVDRPC::Send %s %d",s,length );
-	int ret=0;
+  int ret=0;
   if(filedes>0)
   {
-    if (length < 0) length = strlen(s);
-		outstandingReply++;
+    if (length < 0) 
+      length = strlen(s);
+    outstandingReply++;
     {
       int wbytes=write(filedes, s, length);
       if (wbytes == length)
         ret=true;
       else if (wbytes < 0)
-			{
+      {
+        esyslog("cSVDRPC::Send: %s",strerror(errno));
         //perror("svdrpc-write:");
-				Close();//reopen connection in the case something went wrong:
+	Close();//reopen connection in the case something went wrong:
 			  //if (socket.Open())
 			  //  filedes = socket.Connect();
 			  //else
-			  filedes = -1;
-			  outstandingReply=1;
-			  ReadReply();//lese Greeting...
-			  ret=false;
-			}
+	filedes = -1;
+	outstandingReply=1;
+	ReadReply();//lese Greeting...
+	ret=false;
+      }
       else
       {
-        fprintf(stderr, "Wrote %d bytes instead of %d\n", wbytes, length);
+        esyslog("cSVDRPC::Send: Wrote %d bytes instead of %d", wbytes, length);
         ret=false;
       }
     }
@@ -184,7 +197,7 @@ bool cSVDRPC::ReadReply()
     FD_SET(filedes, &set);
     struct timeval timeout;
     timeout.tv_sec = 0;
-    timeout.tv_usec = 200;
+    timeout.tv_usec = 1000;
     do
     {
       select(1, &set, NULL, NULL, &timeout);
@@ -202,7 +215,8 @@ bool cSVDRPC::ReadReply()
     if(rbytes>0)
     {
       buf[rbytes]=0;
-      if((outstandingReply>0)&&(buf[rbytes-1]=='\n'))outstandingReply--;
+      if( (outstandingReply > 0) && (buf[rbytes-1] == '\n') )
+        outstandingReply--;
       return true;
     }
     else
@@ -240,7 +254,7 @@ bool cSVDRPC::CmdQuit()
 void VDRMessage(const char *s)
 {
   cSVDRPC *svdrpc=new cSVDRPC();
-  svdrpc->Open(2001);
+  svdrpc->Open(SVDRPHost,SVDRPPort);
   usleep(10000);
   svdrpc->ReadCompleteReply();
   svdrpc->Send(s);
@@ -256,7 +270,7 @@ void noadMsg(const char *msg, const char *filename)
 {
   char *baseName = NULL;
   char *cp = NULL;
-  char *vend = strchr(filename,'/');
+  const char *vend = strchr(filename,'/');
   if( vend )
     vend = strchr(vend+1,'/');
   if( vend )
@@ -265,9 +279,9 @@ void noadMsg(const char *msg, const char *filename)
     asprintf(&baseName,"mesg %s %s",msg, filename);
   if( baseName[strlen(baseName)-1] == '/' )
     baseName[strlen(baseName)-1] = '\0';
-  vend = strrchr(baseName, '/');
-  if( vend )
-    *vend = '\0';
+  char *vend1 = strrchr(baseName, '/');
+  if( vend1 )
+    *vend1 = '\0';
   asprintf(&cp,"%s\r\n",baseName);
 
   VDRMessage(cp);
@@ -278,10 +292,10 @@ void noadMsg(const char *msg, const char *filename)
 
 void noadStartMessage( const char *s)
 {
-  noadMsg("starte noad für ",s);
+  noadMsg("start noad for ",s);
 }
 
 void noadEndMessage( const char *s)
 {
-  noadMsg("noad done für ",s);
+  noadMsg("noad done for ",s);
 }

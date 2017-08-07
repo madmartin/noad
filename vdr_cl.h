@@ -66,7 +66,7 @@ typedef unsigned char uchar;
 #define KILOBYTE(n) ((n) * 1024)
 #define TS_SIZE               188
 // The maximum size of a single frame (up to HDTV 1920x1080):
-#define MAXFRAMESIZE  (KILOBYTE(512) / TS_SIZE * TS_SIZE) // multiple of TS_SIZE to avoid breaking up TS packets
+#define MAXFRAMESIZE  (KILOBYTE(1024) / TS_SIZE * TS_SIZE) // multiple of TS_SIZE to avoid breaking up TS packets
 // The maximum size of a single frame:
 
 #define FRAMESPERSEC 25
@@ -75,6 +75,7 @@ typedef unsigned char uchar;
 extern int SysLogLevel;
 extern char MarksfileSuffix[];
 
+bool setMarkfileSuffix(bool bIsPESFile);
 bool setMarkfileName(const char *name, bool bIsPESFile = false);
 void releaseMarkfileName();
 
@@ -349,6 +350,7 @@ private:
   double framesPerSecond;
 public:
   bool Load(const char *RecordingFileName, double FramesPerSecond = DEFAULTFRAMESPERSECOND, bool IsPesRecording = false);
+  bool ReLoad();
   void Sort(void);
   cMark *Add(int Position);
   cMark *Get(int Position);

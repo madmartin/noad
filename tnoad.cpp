@@ -422,6 +422,7 @@ int doOnlineScan(noadData *thedata, const char *fName, cMarks *_marks )
   #ifndef VNOAD
   // open the cIndexFile for the record
   bool isPES = isPESRecording(filename);
+  setMarkfileSuffix(isPES);
   cIF = new cNoadIndexFile(filename,false, isPES);
   if( cIF == NULL )
     return -1;

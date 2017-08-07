@@ -27,9 +27,6 @@
 #include <syslog.h>
 #include <stdlib.h>
 
-//#define esyslog(a...) void( (SysLogLevel > 0) ? syslog(a) : void() )
-//#define isyslog(a...) void( (SysLogLevel > 1) ? syslog(a) : void() )
-//#define dsyslog(a...) void( (SysLogLevel > 2) ? syslog(a) : void() )
 
 #include "noaddata.h"
 #include "ctoolbox.h"

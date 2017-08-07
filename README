@@ -48,6 +48,9 @@ options:
                 erkennt vertikal verschobene Senderlogos
 -O              --OSD
                 sendet eine OSD-Message an VDR(localhost:2001) für Start und Ende
+-O,             --OSD\n"
+                  sendet eine OSD-Message für Start und Ende
+                  (default: to localhost:2001)
 -S              --savelogo
                 speichert das erkannte Logo
 -B              --backupmarks
@@ -56,6 +59,13 @@ options:
                 special behavior for finish stations
 -V              --version
                 zeigt die Versionsnummer und endet dann
+
+                --svdrphost=<ip-address>
+                setzt die IP-Addresse für OSD-Nachrichten
+                (default: localhost)
+                --svdrpport=<tcp-port>
+                setzt den TCP-Port für OSD-Nachrichten
+                (default: 2001)
                 
                 --markfile=<markfilename>
                 set a different markfile-name

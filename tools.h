@@ -20,10 +20,12 @@
 #include <syslog.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-
+#include "config.h"
 extern int SysLogLevel;
 
+#if (HAVE_POSIX_FADVISE==1 )
 #define USE_FADVISE
+#endif
 #define esyslog(a...) void( (SysLogLevel > 0) ? syslog_with_tid(LOG_ERR, a) : void() )
 #define isyslog(a...) void( (SysLogLevel > 1) ? syslog_with_tid(LOG_ERR, a) : void() )
 #define dsyslog(a...) void( (SysLogLevel > 2) ? syslog_with_tid(LOG_ERR, a) : void() )
@@ -49,14 +51,6 @@ void syslog_with_tid(int priority, const char *format, ...) __attribute__ ((form
 template<class T> inline T min(T a, T b) { return a <= b ? a : b; }
 template<class T> inline T max(T a, T b) { return a >= b ? a : b; }
 template<class T> inline void swap(T &a, T &b) { T t = a; a = b; b = t; }
-
-#ifdef AVOID_TRASHING
-int OpenStream(const char* PathName, int Flags, mode_t Mode);
-int OpenStream(const char* PathName, int Flags);
-ssize_t ReadStream(int fd, void* Buffer, size_t Size);
-ssize_t WriteStream(int fd, const void* Buffer, size_t Size);
-int CloseStream(int fd);
-#endif // AVOID_TRASHING
 
 
 class cString {
@@ -108,6 +102,7 @@ const char *DayDateTime(time_t t = 0); // returns a statically allocated string!
 int ReadFrame(int f, unsigned char *b, int Length, int Max);
 int getVStreamID(int f);
 int getTSPID(int f);
+int isHDTV(int f);
 
 class cFile {
 private:

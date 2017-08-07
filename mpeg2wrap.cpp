@@ -376,6 +376,7 @@ void demux_reset(void)
 // from mpeg2dec.cpp
 int demuxPES (uint8_t * buf, uint8_t * end, int flags)
 {
+	int iRet = 0;
   static int mpeg1_skip_table[16] =
   {
     0, 0, 4, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
@@ -418,13 +419,13 @@ int demuxPES (uint8_t * buf, uint8_t * end, int flags)
         } else {					\
           memcpy (header + bytes, buf, end - buf);	\
           state_bytes = bytes + end - buf;		\
-          return 0;					\
+          return iRet;					\
         }						\
       } else {						\
         memcpy (head_buf, header, bytes);		\
         state = DEMUX_HEADER;				\
         state_bytes = bytes;				\
-        return 0;					\
+        return iRet;					\
       }							\
     }							\
   } while (0)
@@ -461,7 +462,7 @@ int demuxPES (uint8_t * buf, uint8_t * end, int flags)
       {
         decode_mpeg2 (buf, end);
         state_bytes -= end - buf;
-        return 0;
+        return iRet;
       }
       decode_mpeg2 (buf, buf + state_bytes);
       buf += state_bytes;
@@ -471,7 +472,7 @@ int demuxPES (uint8_t * buf, uint8_t * end, int flags)
     if (demux_pid || (state_bytes > end - buf))
     {
       state_bytes -= end - buf;
-      return 0;
+      return iRet;
     }
     buf += state_bytes;
     break;
@@ -482,7 +483,7 @@ int demuxPES (uint8_t * buf, uint8_t * end, int flags)
     if (demux_pid)
     {
         state = DEMUX_SKIP;
-        return 0;
+        return iRet;
     }
 
     payload_start:
@@ -496,7 +497,7 @@ int demuxPES (uint8_t * buf, uint8_t * end, int flags)
       if (demux_pid)
       {
       state = DEMUX_SKIP;
-      return 0;
+      return iRet;
       }
       else if (header != head_buf)
       {
@@ -726,12 +727,13 @@ int demuxPES (uint8_t * buf, uint8_t * end, int flags)
         {
           state = DEMUX_SKIP;
           state_bytes = bytes - (end - buf);
-          return 0;
+          return iRet;
         }
         buf += bytes;
       }
     }
   }
+  return iRet;
 }
  
 extern uchar readBuffer[MAXFRAMESIZE]; // frame-buffer

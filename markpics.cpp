@@ -20,7 +20,10 @@ int doPics(const char * filename)
   cNoadIndexFile *cIF = NULL;
   cFileName *cfn = NULL;
   int demux_track = 0;
-  cIF = new cNoadIndexFile(filename,false);
+  bool ispes = isPESRecording(filename);
+
+  setMarkfileSuffix(ispes);
+  cIF = new cNoadIndexFile(filename,false,ispes);
   if( cIF == NULL )
     return -1;
   cfn = new cFileName(filename, false);
@@ -72,11 +75,16 @@ void paintMarks(Image &image, cMarks *pmarks, int iNumFrames, bool bWithAudio=fa
   int *ipMarks;
   int iCount;
   //int iNumFrames = vdr_getnumframes();
-  image.fillColor("red");
-  image.draw( DrawableRectangle(0,0,image.size().width(),bWithAudio ? image.size().height():image.size().height()/2 ) );
 
   ipMarks = getMarkPositions(pmarks);
   iCount = *ipMarks++;
+
+  if( iCount > 0 )
+    image.fillColor("red");
+  else
+    image.fillColor("green");
+  image.draw( DrawableRectangle(0,0,image.size().width(),bWithAudio ? image.size().height():image.size().height()/2 ) );
+
   image.fillColor("green");
   for( int i = 0; i < iCount; i += 2 )
   {
@@ -114,7 +122,9 @@ void paintAudioMarks(Image &image, cMarks *pmarks, int iNumFrames)
 int doMarkPic(const char * filename)
 {
   cNoadIndexFile *cIF = NULL;
-  cIF = new cNoadIndexFile(filename,false);
+  bool ispes = isPESRecording(filename);
+  setMarkfileSuffix(ispes);
+  cIF = new cNoadIndexFile(filename,false,ispes);
   if( cIF == NULL )
     return -1;
   cMarks *pmarks = new cMarks();

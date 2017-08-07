@@ -26,6 +26,7 @@
 #include <signal.h>
 #include <execinfo.h>
 #include "noad.h"
+#include "svdrpc.h"
 #include "tnoad.h"
 
 const char *recDir = NULL;
@@ -213,6 +214,8 @@ int main(int argc, char *argv[], char *envp[])
       {"nopid",0,0,5},
       {"asd",0,0,6},
       {"pass3only",0,0,7},
+		{"svdrphost",1,0,8},
+      {"svdrpport",1,0,9},      
       {0, 0, 0, 0}
     };
 
@@ -356,6 +359,19 @@ int main(int argc, char *argv[], char *envp[])
       #endif
       break;
       
+      case 8:
+          SVDRPHost = optarg;
+      break;
+
+      case 9:
+        if (isnumber(optarg) && atoi(optarg) > 0 && atoi(optarg) < 65536 )
+          SVDRPPort = atoi(optarg);
+        else
+        {
+          fprintf(stderr, "noad: invalid SVDRP Port: %s\n", optarg);
+          return 2;
+        }
+      break;
       default:
         printf ("? getopt returned character code 0%o ?(option_index %d)\n", c,option_index);
     }
@@ -608,12 +624,19 @@ int main(int argc, char *argv[], char *envp[])
          "-B              --backupmarks\n"
          "                  move the marks.vdr to marks0.vdr\n"
          "-O,             --OSD\n"
-         "                  noad sends an OSD-Message to localhost:2001 for start and end\n"
+         "                  noad sends an OSD-Message for start and end \n"
+         "                  (default: to localhost:2001)\n"         
          "-S              --savelogo\n"
          "                  save the detected logo\n"
          "-V              --version\n"
          "                  print version-info and exits\n"
-         "--markfile=<markfilename>\n"
+         "--svdrphost=<ip-address>\n"
+         "                  set the IP-address used for OSD Messages\n"
+         "                  (default: localhost)\n"
+         "--svdrpport=<tcp-port>\n"
+         "                  set the TCP-Port used for OSD Messages\n"
+         "                  (default: 2001)\n"
+		   "--markfile=<markfilename>\n"
          "  set a different markfile-name\n"
          "--online[=1|2] (default is 1)\n"
          "  start noad immediately when called with \"before\" as cmd\n"
@@ -647,5 +670,5 @@ int main(int argc, char *argv[], char *envp[])
          "\n<record>                     is the name of the directory where the recording\n"
          "                             is stored\n\n"
          );
-
+	return 0;
 }
