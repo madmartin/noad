@@ -1,7 +1,7 @@
-Version 0.8.0
+Version 0.8.x
 - can use libmpeg2 or libavcodec(ffmpeg) for video-decoding
-- configure uses pkg-config to detect libmpeg2/libavcodec
-- still many things to do...
+- configure uses pkg-config to detect libmpeg2/libavcodec by default
+- fix some configure-issues (thanks to Martin Dummer, Dirk Vornheder, Peter Pfeifer for testing)
 
 Version 0.7.3
 - adjustments for current ffmpeg-version
@@ -9,7 +9,7 @@ Version 0.7.3
 Version 0.7.2
 - exit noad if a hdtv-recording is found
 - change MAXFRAMESIZE to KILOBYTE(1024) as in vdr
-- fixed noadifnew (thanks to Matti LehtimÃ¤ki for the patch)
+- fixed noadifnew (thanks to Matti Lehtimäki for the patch)
 - add some logging in svdrpc.cpp
 
 Version 0.7.0/0.7.1
@@ -21,7 +21,7 @@ Version 0.6.1
 - fixed a bug with using -O and no running vdr is found
   (thanks to Helmut Auer for sending a patch)
 - implemented new function for file-io based
-  on a patch from Ralf Mï¿½ller (see readme)
+  on a patch from Ralf Müller (see readme)
 
 Version 0.6.0
 - add audio-silence-detection

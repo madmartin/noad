@@ -17,7 +17,7 @@
  ***************************************************************************/
 
 #ifdef HAVE_CONFIG_H
-#include <config.h>
+#include "config.h"
 #endif
 
 #include <stdlib.h>
@@ -94,10 +94,9 @@ void writeStatistic(const char *statfilename, const char *recording)
     return;
   }
   time_t start = time(NULL);
-  fprintf(f,"%s;%s;%s,%s,%s;%dx%d;%d (%s);%d;%d;%d;%d;%d;%d;%s;%s\n",
-//  fprintf(f,"%s;%s;%s;%dx%d;%d (%s);%d;%d;%d;%d;%d;%d;%s;%s\n",
+  fprintf(f,"%s;%s-%s;%s,%s,%s;%dx%d;%d (%s);%d;%d;%d;%d;%d;%d;%s;%s\n",
       myTime(start),
-      getVersion(),
+      getVersion(), (default_Decoder == FFMPEG_DECODER ? "ffmpeg" : "libmpeg2"),
       hasBlackLines?"yes":"no",
       hasAC3?"yes":"no",
       hasOverlaps?"yes":"no",
@@ -184,6 +183,7 @@ int main(int argc, char *argv[], char * /*envp*/[])
   bool bAfter = false;
   bool bBefore = false;
   bool bEdited = false;
+  bool bDeleted = false;
   bool bNice = false;
   bool bOnline = false;
   int onlinemode = 1;
@@ -409,6 +409,10 @@ int main(int argc, char *argv[], char * /*envp*/[])
       {
         bEdited = true;
       }
+      else if(strcmp(argv[optind], "deleted" ) == 0 )
+      {
+         bDeleted = true;
+      }
       else if(strcmp(argv[optind], "nice" ) == 0 )
       {
         bNice = true;
@@ -431,11 +435,27 @@ int main(int argc, char *argv[], char * /*envp*/[])
 
   // we can run, if one of bImmediateCall, bAfter, bBefore or bNice is true
   // and recDir is given
-  if( (bImmediateCall || bAfter || bBefore || bEdited || bNice) && recDir )
+  if( (bImmediateCall || bAfter || bBefore || bEdited || bDeleted || bNice) && recDir )
   {
     // do nothing if called from vdr after the video is cutted
     if( bEdited )
       return 0;
+
+    if(bDeleted)
+    {
+       pid_t olPid = processInfo(recDir);
+       if( olPid < 0 )
+       {
+          syslog(LOG_INFO,"noad called with 'deleted', nothing to do yet");
+          return 0;
+       }
+       else
+       {
+          int killerr = kill(olPid,SIGUSR1);
+          syslog(LOG_INFO,"noad called with 'deleted', try to kill an already running instance of noad with pid %d(result:%d)",olPid,killerr);
+          return killerr;
+       }
+    }
 
     // if online is set to 1, check that the rec is a live-rec
     // else switch online-mode off
@@ -684,6 +704,9 @@ printf(  "--decoder[ffmpeg|libmpeg2] (default is ffmpeg)\n"
          "                             and --online is not given\n"
          "edited                       from vdr if used in the -r option of vdr\n"
          "                             noad exits immediately if called with \"edited\"\n"
+         "deleted                      from vdr if used in the -r option of vdr\n"
+         "                             tries to stop a possible running instance of noad\n"
+         "                             for this recording"
          "nice                         runs noad with nice(19)\n"
          "\n<record>                     is the name of the directory where the recording\n"
          "                             is stored\n\n"

@@ -23,8 +23,8 @@ noad nutzt neben den eigentlichen mpeg-dateien (*.vdr) die Index-Datei von VDR u
 schreibt die Ergebnisse in die marks.vdr.
 
 Erzeugung:
-Vor dem erzeugen von noad ist die libmpeg2, Version 0.3.1 oder 0.4.0, zu installieren.
-(siehe http://libmpeg2.sourceforge.net)
+Vor dem erzeugen von noad ist libmpeg2(Version 0.3.1 oder neuer,siehe http://libmpeg2.sourceforge.net) 
+und/oder ffmpeg zu installieren.
 Danach einfach im Source-Verzeichnis den üblichen Dreisatz configure/make/make install aufrufen.
 
 Aufruf:noad [options] cmd <record>
@@ -82,11 +82,19 @@ options:
                   audio silence detection
                   noad muß mit ffmpeg-support kompiliert sein (siehe configure --help)
 
+                --decoder=libmpeg2|ffmpeg (default ist ffmpeg wenn möglich)
+                  Auswahl des Video-Decoders
+
 cmd: eins von
        before      von vdr, wenn mit der Option "-r" in vdr eingebunden
                    noad beendet sich sofort, wenn dieses cmd gegeben wird und
                    --online nicht angegeben ist
        after       von vdr, wenn mit der Option "-r" in vdr eingebunden
+       edited      von vdr, wenn ein Aufnahme geschnitten wurde 
+                   noad beendet sich sofort, wenn dieses cmd gegeben wird 
+       deleted     von vdr, wenn eine Aufnahme gelöscht wurde
+                   noad prüft, ob es eine laufende Instanz von noad für diese
+                   Aufnahme gibt und beendet diese
        -           dummy-parameter für Direktaufruf
        nice        noad läuft mit geringer Priorität
 <record>    vollständiger Pfad des Verzeichnisses mit der Aufnahme, die bearbeitet werden soll
@@ -231,13 +239,10 @@ configure mit "--with-ffmpeg" aufzurufen, ggf. mit "--with-ffmpeginclude" und "-
 ffmpeg headern und libs setzen. Danach ein "make", und dann kann noad mit "--asd" aufgerufen werden.
 asd ist z.Z. noch nicht im online-scan integriert.
 
-Ab noad-0.6.1:
-Die File-IO-Routinen zum lesen der Aufnahme wurden nach einem patch von Ralf Müller neu implementiert. Die neuen
-Routinen vermeiden, das der File-Cache beim lesen einer Aufnahme vollläuft. Um die neuen Routinen zu aktivieren ist
-configure mit dem Zusatz "--with-avoid-trashing" aufzurufen. Die notwendigen Routinen sind allerdings erst ab 
-Kernel-Version 2.6.x aktiv. Wird ein Kernel 2.4.xx verwendet, gibt es beim compilieren eine Warnung: 
-"warning: posix_fadvise is not implemented and will always fail"
-Diese Warnung kann ignoriert werden.
-
+Ab noad 0.8.0:
+decoder -  Auswahl des Video-Decoders
+Ab Version 0.8 wurde der Video-Decoder überarbeitet. Es kann jetzt mit libmpeg2 oder mit libavcodec(ffmpeg) decodiert
+werden. Default ist, wenn möglich, ffmpeg. Wird der libmpeg-decoder gewählt, so wird bei Ekennung einer HD-Aufnahme 
+automatisch zum ffmpeg-decoder gewechselt.
 
 Fehlermeldungen, Anregungen, Hinweise und auch Erfahrungsberichte an: theNoad@ulmail.net

@@ -46,7 +46,7 @@ MPEGDecoder *decoder;
 
 extern "C"
 {
-  static const char *VERSIONSTRING = "0.8.2";
+  static const char *VERSIONSTRING = "0.8.3";
 }
 
 #ifdef VNOAD
@@ -1599,7 +1599,25 @@ int scanRecord( int iNumFrames, cMarks *_marks )
     pmarks = _marks;
   else
     pmarks = localMarks = new cMarks();
-  
+#ifdef USE_LIBMPGE2
+    if( default_Decoder == LIBMPEG2_DECODER )
+    {
+       int _isHDTV = isHDTV(cfn->File());
+       if( _isHDTV )
+       {
+         #ifdef USE_FFMPEG
+            esyslog("looks like HDTV, can't handle this file with libmpeg2, switching to ffmpeg");
+            default_Decoder = FFMPEG_DECODER;
+         #else
+            esyslog("looks like HDTV, can't handle this file with libmpeg2, give up");
+            delete cfn;
+            delete cIF;
+            return -1;
+         #endif
+       }
+     }
+#endif
+
 #ifdef USE_FFMPEG
     if( default_Decoder == FFMPEG_DECODER )
 		 decoder = new FFMPegDecoder();
@@ -1609,6 +1627,8 @@ int scanRecord( int iNumFrames, cMarks *_marks )
        if( default_Decoder == LIBMPEG2_DECODER )
          decoder = new LibMPeg2Decoder();
 #endif
+    syslog(LOG_INFO, "noad is using %s for video-decoding", default_Decoder == FFMPEG_DECODER ? "ffmpeg" : "libmpeg2" );
+
 	 decoder->decoder_init();
 	 decoder->openFile(cfn,cIF);
 

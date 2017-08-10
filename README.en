@@ -26,9 +26,9 @@ noad is written for ad-detection on german tv-stations. Other countries may have
 kinds of advertising, so you have to check by yourself if noad can be helpfull for you.
 
 Install:
-Before you can build noad, you have to install libmpeg2, version 0.3.1 or 0.4.0.
-(see http://libmpeg2.sourceforge.net)
-If you hav installed libmpeg2, just call configure/make/make install.
+Before you can build noad, you have to install libmpeg2(version 0.3.1 or newer,see http://libmpeg2.sourceforge.net) 
+and/or ffmpeg
+If you hav installed libmpeg2/ffmpeg, just call configure/make/make install.
 
 Running noad:
 noad [options] cmd <record>
@@ -82,12 +82,18 @@ options:
                   audio silence detection
                   you have to compile noad with ffmpeg-support to use this (see configure --help)
 
+
+                --decoder=libmpeg2|ffmpeg (default ist ffmpeg if possible)
+                  choose Video-Decoder
                 
 cmd: one of
        before      given from vdr, if used with the Option "-r" in vdr 
                    noad exits immidiatly with this command
        after       given from vdr, if used with the Option "-r" in vdr 
                    noad starts the scan
+       deleted     given from vdr, if used with the Option "-r" in vdr 
+                   noad looks for a running instance of noad for this
+                   recording and stop it
        -           dummy-parameter if called directly
        nice        noad runs with low priority
 <record>    complete path of the recording that should be scanned
@@ -202,7 +208,11 @@ Sometimes there are short audio breaks between different clips. noad can detect 
 them to distinct between advertising/trailers and the normal recording. 
 To use this feature you need an installed libavcodec from ffmpeg. You have to configure noad with  "--with-ffmpeg",
 and may give the pathes to the include- and libryr-files with "--with-ffmpeginclude" and "--with-ffmpeglibdir".
-At this time, asd isn't intagrated in the online-scan.
+At this time, asd isn't integrated in the online-scan.
 
+noad 0.8.0:
+decoder - choose video-decoder
+You can choose between libmpeg2 or libavcodec(ffmpeg) as video-decoder. Default is ffmpeg if possible. If you choose libmpeg2 and
+noad detects a hd-video ffmpeg will be used if possible.
 
 Send bug-reports and hints to: theNoad@SoftHome.net

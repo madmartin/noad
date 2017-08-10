@@ -14,5 +14,5 @@ then
 fi
 vdir=${1}
 shift
-find $vdir -follow -type d -name '*.rec' ! -path '*/%*' -exec noad $* - '{}' ';'
+find $vdir -follow -type d -name '*.rec' ! -path '*/%*' -exec ./noad $* - '{}' ';'
 

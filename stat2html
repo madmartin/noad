@@ -76,15 +76,17 @@ gawk -F';' '{ if(NF > 12) printf("%s\n",$0); \
                  }\
             };' |
 # convert total-scantime from secs to time and add a reminder for markpic in col 12
-gawk -F';' '{ for(i=1;i<11;i++) \
-  {printf("%s;",$i); } \
+gawk -F';' '{ \
+  for(i=1;i<11;i++) \
+    {printf("%s;",$i); } \
   h=$11/3600; \
   m=$11/60%60; \
   s=$11%60; \
   printf("%d:%02d:%02d;",h,m,s); \
   for(j=12;j<=NF;j++) \
-  { printf("%s;",$j); } \
-  printf("\n"); }' |
+    { printf("%s;",$j); } \
+  printf("\n"); \
+}' |
 
 # sort input by recordingname and scan-date
 sed -e 's/,/;/' |
@@ -118,6 +120,7 @@ sed -e 's/^/<tr><td>/' \
     -e 's/#2E/./g' \
     -e 's/#27/'\''/g' \
     -e 's/#3A/:/g' \
+    -e 's/#3F/?/g' \
     -e 's/$/<\/td><\/tr>/' |
 
 # colorize rows for better reading

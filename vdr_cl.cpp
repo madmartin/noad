@@ -32,9 +32,12 @@ char MarksfileSuffix[256] = MARKSFILESUFFIX;
  
 bool setMarkfileSuffix(bool bIsPESFile)
 {
-  if(MarksfileSuffix!=NULL)
-    releaseMarkfileName();
-  sprintf(MarksfileSuffix,"%s%s","marks", bIsPESFile ? ".vdr" :"");
+	if( strcmp(MarksfileSuffix,MARKSFILESUFFIX) == 0 )
+	{
+		//if(MarksfileSuffix!=NULL)
+		//	releaseMarkfileName();
+      sprintf(MarksfileSuffix,"%s%s","/marks", bIsPESFile ? ".vdr" :"");
+	}
   return 0;
 }
 
@@ -674,7 +677,8 @@ bool cNoadIndexFile::Get(int Index, uint16_t *FileNumber, off_t *FileOffset, boo
         return true;
      }
   }
-  dsyslog( "cNoadIndexFile::Get returns false at %d (last is %d)",Index,last );
+  //dsyslog( "cNoadIndexFile::Get returns false at %d (last is %d)",Index,last );
+  //show_stackframe(false);
   return false;
 }
 

@@ -89,7 +89,7 @@ int time_ms(void);
 void delay_ms(int ms);
 const char *secToTime(int sec);
 bool isnumber(const char *s);
-cString AddDirectory(const char *DirName, const char *FileName); // returns a statically allocated string!
+const char */*cString */AddDirectory(const char *DirName, const char *FileName); // returns a statically allocated string!
 int FreeDiskSpaceMB(const char *Directory, int *UsedMB = NULL);
 bool DirectoryOk(const char *DirName, bool LogErrors = false);
 bool MakeDirs(const char *FileName, bool IsDirectory = false);
