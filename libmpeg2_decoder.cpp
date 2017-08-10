@@ -1,7 +1,6 @@
 #include "libmpeg2_decoder.h"
 #if defined(USE_LIBMPGE2)
 
-bool ignorevideo = false;
 #define VIDEO_STREAM_S   0xE0
 #define VIDEO_STREAM_E   0xEF
 

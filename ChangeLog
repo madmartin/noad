@@ -1,3 +1,15 @@
+Version 0.8.6
+- fixes for ffmpeg 1.2
+
+Version 0.8.5
+- fixed a bug setting marks on non-IFrames
+- fixed a bug reusing saved logos
+- new tool checkMarks for checking that all marks are on IFrames
+- new script (checkAllMarks) for checking all records for faulty marks and re-noad them
+
+Version 0.8.4
+- fixed handling of hdtv-recordings
+
 Version 0.8.x
 - can use libmpeg2 or libavcodec(ffmpeg) for video-decoding
 - configure uses pkg-config to detect libmpeg2/libavcodec by default

@@ -36,7 +36,7 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
-bin_PROGRAMS = noad$(EXEEXT)
+bin_PROGRAMS = noad$(EXEEXT) checkMarks$(EXEEXT)
 EXTRA_PROGRAMS = markpics$(EXEEXT) showindex$(EXEEXT)
 subdir = .
 DIST_COMMON = README $(am__configure_deps) $(srcdir)/Makefile.am \
@@ -69,6 +69,9 @@ am_libnoad_a_OBJECTS = tools.$(OBJEXT) vdr_cl.$(OBJEXT) \
 libnoad_a_OBJECTS = $(am_libnoad_a_OBJECTS)
 am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS) $(noinst_PROGRAMS)
+am_checkMarks_OBJECTS = checkmarks.$(OBJEXT)
+checkMarks_OBJECTS = $(am_checkMarks_OBJECTS)
+checkMarks_DEPENDENCIES = libnoad.a
 am_markpics_OBJECTS = markpics-markpics.$(OBJEXT)
 markpics_OBJECTS = $(am_markpics_OBJECTS)
 markpics_DEPENDENCIES = libnoad.a
@@ -137,10 +140,10 @@ am__v_CCLD_0 = @echo "  CCLD  " $@;
 AM_V_GEN = $(am__v_GEN_$(V))
 am__v_GEN_ = $(am__v_GEN_$(AM_DEFAULT_VERBOSITY))
 am__v_GEN_0 = @echo "  GEN   " $@;
-SOURCES = $(libnoad_a_SOURCES) $(markpics_SOURCES) $(noad_SOURCES) \
-	$(showindex_SOURCES)
-DIST_SOURCES = $(libnoad_a_SOURCES) $(markpics_SOURCES) \
-	$(noad_SOURCES) $(showindex_SOURCES)
+SOURCES = $(libnoad_a_SOURCES) $(checkMarks_SOURCES) \
+	$(markpics_SOURCES) $(noad_SOURCES) $(showindex_SOURCES)
+DIST_SOURCES = $(libnoad_a_SOURCES) $(checkMarks_SOURCES) \
+	$(markpics_SOURCES) $(noad_SOURCES) $(showindex_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -273,18 +276,20 @@ libnoad_a_SOURCES = tools.cpp vdr_cl.cpp svdrpc.cpp  \
 noad_SOURCES = audiotools.cpp cchecklogo.cpp ccontrol.cpp cgetlogo.cpp ctoolbox.cpp \
 		noad.cpp noaddata.cpp tnoad.cpp ffmpeg_decoder.cpp libmpeg2_decoder.cpp mpeg_decoder.cpp \
 	        main.cpp \
-	    	audiotools.h cchecklogo.h ccontrol.h cgetlogo.h ctoolbox.h \
+	    	audiotools.h cchecklogo.h ccontrol.h cgetlogo.h ctoolbox.h channels.h \
 		noad.h tnoad.h noaddata.h videodir.h \
 		ffmpeg_decoder.h libmpeg2_decoder.h mpeg2wrap_ffmpeg.h mpeg_decoder.h yuvbuf.h
 
+checkMarks_SOURCES = checkmarks.cpp
 noad_LDADD = libnoad.a
+checkMarks_LDADD = libnoad.a
 noinst_PROGRAMS = @PICSRC@ @TOOLSRC@
 markpics_SOURCES = markpics.cpp
 markpics_LDADD = libnoad.a @markpics_ldadd@
 markpics_CXXFLAGS = @markpiccxxflags@
 showindex_SOURCES = showindex.cpp
 showindex_LDADD = libnoad.a
-bin_SCRIPTS = allnewnoad allnoad allnoadnice allnoaduncut clearlogos noadifnew stat2html statupd noadcall.sh
+bin_SCRIPTS = allnewnoad allnoad allnoadnice allnoaduncut clearlogos noadifnew stat2html statupd noadcall.sh checkAllMarks
 EXTRA_DIST = $(bin_SCRIPTS) README.en mystat.HTML noad_scripts.zip
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
@@ -389,6 +394,9 @@ clean-binPROGRAMS:
 
 clean-noinstPROGRAMS:
 	-test -z "$(noinst_PROGRAMS)" || rm -f $(noinst_PROGRAMS)
+checkMarks$(EXEEXT): $(checkMarks_OBJECTS) $(checkMarks_DEPENDENCIES) 
+	@rm -f checkMarks$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(checkMarks_OBJECTS) $(checkMarks_LDADD) $(LIBS)
 markpics$(EXEEXT): $(markpics_OBJECTS) $(markpics_DEPENDENCIES) 
 	@rm -f markpics$(EXEEXT)
 	$(AM_V_CXXLD)$(markpics_LINK) $(markpics_OBJECTS) $(markpics_LDADD) $(LIBS)
@@ -443,6 +451,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cchecklogo.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ccontrol.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cgetlogo.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/checkmarks.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ctoolbox.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ffmpeg_decoder.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmpeg2_decoder.Po@am__quote@

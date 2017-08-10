@@ -22,6 +22,7 @@
 
 #include <stdlib.h>
 #include <time.h>
+#include <sys/resource.h>
 #include <sys/wait.h>
 #include <signal.h>
 #include <execinfo.h>

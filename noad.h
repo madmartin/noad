@@ -37,13 +37,13 @@ extern noadYUVBuf lastYUVBuf;  // last yuvbuf from StdCallBack
 #include "ffmpeg_decoder.h"
 #include "libmpeg2_decoder.h"
 
-// in vdr_cl.h #define FRAMESPERSEC 25
-// in vdr_cl.h #define FRAMESPERMIN (FRAMESPERSEC*60)
-#define BIGSTEP (15 * FRAMESPERSEC)
+// in vdr_cl.h double framespersec=25.0
+// in vdr_cl.h #define FRAMESPERMIN (framespersec*60)
+#define BIGSTEP (15 * framespersec)
 #define SMALLSTEP 1
-#define LOGOSTABLETIME 40*FRAMESPERSEC
+#define LOGOSTABLETIME 40*framespersec
 
-#define FRAMES_FOR_AC51DETECT (FRAMESPERSEC*2000)
+#define FRAMES_FOR_AC51DETECT (framespersec*2000)
 #define AC3_51DETECT_SKIP 250
 #define AC3ACTIVECUTOFF 60
 
@@ -55,18 +55,18 @@ extern noadYUVBuf lastYUVBuf;  // last yuvbuf from StdCallBack
 #define CHECKLOGO_SHORTDIST  (1*FRAMESPERMIN)
 #define MINBLACKLINES 15
 #define MAXBLACKLINEDIFF 10
-#define BACKFRAMES (FRAMESPERSEC*90)
-#define OFFBACKFRAMES (FRAMESPERSEC*30)
+#define BACKFRAMES (framespersec*90)
+#define OFFBACKFRAMES (framespersec*30)
 
 // some defines for overlap-detection
-#define PICS_READ_BEFORE (22*FRAMESPERSEC)
-#define PICS_READ_AFTER (250*FRAMESPERSEC)
-#define PICS_BEFORE_ONMARK (60*FRAMESPERSEC)
-#define MIN_PICS_SIMILAR (2*FRAMESPERSEC)
+#define PICS_READ_BEFORE (22*framespersec)
+#define PICS_READ_AFTER (250*framespersec)
+#define PICS_BEFORE_ONMARK (60*framespersec)
+#define MIN_PICS_SIMILAR (2*framespersec)
 #define OVERLAP_OK_FRAMES 75
 
 // some defines for AUDIO-SCAN
-#define AUDIO_CHECK_RANGE (FRAMESPERMIN * 2 + FRAMESPERSEC * 30)
+#define AUDIO_CHECK_RANGE (FRAMESPERMIN * 2 + framespersec * 30)
 //#define AUDIO_CHECK_RANGE (FRAMESPERMIN * 3)
 
 extern noadData *ndata;
@@ -114,38 +114,38 @@ int BlackframeCallback( noadYUVBuf* yuvbuf );
 int checkCallback( noadYUVBuf* yuvbuf );
 int nBlacklineCallback( noadYUVBuf* yuvbuf );
 
-bool checkLogo(cFileName *cfn, int startpos);
-bool checkLogoShort(cFileName *cfn, int startpos);
-bool doLogoDetection(cFileName *cfn, int curIndex);
+bool checkLogo(int startpos);
+bool checkLogoShort(int startpos);
+bool doLogoDetection(int curIndex);
 
 void reInitNoad(int top, int bottom );
-bool detectLogo( cFileName *cfn, char* logoname, int iStartFrame = 0 );
-int checkLogoState(cFileName *cfn, int iState, int iCurrentFrame, int FramesToSkip, int FramesToCheck);
-int findLogoChange(cFileName *cfn, int iState, int& iCurrentFrame,
+bool detectLogo(const char* logoname, int iStartFrame = 0 );
+int checkLogoState(int iState, int iCurrentFrame, int FramesToSkip, int FramesToCheck);
+int findLogoChange(int iState, int& iCurrentFrame,
                    int FramesToSkip, int repeatCheckframes=0);
 void MarkToggle(cMarks *marks, int index, const char *Comment=NULL);
 void moveMark( cMarks *marks, cMark *m, int iNewPos, const char *Comment=NULL);
 void listMarks(cMarks *marks);
 void checkOnMarkBlacklines( cMarks *marks, cMark *m, cFileName *cfn);
 void checkOffMarkBlacklines( cMarks *marks, cMark *m, cFileName *cfn);
-bool checkOnMark( cMarks *marks, cMark *m, cFileName *cfn, bool bForward, int iCheckTime);
+bool checkOnMark( cMarks *marks, cMark *m, bool bForward, int iCheckTime);
 int displayIFrame(int iFrameIndex);
-bool checkBlacklineOnMark( cMarks *marks, cMark *m, cFileName *cfn, bool bForward, int iCheckTime, int iTopLines, int iBottomLines);
-bool checkBlackFrameOnMark( cMarks *marks, cMark *m, cFileName *cfn, bool bForward, int iCheckTime );
-void checkOnMarks(cMarks *marks, cFileName *cfn);
-bool checkBlackFramesOnMarks(cMarks *marks, cFileName *cfn);
-bool detectBlacklines(int _index, int iFramesToCheck, cFileName *cfn, int& iTopLines, int& iBottomLines);
-bool detectBlacklines(cMarks *marks, cFileName *cfn, int& iTopLines, int& iBottomLines);
-bool checkBlacklineOnMarks(cMarks *marks, cFileName *cfn);
+bool checkBlacklineOnMark( cMarks *marks, cMark *m, bool bForward, int iCheckTime, int iTopLines, int iBottomLines);
+bool checkBlackFrameOnMark( cMarks *marks, cMark *m, bool bForward, int iCheckTime );
+void checkOnMarks(cMarks *marks);
+bool checkBlackFramesOnMarks(cMarks *marks);
+bool detectBlacklines(int _index, int iFramesToCheck, int& iTopLines, int& iBottomLines);
+bool detectBlacklines(cMarks *marks, int& iTopLines, int& iBottomLines);
+bool checkBlacklineOnMarks(cMarks *marks);
 void cleanInactiveMarks(cMarks *marks);
 void cleanActiveMarks(cMarks *marks);
-void MarkCleanup(cMarks *marks, cFileName *cfn);
-void pass2a(cMarks *marks, cFileName *cfn);
+void MarkCleanup(cMarks *marks);
+void pass2a(cMarks *marks);
 const char *getVersion();
 
 int audiocallback(int mode);
 #ifdef HAVE_LIBAVCODEC
-void pass3(cMarks *marks, cFileName *cfn);
+void pass3(cMarks *marks);
 #endif
 
 int doX11Scan(noadData *thedata, const char *fName, int iNumFrames );
@@ -154,7 +154,7 @@ void clearStats();
 
 int checkScenecheckOnMark( cMarks *marks, cMark *m );
 void checkMarksOnIFrames(noadData *thedata, const char *fName);
-void checkMarkPair(cMark **m_org, cMarks *marks, cFileName *cfn);
+void checkMarkPair(cMark **m_org, cMarks *marks);
 int getIFrameFor(cIndexFile* cIF, int iFrame);
 #ifdef VNOAD
 int scanRecord( int iNumFrames, cMarks *marks = NULL );

@@ -554,7 +554,7 @@ const char *secToTime(int sec)
 }
 
 // --- cFile -----------------------------------------------------------------
-
+/*
 bool cFile::files[FD_SETSIZE] = { false };
 int cFile::maxFiles = 0;
 
@@ -664,7 +664,7 @@ bool cFile::FileReadyForWriting(int FileDes, int TimeoutMs)
   timeout.tv_usec = TimeoutMs * 1000;
   return select(FD_SETSIZE, NULL, &set, NULL, &timeout) > 0 && FD_ISSET(FileDes, &set);
 }
-
+*/
 // --- cSafeFile -------------------------------------------------------------
 
 cSafeFile::cSafeFile(const char *FileName)
@@ -730,6 +730,7 @@ bool cSafeFile::Close(void)
 
 // --- cLockFile -------------------------------------------------------------
 
+/*
 #define LOCKFILENAME      ".lock-vdr"
 #define LOCKFILESTALETIME 600 // seconds before considering a lock file "stale"
 
@@ -804,7 +805,7 @@ void cLockFile::Unlock(void)
   else
     esyslog( "ERROR: attempt to unlock %s without holding a lock!", fileName);
 }
-
+*/
 // --- cListObject -----------------------------------------------------------
 
 cListObject::cListObject(void)

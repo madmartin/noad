@@ -10,7 +10,7 @@ dnl ---------------------------------------------------------------------------
 dnl initialisation
 dnl ---------------------------------------------------------------------------
 AC_PREREQ(2.57)
-AC_INIT(noad, 0.8.3, theNoad@ulmail.net)
+AC_INIT(noad, 0.8.6, theNoad@ulmail.net)
 AM_INIT_AUTOMAKE(dist-bzip2)
 AM_SILENT_RULES([yes])
 AC_CONFIG_SRCDIR([cchecklogo.cpp])
@@ -154,6 +154,10 @@ if test "x$with_ffmpeg" != "xno" ; then
 	AC_SUBST(ffmpegok,1)
 	AC_SUBST(decoderok,1)
 	CXXFLAGS="-DUSE_FFMPEG $CXXFLAGS"
+	AC_CHECK_MEMBER(AVFrame.width,HAVE_AVFRAMEWIDTH=1, HAVE_AVFRAMEWIDTH=0,[#include "libavcodec/avcodec.h"])
+	if test "$HAVE_AVFRAMEWIDTH" == "0" ; then
+	   CXXFLAGS="-DFORCE_CODECWIDTH $CXXFLAGS"
+	fi
 	dnl AC_SUBST(LIBS,"$LIBS $FFMPEG_LIBS")
 	AC_DEFINE(HAVE_LIBAVCODEC,1,[have libavcodec for audio])
     fi

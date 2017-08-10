@@ -1,0 +1,19 @@
+#! /bin/sh
+if test $# -lt 1
+then
+   echo "usage:"
+   echo "checkAllMarks <videodir>"
+   exit -1
+fi
+
+if [ $1 == '__callcheck__' ]; then
+  #echo call checkMarks	 for $2
+  checkMarks $2 0
+  CM=$?
+  if [ $CM -eq 1 ]; then
+    noad --ac3 --comments --jumplogo --overlap --asd - $2
+  fi  
+else
+   echo checking marks for recordings in $1
+   find $1 -follow -type d -name '*.rec' -exec $0 __callcheck__ {} \;
+fi

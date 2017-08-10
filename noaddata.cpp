@@ -518,6 +518,7 @@ bool noadData::loadCheckData( const char *name, bool bFullnameGiven )
   fd = fopen(fname, "rb");
   if( fd )
   {
+     int grabWidth, grabHeight;
     readInt( fd, "m_nFilterInit", &m_nFilterInit,ignoreData);
     dsyslog( "noadData Load %s %d", "m_nFilterInit", m_nFilterInit);
     readInt( fd, "m_nFilterFrames", &m_nFilterFrames,ignoreData);
@@ -530,15 +531,16 @@ bool noadData::loadCheckData( const char *name, bool bFullnameGiven )
     readInt( fd, "m_nBorderX", &m_nBorderX,ignoreData);
     readInt( fd, "m_nBorderYTop", &m_nBorderYTop,ignoreData);
     readInt( fd, "m_nBorderYBot", &m_nBorderYBot,ignoreData);
-    readInt( fd, "m_nGrabHeight", &m_nGrabHeight,ignoreData);
-    readInt( fd, "m_nGrabWidth", &m_nGrabWidth,ignoreData);
+    readInt( fd, "m_nGrabHeight", &grabHeight,ignoreData);
+    readInt( fd, "m_nGrabWidth", &grabWidth,ignoreData);
     readInt( fd, "m_nMinAverage", &m_nMinAverage,ignoreData);
     readInt( fd, "m_nCheckFrames", &m_nCheckFrames,ignoreData);
     readInt( fd, "m_nLogoCorner", &m_nLogoCorner);
 
 
-    similarCutoff = (int)(m_nGrabWidth * m_nGrabHeight / 4 * .91);
-    dsyslog( "noadData similarCutoff is now %ld", similarCutoff);
+    //similarCutoff = (int)(m_nGrabWidth * m_nGrabHeight / 4 * .91);
+    //dsyslog( "noadData similarCutoff is now %ld", similarCutoff);
+    setGrabSize( grabWidth, grabHeight );
 
     int iVal;
     m_bFound = readInt( fd, "m_bFound", &iVal) > 0;

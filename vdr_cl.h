@@ -25,6 +25,7 @@
 #include <signal.h>
 #endif
 #include "tools.h"
+#include "channels.h"
 
 typedef unsigned char uchar;
 #define DIR_DELIM "/"
@@ -51,6 +52,13 @@ typedef unsigned char uchar;
 #define MAXFILESPERRECORDING 255
 #define DEFAULTFRAMESPERSECOND 25.0
 
+#define MAXPRIORITY       99
+#define MINPRIORITY       (-MAXPRIORITY)
+#define LIVEPRIORITY      0                  // priority used when selecting a device for live viewing
+#define TRANSFERPRIORITY  (LIVEPRIORITY - 1) // priority used for actual local Transfer Mode
+#define IDLEPRIORITY      (MINPRIORITY - 1)  // priority of an idle device
+#define MAXLIFETIME       99
+#define DEFINSTRECTIME    180 // default instant recording time (minutes) 
 // The maximum time to wait before giving up while catching up on an index file:
 #define MAXINDEXCATCHUP   8 // seconds
 
@@ -68,8 +76,8 @@ typedef unsigned char uchar;
 // The maximum size of a single frame (up to HDTV 1920x1080):
 #define MAXFRAMESIZE  (KILOBYTE(1024) / TS_SIZE * TS_SIZE) // multiple of TS_SIZE to avoid breaking up TS packets
 
-#define FRAMESPERSEC 25
-#define FRAMESPERMIN (FRAMESPERSEC*60)
+extern double framespersec;
+#define FRAMESPERMIN (framespersec*60)
 
 extern int SysLogLevel;
 extern char MarksfileSuffix[];
@@ -360,6 +368,41 @@ public:
   int posOff(cMark *m);
 };
 
+
+class cRecordingInfo {
+  friend class cRecording;
+private:
+  tChannelID channelID;
+  char *channelName;
+  //const cEvent *event;
+  //cEvent *ownEvent;
+  char *aux;
+  double framesPerSecond;
+  int priority;
+  int lifetime;
+  char *fileName;
+  //cRecordingInfo(const cChannel *Channel = NULL, const cEvent *Event = NULL);
+  bool Read(FILE *f);
+  void SetData(const char *Title, const char *ShortText, const char *Description);
+  void SetAux(const char *Aux);
+public:
+  cRecordingInfo(const char *FileName, bool bFullFilename = false);
+  ~cRecordingInfo();
+  tChannelID ChannelID(void) const { return channelID; }
+  const char *ChannelName(void) const { return channelName; }
+  //const cEvent *GetEvent(void) const { return event; }
+  //const char *Title(void) const { return event->Title(); }
+  //const char *ShortText(void) const { return event->ShortText(); }
+  //const char *Description(void) const { return event->Description(); }
+  //const cComponents *Components(void) const { return event->Components(); }
+  const char *Aux(void) const { return aux; }
+  double FramesPerSecond(void) const { return framesPerSecond; }
+  void SetFramesPerSecond(double FramesPerSecond);
+  bool Write(FILE *f, const char *Prefix = "") const;
+  bool Read(void);
+  bool Write(void) const;
+  };
+
 class cRecording : public cListObject {
 protected:
   mutable int resume;
@@ -406,6 +449,7 @@ public:
   bool Remove(void);
        // Actually removes the file from the disk
        // Returns false in case of error
+  bool IsPesRecording(void) const { return isPesRecording; } 
   };
 
 class cRecordings : public cList<cRecording> {
@@ -416,7 +460,7 @@ public:
 
 
 bool isPESRecording(const char *filename);
-
+bool isRecording(const char *FileName);
 
 cString IndexToHMSF(int Index, bool WithFrame = false, double FramesPerSecond = DEFAULTFRAMESPERSECOND);
 int HMSFToIndex(const char *HMSF, double FramesPerSecond = DEFAULTFRAMESPERSECOND);

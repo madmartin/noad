@@ -28,8 +28,9 @@
 #define VIDEODIR "/video0"
 const char *VideoDirectory = VIDEODIR;
 
+double framespersec = 25.0;
 char MarksfileSuffix[256] = MARKSFILESUFFIX;
- 
+const tChannelID tChannelID::InvalidID;  
 bool setMarkfileSuffix(bool bIsPESFile)
 {
 	if( strcmp(MarksfileSuffix,MARKSFILESUFFIX) == 0 )
@@ -449,7 +450,7 @@ bool cIndexFile::CatchUp(int Index)
         return true;
     }
   }
-  return false;
+  return index != NULL;
 }
 
 bool cIndexFile::Write(bool Independent, uint16_t FileNumber, off_t FileOffset)
@@ -547,14 +548,19 @@ void cIndexFile::check(int start)
 {
    int i;
    int Length = -1;
-   for (i = start; i < last; i++)
+   for (i = start+1; i < last; i++)
    {
-      int fn = index[i + 1].number;
-      int fo = index[i + 1].offset;
+      int fn = index[i - 1].number;
+      int fo = index[i - 1].offset;
       if (fn == index[i].number)
-          Length = fo - index[i].offset;
+          Length = index[i].offset - fo;
+      else
+         Length = index[i].offset;
       if( Length < 0 )
         fprintf(stdout, " Error: illegal length %d",Length);
+      if( i > 0 && index[i-1].number == index[i].number )
+         if( index[i].offset < index[i-1].offset )
+           fprintf(stdout, " Error: backjump at %d",i);
    }
 }
 
@@ -901,6 +907,7 @@ bool cMark::Parse(const char *s)
      if (*p)
 	  {
         comment = strdup(p);
+     if(comment[strlen(comment) - 1] == '\n' )
 	     comment[strlen(comment) - 1] = 0; // strips trailing newline
      }
   }
@@ -1123,9 +1130,161 @@ int HMSFToIndex(const char *HMSF, double FramesPerSecond)
   if (n == 1)
      return h - 1; // plain frame number
   if (n >= 3)
-     return int( ceil( ((h * 3600 + m * 60 + s) * FramesPerSecond)+0.5) ) + f - 1;
+     return int( round( (h * 3600 + m * 60 + s) * FramesPerSecond) ) + f - 1;
   return 0;
 }
+
+cRecordingInfo::cRecordingInfo(const char *FileName, bool bFullFilename)
+{
+  channelID = tChannelID::InvalidID;
+  channelName = NULL;
+  //ownEvent = new cEvent(0);
+  //event = ownEvent;
+  aux = NULL;
+  framesPerSecond = DEFAULTFRAMESPERSECOND;
+  priority = MAXPRIORITY;
+  lifetime = MAXLIFETIME;
+  if(bFullFilename)
+      fileName = strdup(FileName);
+  else
+      fileName = strdup(cString::sprintf("%s%s", FileName, INFOFILESUFFIX));
+}
+
+cRecordingInfo::~cRecordingInfo()
+{
+  //delete ownEvent;
+  free(aux);
+  free(channelName);
+  free(fileName);
+}
+
+void cRecordingInfo::SetData(const char *Title, const char *ShortText, const char *Description)
+{
+  //if (!isempty(Title))
+  //   ((cEvent *)event)->SetTitle(Title);
+  //if (!isempty(ShortText))
+  //   ((cEvent *)event)->SetShortText(ShortText);
+  //if (!isempty(Description))
+  //   ((cEvent *)event)->SetDescription(Description);
+}
+
+void cRecordingInfo::SetAux(const char *Aux)
+{
+  free(aux);
+  aux = Aux ? strdup(Aux) : NULL;
+}
+
+void cRecordingInfo::SetFramesPerSecond(double FramesPerSecond)
+{
+  framesPerSecond = FramesPerSecond;
+}
+
+bool cRecordingInfo::Read(FILE *f)
+{
+  //if (ownEvent) {
+     cReadLine ReadLine;
+     char *s;
+     int line = 0;
+     while ((s = ReadLine.Read(f)) != NULL) {
+           ++line;
+           char *t = skipspace(s + 1);
+           switch (*s) {
+             /*
+             case 'C': {
+                         char *p = strchr(t, ' ');
+                         if (p) {
+                            free(channelName);
+                            channelName = strdup(compactspace(p));
+                            *p = 0; // strips optional channel name
+                            }
+                         if (*t)
+                            channelID = tChannelID::FromString(t);
+                       }
+                       break;*/
+             /*case 'E': {
+                         unsigned int EventID;
+                         time_t StartTime;
+                         int Duration;
+                         unsigned int TableID = 0;
+                         unsigned int Version = 0xFF;
+                         int n = sscanf(t, "%u %ld %d %X %X", &EventID, &StartTime, &Duration, &TableID, &Version);
+                         if (n >= 3 && n <= 5) {
+                            ownEvent->SetEventID(EventID);
+                            ownEvent->SetStartTime(StartTime);
+                            ownEvent->SetDuration(Duration);
+                            ownEvent->SetTableID(uchar(TableID));
+                            ownEvent->SetVersion(uchar(Version));
+                            }
+                       }
+                       break;*/
+             case 'F': framesPerSecond = atof(t);
+                       break;
+             case 'L': lifetime = atoi(t);
+                       break;
+             case 'P': priority = atoi(t);
+                       break;
+             case '@': free(aux);
+                       aux = strdup(t);
+                       break;
+             case '#': break; // comments are ignored
+             default: /*if (!ownEvent->Parse(s)) {
+                         esyslog("ERROR: EPG data problem in line %d", line);
+                         return false;
+                         }*/
+                      break;
+             }
+           }
+     return true;
+//     }
+//  return false;
+}
+
+bool cRecordingInfo::Write(FILE *f, const char *Prefix) const
+{
+  //if (channelID.Valid())
+  //   fprintf(f, "%sC %s%s%s\n", Prefix, *channelID.ToString(), channelName ? " " : "", channelName ? channelName : "");
+  //event->Dump(f, Prefix, true);
+  fprintf(f, "%sF %.10g\n", Prefix, framesPerSecond);
+  fprintf(f, "%sP %d\n", Prefix, priority);
+  fprintf(f, "%sL %d\n", Prefix, lifetime);
+  if (aux)
+     fprintf(f, "%s@ %s\n", Prefix, aux);
+  return true;
+}
+
+bool cRecordingInfo::Read(void)
+{
+  bool Result = false;
+  if (fileName) {
+     FILE *f = fopen(fileName, "r");
+     if (f) {
+        if (Read(f))
+           Result = true;
+        else
+           esyslog("ERROR: EPG data problem in file %s", fileName);
+        fclose(f);
+        }
+     else if (errno != ENOENT)
+        LOG_ERROR_STR(fileName);
+     }
+  return Result;
+}
+
+bool cRecordingInfo::Write(void) const
+{
+  bool Result = false;
+  if (fileName) {
+     cSafeFile f(fileName);
+     if (f.Open()) {
+        if (Write(f))
+           Result = true;
+        f.Close();
+        }
+     else
+        LOG_ERROR_STR(fileName);
+     }
+  return Result;
+} 
 
 // --- cRecording ------------------------------------------------------------
 
@@ -1292,7 +1451,8 @@ cRecording::cRecording(const char *FileName)
      struct tm tm_r;
      struct tm t = *localtime_r(&now, &tm_r); // this initializes the time zone in 't'
      t.tm_isdst = -1; // makes sure mktime() will determine the correct DST setting
-     if (7 == sscanf(p + 1, DATAFORMAT, &t.tm_year, &t.tm_mon, &t.tm_mday, &t.tm_hour, &t.tm_min, &priority, &lifetime)) {
+     if (7 == sscanf(p + 1, DATAFORMATTS, &t.tm_year, &t.tm_mon, &t.tm_mday, &t.tm_hour, &t.tm_min, &channel, &instanceId)
+      || 7 == sscanf(p + 1, DATAFORMATPES, &t.tm_year, &t.tm_mon, &t.tm_mday, &t.tm_hour, &t.tm_min, &priority, &lifetime)) {
         t.tm_year -= 1900;
         t.tm_mon--;
         t.tm_sec = 0;
@@ -1301,8 +1461,10 @@ cRecording::cRecording(const char *FileName)
         strncpy(name, FileName, p - FileName);
         name[p - FileName] = 0;
         name = ExchangeChars(name, false);
+        isPesRecording = instanceId < 0;
         }
-     // read an optional summary file:
+     else
+        return;      // read an optional summary file:
      char *SummaryFileName = NULL;
      asprintf(&SummaryFileName, "%s%s", fileName, SUMMARYFILESUFFIX);
      int f = open(SummaryFileName, O_RDONLY);
@@ -1655,6 +1817,46 @@ bool isPESRecording(const char *FileName)
   }
   free(fileName);
   return isPesRecording;
+}
+
+bool isRecording(const char *FileName)
+{
+  bool isRecording = false;
+  char *fileName = strdup(FileName);
+#ifdef _MSC_VER
+  char *cp = strchr(fileName, '/');
+  while( cp )
+  {
+     *cp = DIR_DELIMC;
+      cp = strchr(fileName, '/');
+  }
+#endif
+  const char *p = strrchr(fileName , DIR_DELIMC );
+  if (p)
+  {
+     time_t now = time(NULL);
+#ifdef _MSC_VER
+     struct tm t = *localtime(&now);
+#else
+     struct tm tm_r;
+     struct tm t = *localtime_r(&now, &tm_r); // this initializes the time zone in 't'
+#endif
+     t.tm_isdst = -1; // makes sure mktime() will determine the correct DST setting
+     int channel = -1;
+     int priority = -1;
+     int instanceId = -1;
+     int lifetime = -1;
+     if (7 == sscanf(p + 1, DATAFORMATTS, &t.tm_year, &t.tm_mon, &t.tm_mday, &t.tm_hour, &t.tm_min, &channel, &instanceId)
+      || 7 == sscanf(p + 1, DATAFORMATPES, &t.tm_year, &t.tm_mon, &t.tm_mday, &t.tm_hour, &t.tm_min, &priority, &lifetime))
+     {
+        t.tm_year -= 1900;
+        t.tm_mon--;
+        t.tm_sec = 0;
+        isRecording = true;
+     }
+  }
+  free(fileName);
+  return isRecording;
 }
 
 cUnbufferedFile *OpenVideoFile(const char *FileName, int Flags)

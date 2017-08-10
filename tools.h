@@ -89,7 +89,7 @@ int time_ms(void);
 void delay_ms(int ms);
 const char *secToTime(int sec);
 bool isnumber(const char *s);
-const char */*cString */AddDirectory(const char *DirName, const char *FileName); // returns a statically allocated string!
+const char *AddDirectory(const char *DirName, const char *FileName); // returns a statically allocated string!
 int FreeDiskSpaceMB(const char *Directory, int *UsedMB = NULL);
 bool DirectoryOk(const char *DirName, bool LogErrors = false);
 bool MakeDirs(const char *FileName, bool IsDirectory = false);
@@ -104,6 +104,7 @@ int getVStreamID(int f);
 int getTSPID(int f);
 int isHDTV(int f);
 
+/*
 class cFile {
 private:
   static bool files[];
@@ -122,6 +123,7 @@ public:
   static bool FileReady(int FileDes, int TimeoutMs = 1000);
   static bool FileReadyForWriting(int FileDes, int TimeoutMs = 1000);
   };
+*/
 
 /// cUnbufferedFile is used for large files that are mainly written or read
 /// in a streaming manner, and thus should not be cached.
@@ -168,6 +170,7 @@ public:
   bool Close(void);
   };
 
+/*
 class cLockFile {
 private:
   char *fileName;
@@ -178,7 +181,7 @@ public:
   bool Lock(int WaitSeconds = 0);
   void Unlock(void);
   };
-
+*/
 class cListObject {
 private:
   cListObject *prev, *next;

@@ -245,4 +245,13 @@ Ab Version 0.8 wurde der Video-Decoder überarbeitet. Es kann jetzt mit libmpeg2 
 werden. Default ist, wenn möglich, ffmpeg. Wird der libmpeg-decoder gewählt, so wird bei Ekennung einer HD-Aufnahme 
 automatisch zum ffmpeg-decoder gewechselt.
 
+Ab noad 0.8.5:
+Neues Tool "checkMarks" zum Überprüfen der Marken für eine Aufnahme.
+Durch einen Fehler in den 0.8.x-Versionen kann es vorkommen, das Marken auf falsche Frames gesetzt werden. Um diese
+Aufnahmen zu finden gibt es jetzt ein Tool für die Markenprüfung. 
+Um alle Aufnahmen mit fehlerhaften Marken zu finden 
+und die Marken neu zu setzen ist ein script (checkAllMarks) mitgeliefert. Dieses script erwartet als Parameter ein 
+Video-Aufnahmeverzeichnis. Es werden dann in diesem Aufnahmeverzeichnis alle Aufnahmen mit checkMarks überprüft und 
+die Marken ggf. mit einem Aufruf der aktuellen noad-Version neu gesucht.
+
 Fehlermeldungen, Anregungen, Hinweise und auch Erfahrungsberichte an: theNoad@ulmail.net

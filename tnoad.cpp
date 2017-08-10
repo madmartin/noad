@@ -51,7 +51,7 @@ bool bTestMode = false;
 #endif
 
 #define SLEEPTIME 15
-#define NEWFRAMES (SLEEPTIME*FRAMESPERSEC)
+#define NEWFRAMES (SLEEPTIME*framespersec)
 #define MINFRAMESTOSTART 3000
 #define MINFORWARDFRAMES 1000
 #define LOGORESETFRAMES (FRAMESPERMIN*12)
@@ -100,7 +100,7 @@ void scanLoop(cMarks *marks)
    bMarkChanged = true;
    if(cIF->Last() < MINFRAMESTOSTART)
    {
-      int secs = (MINFRAMESTOSTART - cIF->Last()) / FRAMESPERSEC;
+      int secs = (MINFRAMESTOSTART - cIF->Last()) / framespersec;
       xsyslog("scanLoop: go sleep for %d seconds",secs);
       sleep(secs);
    }
@@ -147,10 +147,10 @@ void scanLoop(cMarks *marks)
                reInitNoad( 0,0 );
                xsyslog("scanLoop: start logodetection at frame %d",logoDetectStart);
                dodumpts=false;
-               if( doLogoDetection(cfn, logoDetectStart ) )
+               if( doLogoDetection( logoDetectStart ) )
                {
                   //check logo from iLastIFrame for a least 100 frames!!
-                  if( !checkLogoState(cfn, 1, iLastIFrame, 0, 3000) )
+                  if( !checkLogoState( 1, iLastIFrame, 0, 3000) )
                   {
                      haveLogo = true;
                      // scan should start at lst Logo-position
@@ -257,7 +257,7 @@ void scanLoop(cMarks *marks)
             iOldState = iState;
             iLastStartFrame = iCurrentFrame;
             xsyslog("findLogoChange with iState=%d oldstate=%d currentFrame=%d", iState, iOldState, iCurrentFrame);
-            iState = findLogoChange(cfn, iState, iCurrentFrame, BIGSTEP );
+            iState = findLogoChange(iState, iCurrentFrame, BIGSTEP );
             xsyslog("StateChanged: newstate=%d oldstate=%d currentFrame=%d", iState, iOldState, iCurrentFrame);
             if( iState < 0 )
             {
@@ -284,7 +284,7 @@ void scanLoop(cMarks *marks)
                   iState = iOldState;
                   break;
                }
-               iState = findLogoChange(cfn, iOldState, iCurrentFrame, SMALLSTEP, logostabletime );
+               iState = findLogoChange(iOldState, iCurrentFrame, SMALLSTEP, logostabletime );
                if( iState >= 0 && iState != iOldState )
                {
                   int iLastLogoFrame;
@@ -348,13 +348,13 @@ void scanLoop(cMarks *marks)
             {
                cMark *dummy = new cMark();
                dummy->position = -1;
-               checkMarkPair(&dummy, marks, cfn);
+               checkMarkPair(&dummy, marks);
                m->setChecked(true);
             }
             else
             {
                m = (cMark *)m->Prev();
-               checkMarkPair(&m, marks, cfn);
+               checkMarkPair(&m, marks);
                m->setChecked(true);
                m = (cMark *)m->Next();
                m->setChecked(true);
@@ -429,6 +429,14 @@ int doOnlineScan(noadData *thedata, const char *fName, cMarks *_marks )
     isOnlinescan=false;
     return -1;
   }
+  cRecordingInfo recInfo(filename);
+  if( recInfo.Read() )
+     framespersec = recInfo.FramesPerSecond();
+  else
+  {
+      esyslog("can't read Info-File for %s", filename);
+      esyslog("assume %f fps", framespersec);
+  }
   demux_track = getVStreamID(cfn->File());
   if( isPES )
       demux_pid = 0;
@@ -441,7 +449,7 @@ int doOnlineScan(noadData *thedata, const char *fName, cMarks *_marks )
   else
   {
     pmarks = localMarks = new cMarks();
-    pmarks->Load(filename,DEFAULTFRAMESPERSECOND,cfn->isPES());
+    pmarks->Load(filename,framespersec,cfn->isPES());
   }  
   scanLoop(pmarks);
   

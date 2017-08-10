@@ -16,6 +16,7 @@ int demux_track;
 int LastDemuxIndex;
 bool dodumpts;
 bool isOnlinescan;
+bool ignorevideo = false;
 cNoadIndexFile *cCurrentCIF;
 
 void MarkToggle(cMarks *marks, int index, const char *Comment=NULL);
@@ -190,9 +191,7 @@ bool MPEGDecoder::ac3Pass1(cMarks *pmarks)
 	int iCurrentFrame = cIF->Get( 0, &FileNumber, &FileOffset, NULL, &Length);
 
 	dsyslog( "start ac3 pass1");
-	//if( backupMarks )
-	//	pmarks->Backup(filename);
-	pmarks->Load(cfn->dirName(),DEFAULTFRAMESPERSECOND,cfn->isPES());
+   pmarks->Load(cfn->dirName(),framespersec,cfn->isPES());
 	pmarks->ClearList();
 	bool bMarkChanged = true;
 	int flags = DEMUX_RESET;
@@ -334,7 +333,7 @@ int MPEGDecoder::demuxPES_audio (uint8_t * buf, uint8_t * end, int flags)
    */
 
 
-  static uint8_t head_buf[264];
+   static uint8_t head_buf[20048];
 
   uint8_t * header;
   int bytes;
@@ -454,8 +453,8 @@ int MPEGDecoder::demuxPES_audio (uint8_t * buf, uint8_t * end, int flags)
     {
       if ((header[3] >= 0xe0) && (header[3] <= 0xef))
         goto pes;
-      fprintf (stderr, "bad stream id %x\n", header[3]);
-      exit (1);
+      // fprintf (stderr, "bad stream id %x\n", header[3]);
+      //exit (1);
     }
     switch (header[3])
     {

@@ -26,7 +26,7 @@ typedef uint8_t *gopyuvbuf[3];
 
 #define PICS_IN_GOP 40
 
-#define FRAMES_FOR_AC51DETECT (FRAMESPERSEC*2000)
+#define FRAMES_FOR_AC51DETECT (framespersec*2000)
 #define AC3_51DETECT_SKIP 250
 #define AC3ACTIVECUTOFF 60
 

@@ -3,12 +3,15 @@
 bool havesilence = false;
 #ifdef HAVE_LIBAVCODEC
 
-#include "mpeg2wrap.h"
 #include "mpeg2wrap_ffmpeg.h"
 extern "C"
 {
    #include "libavcodec/avcodec.h"
 }
+
+#if LIBAVCODEC_VERSION_MAJOR > 54
+#define AVCODEC_MAX_AUDIO_FRAME_SIZE 192000 // 1 second of 48khz 32bit audio 
+#endif
 
 // from libavutil/intreadwrite.h:
 #define AV_RB32(x)  ((((const uint8_t*)(x))[0] << 24) | \
@@ -47,6 +50,9 @@ int pr = 1;
 uint8_t *outbuf=NULL;
 AVCodec *codec=NULL;
 AVCodecContext *codecContext= NULL;
+#if LIBAVCODEC_VERSION_MAJOR > 54
+AVDictionary *avDictionary = NULL;                // "create" an empty dictionary
+#endif
 int64_t basepts=0;
 int64_t audiobasepts=0;
 //int64_t audiopts=0;
@@ -102,8 +108,13 @@ void initAVCodec()
   codecContext = avcodec_alloc_context3(codec);
 #endif
 
+#if LIBAVCODEC_VERSION_MAJOR > 54
+   /* open it */
+   if (avcodec_open2(codecContext, codec, &avDictionary) < 0)
+#else
   /* open it */
   if (avcodec_open(codecContext, codec) < 0)
+#endif
   {
     fprintf(stderr, "could not open codec\n");
   }
@@ -118,6 +129,9 @@ void exitAVCodec()
 {
   free(outbuf);
   avcodec_close(codecContext);
+#if LIBAVCODEC_VERSION_MAJOR > 54
+  av_dict_free(&avDictionary);
+#endif
   av_free(codecContext);
   av_codec_initialised = false;
 }
@@ -179,7 +193,7 @@ int scan_audio_stream_0(unsigned char *mbuf, int count)
     if (len < 0)
     {
       //fprintf(stderr, "Error while decoding audio\n\n");
-		esyslog("Error while decoding audio (ignored)");
+      // esyslog("Error while decoding audio (ignored)");
       resetAudioBuffer();
       size=0;
       break;

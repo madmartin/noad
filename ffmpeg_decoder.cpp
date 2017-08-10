@@ -7,7 +7,16 @@ volatile bool ffmpegerror;
 extern void my_av_log(void*, int level,const char *fmt,...);
 
 static bool doSeekPos = false;
+#define MAX_WIDTH 1920
+#define MAX_HEIGHT 1080
 
+#ifdef FORCE_CODECWIDTH
+#define FRAMEWIDTH pCodecCtx->width
+#define FRAMEHEIGHT pCodecCtx->height
+#else
+#define FRAMEWIDTH pFrame->width
+#define FRAMEHEIGHT pFrame->height
+#endif
 
 void my_av_dolog(void * /*ptr*/, int level, const char *fmt,va_list vl)
 {
@@ -213,8 +222,13 @@ int FFMPegDecoder::openFile(cFileName *_cfn, cNoadIndexFile *_cIF)
 	if(pCodec->capabilities & CODEC_CAP_TRUNCATED)
 		pCodecCtx->flags|=CODEC_FLAG_TRUNCATED;
 
+#if LIBAVCODEC_VERSION_MAJOR > 54
+	// Open codec
+	if(avcodec_open2(pCodecCtx, pCodec,&avDictionary) < 0)
+#else
 	// Open codec
 	if(avcodec_open(pCodecCtx, pCodec)<0)
+#endif
 		return -1; // Could not open codec
 
 
@@ -255,6 +269,10 @@ int FFMPegDecoder::decoder_exit()
       av_free(pIOContext);
       pIOContext = NULL;
 	}
+#endif
+#if LIBAVCODEC_VERSION_MAJOR > 54
+   av_dict_free(&avDictionary);
+   avDictionary = NULL;
 #endif
 	return 0;
 }
@@ -374,20 +392,15 @@ bool FFMPegDecoder::getNextPicture(int startIndex, int flags )
 	while( !bRet && ffmpeg_index < cIF->getLast() && !ffmpegerror )
 	{
 		bRet = GetVideoFrame(restart);
-		if( pCodecCtx->width > 1280 )
-		{
-			esyslog("ERROR: faulty width");
-			bRet = false;
-		}
-		else if( pCodecCtx->height > 720 )
-		{
-			esyslog("ERROR: faulty height");
-			bRet = false;
-		}
-		else if( bRet && callBackFunc )
+      if( bRet && callBackFunc )
       {
-         noadYUVBuf lbuf(pFrame->data,pFrame->linesize,pFrame->width,pFrame->height);
-         callBackFunc(&lbuf);
+         if( (FRAMEWIDTH <= MAX_WIDTH && FRAMEWIDTH > 0) && (FRAMEHEIGHT <= MAX_HEIGHT && FRAMEHEIGHT > 0 ) )
+         {
+            noadYUVBuf lbuf(pFrame->data,pFrame->linesize,FRAMEWIDTH,FRAMEHEIGHT);
+            callBackFunc(&lbuf);
+         }
+         else
+            esyslog("ERROR: faulty width (%d) or height(%d)",FRAMEWIDTH,FRAMEHEIGHT);
       }
 	}
 	startIndex = ffmpeg_index; 
@@ -415,17 +428,17 @@ bool FFMPegDecoder::getPictures(int &startIndex, int flags, stopFunction stop )
 	{
 		bRet = GetVideoFrame(restart);
 		restart = false;
-		//iCurrentDecodedFrame = ffmpeg_index;
-		if( bRet && callBackFunc )
+      if( bRet && callBackFunc )
       {
-          noadYUVBuf lbuf(pFrame->data,pFrame->linesize,pFrame->width,pFrame->height);
-         callBackFunc(&lbuf);
-			bStop = stop();
-		}
-		if( pCodecCtx->width > 1280 )
-			esyslog("ERROR: faulty width");
-		if( pCodecCtx->height > 720 )
-			esyslog("ERROR: faulty height");
+         if( (FRAMEWIDTH <= MAX_WIDTH && FRAMEWIDTH > 0) && (FRAMEHEIGHT <= MAX_HEIGHT && FRAMEHEIGHT > 0 ) )
+         {
+            noadYUVBuf lbuf(pFrame->data,pFrame->linesize,FRAMEWIDTH,FRAMEHEIGHT);
+            callBackFunc(&lbuf);
+            bStop = stop();
+         }
+         else
+            esyslog("ERROR: faulty width (%d) or height(%d)",FRAMEWIDTH,FRAMEHEIGHT);
+      }
 	}
 	startIndex = ffmpeg_index; 
 	return bRet;
@@ -456,18 +469,18 @@ bool FFMPegDecoder::getGOP(int &startIndex )
 		{
 			bRet = GetVideoFrame(restart);
 			restart = false;
-			//iCurrentDecodedFrame = ffmpeg_index;
 			if( bRet )
 			{
-				if( bFirst )
-					GOP_Buffer.init(pCodecCtx->width,pCodecCtx->height,pFrame->linesize[0],pFrame->linesize[1]);
-				bFirst = false;
-            GOP_Buffer.addPic(pFrame->data,pFrame->linesize[0],pFrame->linesize[1]);
-			}
-			if( pCodecCtx->width > 1280 )
-				esyslog("ERROR: faulty width");
-			if( pCodecCtx->height > 720 )
-				esyslog("ERROR: faulty height");
+            if( (FRAMEWIDTH <= MAX_WIDTH && FRAMEWIDTH > 0) && (FRAMEHEIGHT <= MAX_HEIGHT && FRAMEHEIGHT > 0 ) )
+            {
+               if( bFirst )
+                  GOP_Buffer.init(FRAMEWIDTH,FRAMEHEIGHT,pFrame->linesize[0],pFrame->linesize[1]);
+               bFirst = false;
+               GOP_Buffer.addPic(pFrame->data,pFrame->linesize[0],pFrame->linesize[1]);
+            }
+            else
+               esyslog("ERROR: faulty width (%d) or height(%d)",FRAMEWIDTH,FRAMEHEIGHT);
+         }
 		}
 		GOP_Buffer.startindex = gopStartFrame;
 	}

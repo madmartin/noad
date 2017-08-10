@@ -215,4 +215,12 @@ decoder - choose video-decoder
 You can choose between libmpeg2 or libavcodec(ffmpeg) as video-decoder. Default is ffmpeg if possible. If you choose libmpeg2 and
 noad detects a hd-video ffmpeg will be used if possible.
 
+noad 0.8.5:
+New tool "checkMarks" for checking the marks for a recording.
+Due to an error in the 0.8.x-Versions there can be marks on non-IFrames. To identify those recordings there is now a 
+tool for checking the marks.
+To find all recordings with faulty marks there is a scrip called "checkAllMarks". This script has to be called with
+a vdr-video-directory as parameter. It searches all recordings in that dir and checks them with checkMarks.
+If necessary, recordings with faulty marks will be rescanned with the curent noad-programm.
+
 Send bug-reports and hints to: theNoad@SoftHome.net
