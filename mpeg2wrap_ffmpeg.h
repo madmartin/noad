@@ -26,11 +26,13 @@
 #endif
 #include <inttypes.h>
 #include "vdr_cl.h"
+#ifdef USE_FFMPEG
 extern "C"
 {
   #include "libavcodec/avcodec.h"
   #include "libavformat/avformat.h"
 }
+#endif
 #include "yuvbuf.h"
 
 #define DEMUX_PAYLOAD_START 1

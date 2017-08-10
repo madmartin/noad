@@ -46,7 +46,7 @@ MPEGDecoder *decoder;
 
 extern "C"
 {
-  static const char *VERSIONSTRING = "0.8.0";
+  static const char *VERSIONSTRING = "0.8.2";
 }
 
 #ifdef VNOAD
@@ -2556,7 +2556,6 @@ void info(const char*info1, const char *info2)
 
 void checkMarkByAudio(cMark **m_org, cMarks *marks, cFileName *cfn)
 {
-  /* todo
   cMark *m = *m_org;
   int iStartframe = m->position;
   int iEndFrame = iStartframe + AUDIO_CHECK_RANGE;
@@ -2571,19 +2570,20 @@ void checkMarkByAudio(cMark **m_org, cMarks *marks, cFileName *cfn)
   cMark *mnext = marks->GetNext(m->position);
   if( mnext && iEndFrame > mnext->position )
       iEndFrame = mnext->position - 20;
-  setCB_Func(simpleCallback);
+  //noadCallback oldCallback = decoder->getCallback();
+  decoder->setCallback(simpleCallback);
   current_playaudiocbf = scan_audio_stream_0;
   havesilence = false;
   lowvalcount = 0;
   while(  (iCurrentFrame < cIF->Last() && iCurrentFrame <= iEndFrame) )
   {
-    demuxFrame(cfn, cIF, iCurrentFrame++,0 );
+    decoder->demuxFrame_audio(iCurrentFrame++,0 );
     iCurrentDecodedFrame = iCurrentFrame-1;
     if( havesilence )
     {
       ignorevideo = false;
       current_playaudiocbf = NULL;
-      cframe = findVideoByPTS(audiopts, iCurrentFrame);
+      cframe = decoder->findVideoByPTS(audiopts, iCurrentFrame);
       if(cframe)
       {
         dsyslog("(loop)found silence in frame %d, videoframe is %d, diff is %d",iCurrentDecodedFrame,cframe,iCurrentFrame-iLastSilenceFrame);
@@ -2620,9 +2620,8 @@ void checkMarkByAudio(cMark **m_org, cMarks *marks, cFileName *cfn)
           *m_org = marks->Get(cframe);
         }
       }
-      * /
+      */
   }
-  */
 }
 
 void pass3(cMarks *marks, cFileName *cfn)

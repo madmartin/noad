@@ -26,116 +26,6 @@ void my_av_dolog(void * /*ptr*/, int level, const char *fmt,va_list vl)
 extern cFileName *cfn;
 extern cNoadIndexFile *cIF;
 
-#ifdef USE_URLCONTEXT
-static int noad_close(URLContext* /* h */ )
-{
-	//BUF*	pf = (BUF*)&h->priv_data;
-	// I dont free(pf->buf);, I assume the data belongs to the app
-	//free(pf);
-	return 0;
-}
-
-static int noad_open(URLContext *h, const char *pseudofilename, int /* flags */)
-{
-	pseudofilename += 5;
-	FFMPegDecoder *decoder = (FFMPegDecoder*)strtoul(pseudofilename, NULL, 16);
-	h->priv_data = decoder;
-	return 0;
-}
-
-static int noad_read(URLContext *h, unsigned char *buf, int size)
-{
-  FFMPegDecoder *decoder = (FFMPegDecoder*)(h->priv_data);
-  if( decoder->__bufBytes <= 0 )
-  {
-    if( decoder->ffmpeg_index >= 0 )
-    {
-      if( !decoder->cont_reading )
-			  if( decoder->ffmpeg_Lastindex == decoder->ffmpeg_index )
-				  return 0;
-		bool Independent;
-		if( !cIF->Get(decoder->ffmpeg_index,&decoder->ffmpegFileNumber, &decoder->ffmpegFileOffset, &Independent, &decoder->ffmpegLength) )
-			return 0;
-      if( decoder->ffmpegLength <= 0 )
-        ffmpegerror = true;
-      if( logReading )
-         dsyslog("noad_read read from file, ffmpeg_index = %d (iframe: %s), length = %d",decoder->ffmpeg_index, Independent?"true":"false", decoder->ffmpegLength);
-		  if( decoder->cont_reading )
-			  decoder->ffmpeg_index++;
-		  decoder->ffmpeg_Lastindex = decoder->ffmpeg_index;
-    }
-    else
-    {
-      if( logReading )
-         dsyslog("noad_read read from file, ffmpegFileOffset = %d, length = %d",decoder->ffmpegFileOffset, decoder->ffmpegLength);
-      if( decoder->ffmpegFileOffset == decoder->ffmpegLastFileOffset )
-        return 0;
-    }
-    cfn->SetOffset( decoder->ffmpegFileNumber, decoder->ffmpegFileOffset);
-    ReadFrame (cfn->File(), readBuffer, decoder->ffmpegLength, MAXFRAMESIZE);
-    decoder->__bufBytes = decoder->ffmpegLength;
-    decoder->__bufPos = readBuffer; 
-    decoder->ffmpegLastFileOffset = decoder->ffmpegFileOffset;
-  }
-  if( decoder->__bufBytes > 0 )
-  {
-    int cpBytes = size > decoder->__bufBytes?decoder->__bufBytes:size;
-    memcpy(buf,decoder->__bufPos, cpBytes);
-		//dsyslog("noad_read --> return %d bytes of %d bytes",cpBytes,__bufBytes);
-    decoder->__bufPos += cpBytes;
-    decoder->__bufBytes -= cpBytes;
-    return cpBytes;
-  }
-	return 0;
-}
-
-static int noad_write(URLContext *h, unsigned char * /* buf*/ , int /* size */ )
-{
-  FFMPegDecoder *decoder = (FFMPegDecoder*)(h->priv_data);
-	/*
-	BUF*	af = h->priv_data;
-	int		n;
-	n = min(size, af->buflen-af->bufused);
-	if(n<0)
-		return -1;
-	memcpy(af->buf+af->bufused, buf, n);
-	af->buf_used+=size;
-	return n;
-	*/
-	return 0;
-}
-
-static int64_t noad_seek(URLContext *h, int64_t pos, int whence)
-{
-  FFMPegDecoder *decoder = (FFMPegDecoder*)(h->priv_data);
-	// To implement this you need a bufcur element in BUF too
-	//...
-	if( whence == AVSEEK_SIZE )
-	{
-		return cIF->getVideoFileSize();
-	}
-	else if ( whence == SEEK_SET )
-	{
-      if( doSeekPos )
-         decoder->ffmpeg_index = cIF->getIndexForFilepos(pos);
-      if( logSeeking )
-         dsyslog("noad-protocol seek to %lld --> index %d",pos,decoder->ffmpeg_index);
-		decoder->__bufBytes = 0;
-	}
-	return pos;
-}
-
-static URLProtocol noad_protocol = 
-{
-	"noad",
-	noad_open,
-	noad_read,
-	noad_write,
-	noad_seek,
-	noad_close
-};
-#endif
-
 #ifdef USE_AVIOCONTEXT
 static int noad_read_packet(void *h, uint8_t *buf, int size)
 {
@@ -249,9 +139,6 @@ int FFMPegDecoder::decoder_init()
 {
 	// Register all formats and codecs
 	av_register_all();
-#ifdef USE_URLCONTEXT
-   av_register_protocol2(&noad_protocol, sizeof(noad_protocol));
-#endif
 #ifdef USE_AVIOCONTEXT
 #define IOBUFSIZE (1024L*200L)
    iobuffer = (unsigned char*)av_malloc(IOBUFSIZE);
@@ -276,12 +163,6 @@ int FFMPegDecoder::openFile(cFileName *_cfn, cNoadIndexFile *_cIF)
 	cont_reading = true;
    doSeekPos = true;
 
-#ifdef USE_URLCONTEXT
-   char somebuf[1024];
-   sprintf(somebuf, "noad:0x%08lx", (unsigned long)this);
-   if(av_open_input_file(&pFormatCtx, somebuf, NULL, 0, NULL)!=0)
-		return -1; // Couldn't open file
-#endif
 #ifdef USE_AVIOCONTEXT
    pFormatCtx = avformat_alloc_context();
    pFormatCtx->pb = pIOContext;

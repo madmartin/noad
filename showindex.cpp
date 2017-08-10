@@ -6,15 +6,17 @@
 
 using namespace std;
 
-static int SysLogLevel=3;
+//static int SysLogLevel=3;
+int SysLogLevel=3;
 bool showGOPsize = false;
 #define BYTES_TO_READ 30
 int doShowIndex(const char * filename)
 {
   cNoadIndexFile *cIF = NULL;
   cFileName *cfn = NULL;
+  bool isPES = isPESRecording(filename);
   fprintf(stdout,"try to open index.vdr in %s\n",filename);
-  cIF = new cNoadIndexFile(filename,false);
+  cIF = new cNoadIndexFile(filename,false,isPES);
   if( cIF == NULL )
   {
     fprintf(stdout,"opening index.vdr failed\n");
@@ -28,7 +30,8 @@ int doShowIndex(const char * filename)
     return -1;
   }
 
-  cfn = new cFileName(filename, false);
+  cfn = new cFileName(filename, false, false, isPES);
+  //cfn = new cFileName(filename, false);
   fprintf(stdout,"try to open %s\n",cfn->Name());
   if( cfn->Open() < 0 )
   {
@@ -41,9 +44,10 @@ int doShowIndex(const char * filename)
   fprintf(stdout,"index.vdr opened, # of entries is %d\n",  cIF->Last() );
   int iIndex = 0;
   int iMax = cIF->Last();
-  uchar FileNumber;         // current file-number
-  int FileOffset;           // current file-offset
+  uint16_t FileNumber;         // current file-number
+  off_t FileOffset;           // current file-offset
   uchar PictureType;        // current picture-type
+  bool Independent;
   int Length;               // frame-lenght of current frame
   char pictypes[]= { 'U','I','P','B' };
   char *indents[]= { "","","  ","    " };
@@ -53,13 +57,13 @@ int doShowIndex(const char * filename)
   unsigned char readBuffer[BYTES_TO_READ+1];
   while( iIndex < iMax )
   {
-    cIF->Get( iIndex, &FileNumber, &FileOffset, &PictureType, &Length);
+    cIF->Get( iIndex, &FileNumber, &FileOffset, &Independent, &Length);
     if( showGOPsize )
     {
-      if( PictureType == I_FRAME )
+      if( Independent/*PictureType == I_FRAME*/ )
       {
         fprintf(stdout,"%s%06d %02d %10d %c %06d",
-          indents[PictureType],iIndex, FileNumber, FileOffset, pictypes[PictureType], Length);
+          indents[0],iIndex, FileNumber, FileOffset, pictypes[0], Length);
         int nextIFrame = cIF->GetNextIFrame( iIndex, true, &FileNumber, &FileOffset, &Length, false);
         if( nextIFrame < 0 )
           nextIFrame = cIF->Last();
@@ -71,14 +75,15 @@ int doShowIndex(const char * filename)
     {
       // check the index-entry
       fprintf(stdout,"%s%06d %02d %10d %c %06d",
-        indents[PictureType],iIndex, FileNumber, FileOffset, pictypes[PictureType], Length);
+        indents[1],iIndex, FileNumber, FileOffset, pictypes[1], Length);
       if( Length < 0 )
       {
-        uchar fn;        // current file-number
-        int fo;          // current file-offset
+        uint16_t fn;        // current file-number
+        off_t fo;          // current file-offset
         uchar pt;        // current picture-type
         int le;          // frame-lenght of current frame
-        cIF->Get( iIndex+1, &fn, &fo, &pt, &le);
+        bool bIndep;
+        cIF->Get( iIndex+1, &fn, &fo, &bIndep, &le);
         if( fn > FileNumber && Length == -1)
         {
           fprintf(stdout," length %d is ok (last index-entry for file %d)",Length,FileNumber);

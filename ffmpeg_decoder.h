@@ -8,9 +8,6 @@ extern "C"
 {
   #include "libavcodec/avcodec.h"
   #include "libavformat/avformat.h"
-#ifdef USE_URLCONTEXT
-  #include "libavformat/url.h"
-#endif
 }
 #define DEMUX_RESET 2
 #define FFMPEG_SUPPRESS_NOPICTURE_ERROR

@@ -10,7 +10,7 @@ dnl ---------------------------------------------------------------------------
 dnl initialisation
 dnl ---------------------------------------------------------------------------
 AC_PREREQ(2.57)
-AC_INIT(noad, 0.8.0, theNoad@ulmail.net)
+AC_INIT(noad, 0.8.2, theNoad@ulmail.net)
 AM_INIT_AUTOMAKE(dist-bzip2)
 AM_SILENT_RULES([yes])
 AC_CONFIG_SRCDIR([cchecklogo.cpp])
@@ -72,7 +72,7 @@ AC_FUNC_STRFTIME
 AC_CHECK_FUNCS([gettimeofday localtime_r memmove memset mkdir select socket strchr strdup strerror strrchr strstr])
 AC_CHECK_FUNCS([strsignal])
 #CXXFLAGS='-g -O3 -pg'
-CXXFLAGS='-g -O3'
+dnl CXXFLAGS='-v -g -O3'
 
 dnl ---------------------------------------------------------------------------
 dnl check for posix_fadvise 
@@ -94,21 +94,21 @@ if test "$PKG_LIBMPEG2" == "1"; then
   LIBMPEG_VERSION="`pkg-config --modversion libmpeg2`"
   AC_MSG_NOTICE([found libmpeg2 Version $LIBMPEG_VERSION])
   AC_SUBST(LIBMPEGX,$LIBMPEG2_LIBS)
+  AC_MSG_NOTICE([LIBMPEG2_LIBS=$LIBMPEG2_LIBS])
   
   dnl ---------------------------------------------------------------------------
   dnl setup for forcing static linking of libmpeg2
   dnl ---------------------------------------------------------------------------
   AC_ARG_WITH(libmpeg2-static,
       AC_HELP_STRING([--with-libmpeg2-static],[force linking of static version of libmpeg2]),
-      [AC_SUBST(LIBMPEGX,"-Xlinker -Bstatic $LIBMPEG2_LIBS -Xlinker -Bdynamic")])
-
-  CPPFLAGS="$LIBMPEG2_CFLAGS $CPPFLAGS"
-  CXXFLAGS="-DUSE_LIBMPGE2 $CXXFLAGS"
-  LDFLAGS="$LDFLAGS $LIBMPEGX"
+      [AC_SUBST(LIBMPEGX,["-Wl,--trace -Xlinker -Bstatic $LIBMPEG2_LIBS -lmpeg2convert -Xlinker -Bdynamic"])])
+  CPPFLAGS=" $CPPFLAGS -DUSE_LIBMPGE2 $LIBMPEG2_CFLAGS"
+  AC_SUBST(LIBS,"$LIBS $LIBMPEGX ")
   AC_SUBST(HAVE_LIBMPEG2,1) 
   AC_SUBST(libmpeg2ok,1)
   AC_SUBST(decoderok,1)
 fi
+
 
 
 dnl ---------------------------------------------------------------------------
@@ -122,26 +122,25 @@ if test "$HAVE_FFMPEG" == "1"; then
    AC_MSG_NOTICE([found libavcodec Version $LIBAVCODEC_VERSION])
    OLDLDFLAGS="$LDFLAGS"
    OLDCXXFLAGS="$CXXFLAGS"
-   LDFLAGS="$LDFLAGS $FFMPEG_LIBS"
+   OLDLIBS="$LIBS"
+   LIBS="$LIBS $FFMPEG_LIBS"
+   dnl LDFLAGS="$LDFLAGS $FFMPEG_LIBS"
    CXXFLAGS="$FFMPEG_CFLAGS $CXXFLAGS"
-   AC_CHECK_HEADER(libavformat/url.h,HAVE_URLCONTEXT=1, HAVE_URLCONTEXT=0)
-   AC_CHECK_MEMBER(AVIOContext.av_class,HAVE_AVIOCONTEXT=1, HAVE_AVIOCONTEXT=0,[#include "libavformat/avformat.h"])
+   AC_CHECK_MEMBER(AVIOContext.read_packet,HAVE_AVIOCONTEXT=1, HAVE_AVIOCONTEXT=0,[#include "libavformat/avformat.h"])
    if test "$HAVE_AVIOCONTEXT" == "1"; then
       CPPFLAGS="-DUSE_AVIOCONTEXT $CPPFLAGS"
-   else
-      if test "$HAVE_URLCONTEXT" == "1"; then
-         CPPFLAGS="-DUSE_URLCONTEXT $CPPFLAGS"
-      fi
    fi
-   if test "$HAVE_AVIOCONTEXT" == "0" && test "$HAVE_URLCONTEXT" == "0" ; then
+   if test "$HAVE_AVIOCONTEXT" == "0" ; then
       echo ffmpeg not usable
       HAVE_FFMPEG=0
       LDFLAGS="$OLDLDFLAGS"
       CXXFLAGS="$OLDCXXFLAGS"
+      LIBS="$OLDLIBS"
    else
       AC_SUBST(ffmpegok,1)
       AC_SUBST(decoderok,1)
       CXXFLAGS="-DUSE_FFMPEG $CXXFLAGS"
+      dnl AC_SUBST(LIBS,"$LIBS $FFMPEG_LIBS")
    fi
 fi
    
@@ -191,7 +190,7 @@ test $withtools -eq 1 && TOOLSRC="showindex"
 
 dnl LDFLAGS="$LDFLAGS -rdynamic"
 
-
+dnl CXXFLAGS="-v -g -O3 $CXXFLAGS"
 CFLAGS="$CFLAGS -DFFMPEGDECODING"
 CPPFLAGS="$CPPFLAGS -DFFMPEGDECODING "
 
@@ -215,13 +214,9 @@ else
     echo " this is noad Version $VERSION"
     if test "$libmpeg2ok" == "1" ; then
        echo " configured with libmpeg2 Version $LIBMPEG_VERSION"
-       echo "   CFLAGS=$LIBMPEG2_CFLAGS"
-       echo "   LDFLAGS=$LIBMPEG2_LIBS"
     fi
     if test "$ffmpegok" == "1" ; then
        echo " configured with libavcodec Version $LIBAVCODEC_VERSION"
-       echo "   CFLAGS=$FFMPEG_CFLAGS"
-       echo "   LDFLAGS=$FFMPEG_LIBS"
     else
        echo " ffmpeg-support not configured"
     fi
