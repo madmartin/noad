@@ -58,7 +58,11 @@ int64_t audiobasepts=0;
 //int64_t audiopts=0;
 extern uint64_t audiopts;
 int64_t audiosamples=0;
+#if LIBAVCODEC_VERSION_MAJOR < 57
 uint8_t audio_in_buffer[8192];
+#else
+uint8_t audio_in_buffer[8192 + AV_INPUT_BUFFER_PADDING_SIZE];
+#endif
 int in_buf_count = 0;
 static bool av_codec_initialised = false;
 
@@ -95,8 +99,12 @@ void initAVCodec()
   avcodec_register_all();
     
   /* find the mpeg audio decoder */
+#if LIBAVCODEC_VERSION_MAJOR < 57
   codec = avcodec_find_decoder(CODEC_ID_MP3);
-  
+#else
+  codec = avcodec_find_decoder(AV_CODEC_ID_MP3);
+#endif
+
   if (!codec) 
   {
     fprintf(stdout, "codec not found\n");
@@ -122,7 +130,7 @@ void initAVCodec()
   outbuf = (uint8_t *)malloc(AVCODEC_MAX_AUDIO_FRAME_SIZE);
 
   av_codec_initialised = true;
-        
+
 }
 
 void exitAVCodec()
@@ -182,14 +190,74 @@ int scan_audio_stream_0(unsigned char *mbuf, int count)
 #if (LIBAVCODEC_VERSION_MAJOR < 53)
     len = avcodec_decode_audio2(codecContext, (short *)outbuf, &out_size,
                                   inbuf_ptr, 576/*size*/);
-#else
+#elseif (LIBAVCODEC_VERSION_MAJOR < 57)
     AVPacket p;
     av_init_packet(&p);
     p.data = inbuf_ptr;
     p.size = 576;
     len = avcodec_decode_audio3(codecContext, (short *)outbuf,
                          &out_size, &p);
+#else
+    AVPacket p;
+    av_init_packet(&p);
+    p.data = inbuf_ptr;
+    p.size = 576;
+    int ret = avcodec_send_packet(codecContext, &p);
+    if (ret != 0 && ret != AVERROR(EAGAIN))
+    {
+        size = 0;
+        break;
+    }
+    len = ret == AVERROR(EAGAIN)? 0 : 576;
+
+    AVFrame *frame = av_frame_alloc();
+    if (!frame)
+    {
+        size = 0;
+        break;
+    }
+
+		do
+		{
+			ret = avcodec_receive_frame(codecContext, frame);
+			if (ret != 0 && ret != AVERROR (EAGAIN))
+			{
+				size = 0;
+				av_frame_free(&frame);
+				out_size = 0;
+				break;
+			}
+
+			int ch, plane_size;
+			int planar    = av_sample_fmt_is_planar(codecContext->sample_fmt);
+			int data_size = av_samples_get_buffer_size(&plane_size, codecContext->channels,
+                                                 frame->nb_samples,
+                                                 codecContext->sample_fmt, 1);
+			if (out_size < data_size) {
+				av_log(codecContext, AV_LOG_ERROR, "output buffer size is too small for "
+                                    "the current frame (%d < %d)\n", out_size, data_size);
+				av_frame_free(&frame);
+				size = 0;
+				out_size = 0;
+				break;
+			}
+
+			memcpy(outbuf, frame->extended_data[0], plane_size);
+
+			if (planar && codecContext->channels > 1) {
+				uint8_t *out = ((uint8_t *)outbuf) + plane_size;
+				for (ch = 1; ch < codecContext->channels; ch++) {
+					memcpy(out, frame->extended_data[ch], plane_size);
+					out += plane_size;
+				}
+			}
+			out_size = data_size;
+		}
+		while (ret == 0);
+
+		av_frame_free(&frame);
 #endif
+
     if (len < 0)
     {
       //fprintf(stderr, "Error while decoding audio\n\n");
@@ -199,7 +267,7 @@ int scan_audio_stream_0(unsigned char *mbuf, int count)
       break;
     }
 //    SDL_PauseAudio(0);
-    if (out_size > 0) 
+    if (out_size > 0)
     {
       audiosamples += out_size/4;
       //fprintf(stdout,"decode audio out_size=%d\n",out_size);

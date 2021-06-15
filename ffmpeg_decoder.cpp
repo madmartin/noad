@@ -126,6 +126,9 @@ FFMPegDecoder::FFMPegDecoder() :
 	pFormatCtx = NULL;
 	//i, videoStream;
 	pCodecCtx = NULL;
+#if LIBAVCODEC_VERSION_MAJOR > 56
+	pCodecPar = NULL;
+#endif
 	pCodec = NULL;
 	pFrame = NULL;
 	__bufBytes = 0;
@@ -184,11 +187,16 @@ int FFMPegDecoder::openFile(cFileName *_cfn, cNoadIndexFile *_cIF)
 
 	// Retrieve stream information
 	resetDecoder();
-   int openCode2 = av_find_stream_info(pFormatCtx);
+#if LIBAVCODEC_VERSION_MAJOR <57
+	int openCode2 = av_find_stream_info(pFormatCtx);
+#else
+	int openCode2 = avformat_find_stream_info(pFormatCtx, NULL);
+#endif
 	if(openCode2<0)
 		return -1; // Couldn't find stream information
 
 	// Find the first video stream
+#if LIBAVCODEC_VERSION_MAJOR <57
 	videoStream=-1;
 	for(i=0; i < (int)pFormatCtx->nb_streams; i++)
 	{
@@ -198,10 +206,17 @@ int FFMPegDecoder::openFile(cFileName *_cfn, cNoadIndexFile *_cIF)
 			break;
 		}
 	}
-	if(videoStream==-1)
-		return -1; // Didn't find a video stream
+#else
+	videoStream = av_find_best_stream(pFormatCtx, AVMEDIA_TYPE_VIDEO, -1, -1, &pCodec, 0);
+#endif
+	if(videoStream < 0)
+	{
+		esyslog("can't find a video stream!");
+		return -1;
+	}
 
 	// Get a pointer to the codec context for the video stream
+#if LIBAVCODEC_VERSION_MAJOR <57
 	pCodecCtx=pFormatCtx->streams[videoStream]->codec;
 	pCodecCtx->flags|=CODEC_FLAG_EMU_EDGE;
 
@@ -210,9 +225,18 @@ int FFMPegDecoder::openFile(cFileName *_cfn, cNoadIndexFile *_cIF)
 		esyslog("can't detect codec for video!");
 		return -1;
 	}
+#else
+	pCodecPar=pFormatCtx->streams[videoStream]->codecpar;
+	if( pCodecPar->codec_id == AV_CODEC_ID_PROBE )
+	{
+		esyslog("can't detect codec for video!");
+		return -1;
+	}
+#endif
 	//av_close_input_file(pFormatCtx);
 
 	// Find the decoder for the video stream
+#if LIBAVCODEC_VERSION_MAJOR < 57
 	pCodec=avcodec_find_decoder(pCodecCtx->codec_id);
 	if(pCodec==NULL)
 		return -1; // Codec not found
@@ -221,23 +245,37 @@ int FFMPegDecoder::openFile(cFileName *_cfn, cNoadIndexFile *_cIF)
 	// bitstreams where frame boundaries can fall in the middle of packets
 	if(pCodec->capabilities & CODEC_CAP_TRUNCATED)
 		pCodecCtx->flags|=CODEC_FLAG_TRUNCATED;
+#else
+	pCodec=avcodec_find_decoder(pCodecPar->codec_id);
+	if(pCodec==NULL)
+		return -1; // Codec not found
 
-#if LIBAVCODEC_VERSION_MAJOR > 54
+   // Create CodecContext from Codec
+   pCodecCtx= avcodec_alloc_context3(pCodec);
+
+	// Inform the codec that we can handle truncated bitstreams -- i.e.,
+	// bitstreams where frame boundaries can fall in the middle of packets
+	if(pCodec->capabilities & AV_CODEC_CAP_TRUNCATED)
+		pCodecCtx->flags|=AV_CODEC_FLAG_TRUNCATED;
+#endif
+
 	// Open codec
+#if LIBAVCODEC_VERSION_MAJOR > 54
 	if(avcodec_open2(pCodecCtx, pCodec,&avDictionary) < 0)
 #else
-	// Open codec
 	if(avcodec_open(pCodecCtx, pCodec)<0)
 #endif
 		return -1; // Could not open codec
 
-
-
 	// Allocate video frame
-   pFrame=avcodec_alloc_frame();
+#if LIBAVCODEC_VERSION_MAJOR < 57
+	pFrame=avcodec_alloc_frame();
+#else
+	pFrame=av_frame_alloc();
+#endif
 	cont_reading = true;
-   doSeekPos = false;
-   dsyslog("init_ffmpeg done" );
+	doSeekPos = false;
+	dsyslog("init_ffmpeg done" );
 	return false;
 }
 
@@ -253,7 +291,11 @@ int FFMPegDecoder::decoder_exit()
 	// close the file
 	if( pFormatCtx )
 	{
+#if LIBAVFORMAT_VERSION_MAJOR < 54
 		av_close_input_file(pFormatCtx);
+#else
+		avformat_close_input(&pFormatCtx);
+#endif
 		pFormatCtx = NULL;
 	}
 	// Close the codec
@@ -285,7 +327,9 @@ bool FFMPegDecoder::GetVideoFrame(bool restart)
   static bool     fFirstTime=true;
   int             bytesDecoded;
   int             frameFinished;
+  int             ret;
 
+#if LIBAVCODEC_VERSION_MAJOR < 57
   if( restart )
   {
     bytesRemaining=0;
@@ -373,6 +417,73 @@ loop_exit:
   ffmpegerror = true;
 
   return frameFinished!=0;
+#else
+	// libavcodec 57+
+	if( restart )
+	{
+		if(packet.data!=NULL)
+			av_packet_unref(&packet);
+		packet.data=NULL;
+		avcodec_flush_buffers(pCodecCtx);
+	}
+	else
+	{
+		ret = avcodec_receive_frame(pCodecCtx, pFrame);
+		if (ret < 0 && ret != AVERROR(EAGAIN))
+		{
+			ffmpegerror = true;
+			return false;
+		}
+	}
+
+	do
+	{
+		do
+		{
+			// Free packet
+			if(packet.data!=NULL)
+				av_packet_unref(&packet);
+
+			// Read new packet
+			ret = av_read_frame(pFormatCtx, &packet);
+			if(ret < 0)
+			{
+				if (ret == AVERROR_EOF)
+				{ // create draining packet
+					packet.data = NULL;
+					packet.size = 0;
+				}
+				else
+				{
+					if (packet.data!=NULL)
+						av_packet_unref(&packet);
+					ffmpegerror = true;
+					return false;
+				}
+			}
+		} while(packet.stream_index!=videoStream && ret != AVERROR_EOF);
+
+		ret = avcodec_send_packet(pCodecCtx, &packet);
+		if (packet.data!=NULL)
+			av_packet_unref(&packet);
+
+		if (ret < 0 && ret != AVERROR(EAGAIN))
+		{
+			ffmpegerror = true;
+			return false;
+		}
+
+		ret = avcodec_receive_frame(pCodecCtx, pFrame);
+		if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF)
+		{
+			ffmpegerror = true;
+			return false;
+		}
+
+	} while (ret != 0 && ret != AVERROR_EOF);
+
+	return ret != AVERROR_EOF;
+#endif
 }
 
 
@@ -505,7 +616,11 @@ void FFMPegDecoder::resetDecoder()
 	}
 	if( pFrame )
 		av_free(pFrame);
+#if LIBAVCODEC_VERSION_MAJOR < 57
 	pFrame=avcodec_alloc_frame();
+#else
+	pFrame=av_frame_alloc();
+#endif
 	__bufBytes = 0;
 }
 

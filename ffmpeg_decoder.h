@@ -21,6 +21,9 @@ class FFMPegDecoder : public MPEGDecoder
 
 	int             i, videoStream;
 	AVCodecContext  *pCodecCtx;
+#if LIBAVCODEC_VERSION_MAJOR > 56
+	AVCodecParameters *pCodecPar;
+#endif
 	AVCodec         *pCodec;
 #if LIBAVCODEC_VERSION_MAJOR > 54
    AVDictionary    *avDictionary;
