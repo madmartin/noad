@@ -1114,7 +1114,7 @@ cString IndexToHMSF(int Index, bool WithFrame, double FramesPerSecond)
 {
   static char buffer[16];
   double Seconds;
-  int f = int(modf((Index + 0.5) / FramesPerSecond, &Seconds) * FramesPerSecond + 1);
+  int f = int(modf((Index + 0.5) / FramesPerSecond, &Seconds) * FramesPerSecond);
   int s = int(Seconds);
   int m = s / 60 % 60;
   int h = s / 3600;
@@ -1125,12 +1125,12 @@ cString IndexToHMSF(int Index, bool WithFrame, double FramesPerSecond)
 
 int HMSFToIndex(const char *HMSF, double FramesPerSecond)
 {
-  int h, m, s, f = 1;
+  int h, m, s, f = 0;
   int n = sscanf(HMSF, "%d:%d:%d.%d", &h, &m, &s, &f);
   if (n == 1)
-     return h - 1; // plain frame number
+     return h; // plain frame number
   if (n >= 3)
-     return int( round( (h * 3600 + m * 60 + s) * FramesPerSecond) ) + f - 1;
+     return int( round( (h * 3600 + m * 60 + s) * FramesPerSecond) ) + f;
   return 0;
 }
 
