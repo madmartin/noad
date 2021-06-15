@@ -1,4 +1,4 @@
-Version 0.8.6
+﻿Version 0.8.6
 - fixes for ffmpeg 1.2
 
 Version 0.8.5
@@ -21,7 +21,7 @@ Version 0.7.3
 Version 0.7.2
 - exit noad if a hdtv-recording is found
 - change MAXFRAMESIZE to KILOBYTE(1024) as in vdr
-- fixed noadifnew (thanks to Matti Lehtim�ki for the patch)
+- fixed noadifnew (thanks to Matti Lehtimäki for the patch)
 - add some logging in svdrpc.cpp
 
 Version 0.7.0/0.7.1
@@ -33,7 +33,7 @@ Version 0.6.1
 - fixed a bug with using -O and no running vdr is found
   (thanks to Helmut Auer for sending a patch)
 - implemented new function for file-io based
-  on a patch from Ralf M�ller (see readme)
+  on a patch from Ralf Müller (see readme)
 
 Version 0.6.0
 - add audio-silence-detection
@@ -80,10 +80,10 @@ Version 0.4.2:
 Version 0.4.1:
 - Fehlerbereinigung configure.ac 
 - start als Hintergrundprozess verbessert
-- pid-file zur Vermeidung von Doppelaufrufen eingef�hrt
-- Schrittweite f�r ac3-scan verringert
+- pid-file zur Vermeidung von Doppelaufrufen eingefï¿½hrt
+- Schrittweite für ac3-scan verringert
 - setzen von fehlerhaften Marken in checkBlacklineOnmark bereinigt
-- einige Script-Verbesserungen nach einem patch von Thomas G�nther
+- einige Script-Verbesserungen nach einem patch von Thomas Günther
 - Zusammenfassung der Versionen 0.3.2b und 0.4.0
 - add switch "nelonen" based on a patch from Esa Loukkola
 - add english readme
@@ -91,10 +91,10 @@ Version 0.4.1:
 Version 0.4.0:
 - overlap-detection
 - ac3 detection
-- scripte allnewnoad/noadifnew pr�fen jetzt auf vorhandene marks.vdr
-- stat2html �berarbeitet
+- scripte allnewnoad/noadifnew prüfen jetzt auf vorhandene marks.vdr
+- stat2html überarbeitet
 - OSD-Message
-- priority �nderbar
+- priority änderbar
 
 Version 0.3.4:
 - Verwendung von Automake/Autoconf ==> configure
@@ -105,13 +105,13 @@ Version 0.3.4:
 Version 0.3.3:
 - Kommentare zu den Marken in der marks.vdr
 - Erkennung von Wiederholungen vor/nach der Werbung
-- OSD-Nachrichten f�r Start und Ende von noad
-- Logo-Speicherung defaultm�ssig abgeschaltet
+- OSD-Nachrichten für Start und Ende von noad
+- Logo-Speicherung defaultmrässig abgeschaltet
 - Versions-Nummer abrufbar
 
 Version 0.3.1:
-- �nderungen f�r libmpeg 0.3.2 pre-Release
+- Änderungen für libmpeg 0.3.2 pre-Release
 - Bereinigung div. Compiler-Warnings
 - Ausgabe div. Statistikwerte
 - script zum bearbeiteten aller noch nicht bearbeiteten Aufnahmen (allnewnoad)
-- script zum l�schen aller gespeicherten logos (clearlogos)
+- script zum löschen aller gespeicherten logos (clearlogos)
