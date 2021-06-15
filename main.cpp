@@ -183,7 +183,7 @@ int main(int argc, char *argv[], char * /*envp*/[])
   bool bImmediateCall = false;
   bool bAfter = false;
   bool bBefore = false;
-  bool bEdited = false;
+  bool bEditedOrStarted = false;
   bool bDeleted = false;
   bool bNice = false;
   bool bOnline = false;
@@ -221,7 +221,7 @@ int main(int argc, char *argv[], char * /*envp*/[])
       {"nopid",0,0,5},
       {"asd",0,0,6},
       {"pass3only",0,0,7},
-		{"svdrphost",1,0,8},
+      {"svdrphost",1,0,8},
       {"svdrpport",1,0,9},      
       {"decoder",1,0,13},
       {0, 0, 0, 0}
@@ -408,7 +408,15 @@ int main(int argc, char *argv[], char * /*envp*/[])
       }
       else if(strcmp(argv[optind], "edited" ) == 0 )
       {
-        bEdited = true;
+        bEditedOrStarted = true;
+      }
+      else if(strcmp(argv[optind], "editing" ) == 0 )
+      {
+        bEditedOrStarted = true;
+      }
+      else if(strcmp(argv[optind], "started" ) == 0 )
+      {
+        bEditedOrStarted = true;
       }
       else if(strcmp(argv[optind], "deleted" ) == 0 )
       {
@@ -436,10 +444,10 @@ int main(int argc, char *argv[], char * /*envp*/[])
 
   // we can run, if one of bImmediateCall, bAfter, bBefore or bNice is true
   // and recDir is given
-  if( (bImmediateCall || bAfter || bBefore || bEdited || bDeleted || bNice) && recDir )
+  if( (bImmediateCall || bAfter || bBefore || bEditedOrStarted || bDeleted || bNice) && recDir )
   {
     // do nothing if called from vdr after the video is cutted
-    if( bEdited )
+    if( bEditedOrStarted )
       return 0;
 
     if(bDeleted)
@@ -636,81 +644,85 @@ int main(int argc, char *argv[], char * /*envp*/[])
   }
 
   // nothing done, give the user some help
-  printf("Usage: noad [options] cmd <record>\n"
+  printf("noad %s - no advertising\n", getVersion());
+  printf("Usage: noad [options] cmd <recording>\n"
          "options:\n"
-         "-a,             --ac3\n"
+         "-a, --ac3\n"
          "                  use ac3-detection\n"
-         "-b,             --background\n"
+         "-b, --background\n"
          "                  noad runs as a background-process\n"
          "                  this will be automatic set if called with \"after\" or \"before\"\n"
-         "-c,             --comments\n"
+         "-c, --comments\n"
          "                  add comments to the marks\n"
-         "-j,             --jumplogo\n"
+         "-j, --jumplogo\n"
          "                  detect jumping logos\n"
-         "-n              --nelonen\n"
+         "-n, --nelonen\n"
          "                  special behavior for finish stations\n"
-         "-o,             --overlap\n"
+         "-o, --overlap\n"
          "                  detect overlaps\n"
-         "-p,             --priority\n"
+         "-p, --priority\n"
          "                  priority-level of noad when running in background\n"
          "                  [19...-19] default 19\n"
-         "-s <filename>,  --statisticfile=<file>\n"
+         "-s <filename>, --statisticfile=<file>\n"
          "                  filename where some statistic datas are stored\n"
-         "-v,             --verbose\n"
+         "-v, --verbose\n"
          "                  increments loglevel by one, can be given multiple\n"
-         "-B              --backupmarks\n"
+         "-B, --backupmarks\n"
          "                  move the marks.vdr to marks0.vdr\n"
-         "-O,             --OSD\n"
+         "-O, --OSD\n"
          "                  noad sends an OSD-Message for start and end \n"
-         "                  (default: to localhost:2001)\n"         
-         "-S              --savelogo\n"
+         "                  (default: to localhost:6419)\n"
+         "-S, --savelogo\n"
          "                  save the detected logo\n"
-         "-V              --version\n"
+         "-V, --version\n"
          "                  print version-info and exits\n"
          "--svdrphost=<ip-address>\n"
          "                  set the IP-address used for OSD Messages\n"
          "                  (default: localhost)\n"
          "--svdrpport=<tcp-port>\n"
          "                  set the TCP-Port used for OSD Messages\n"
-         "                  (default: 2001)\n"
-		   "--markfile=<markfilename>\n"
-         "  set a different markfile-name\n"
+         "                  (default: 6419)\n"
+         "--markfile=<markfilename>\n"
+         "                  set a different markfile-name\n"
          "--online[=1|2] (default is 1)\n"
-         "  start noad immediately when called with \"before\" as cmd\n"
-         "  if online is 1, noad starts online for live-recordings\n"
-         "  only, online=2 starts noad online for every recording\n"
-         "  live-recordings are identified by having a '@' in the filename\n"
-         "  so the entry 'Mark instant recording' in the menu 'Setup - Recording'\n"
-         "  of the vdr should be set to 'yes'\n"
+         "                  start noad immediately when called with \"before\" as cmd\n"
+         "                  if online is 1, noad starts online for live-recordings\n"
+         "                  only, online=2 starts noad online for every recording\n"
+         "                  live-recordings are identified by having a '@' in the filename\n"
+         "                  so the entry 'Mark instant recording' in the menu 'Setup - Recording'\n"
+         "                  of the vdr should be set to 'yes'\n"
          "--asd\n"
-         "  use audio silence detection for mark-refinement\n"
-         "  you need to have noad configured with \"--with-ffmpeg\"\n"
-         "  to use this parameter\n"
+         "                  use audio silence detection for mark-refinement\n"
+         "                  you need to have noad configured with \"--with-ffmpeg\"\n"
+         "                  to use this parameter\n"
          "--pass3only\n"
-         "  this is a parameter for testing only and you need\n"
-         "  to give \"--asd\" also to let this work\n"
-         "  if given, only the third pass is done, which\n"
-         "  is the pass with audio silence detection\n"
-         "  this parameter is only usefull if there are already\n"
-         "  some marks in the \"marks.vdr\" for this recording\n");
+         "                  this is a parameter for testing only and you need\n"
+         "                  to give \"--asd\" also to let this work\n"
+         "                  if given, only the third pass is done, which\n"
+         "                  is the pass with audio silence detection\n"
+         "                  this parameter is only usefull if there are already\n"
+         "                  some marks in the \"marks.vdr\" for this recording\n");
 
 printf(  "--decoder[ffmpeg|libmpeg2] (default is ffmpeg)\n"
          //"-C              --scenechangedetection\n"
          //"                  use scene-change-detection\n"
          "\ncmd: one of\n"
-         "-                            dummy-parameter if called directly\n"
-         "after                        from vdr if used in the -r option of vdr\n"
-         "before                       from vdr if used in the -r option of vdr\n"
-         "                             noad exits immediately if called with \"before\"\n"
-         "                             and --online is not given\n"
-         "edited                       from vdr if used in the -r option of vdr\n"
-         "                             noad exits immediately if called with \"edited\"\n"
-         "deleted                      from vdr if used in the -r option of vdr\n"
-         "                             tries to stop a possible running instance of noad\n"
-         "                             for this recording"
-         "nice                         runs noad with nice(19)\n"
-         "\n<record>                     is the name of the directory where the recording\n"
-         "                             is stored\n\n"
+         "-                 dummy-parameter if called directly\n"
+         "after             from vdr if used in the -r option of vdr\n"
+         "before            from vdr if used in the -r option of vdr\n"
+         "                  noad exits immediately if called with \"before\"\n"
+         "                  and --online is not given\n"
+         "edited|editing|started\n"
+         "                  from vdr if used in the -r option of vdr\n"
+         "                  noad exits immediately if called with \"edited\",\n"
+         "                  \"editing\" or \"started\"\n"
+         "deleted           from vdr if used in the -r option of vdr\n"
+         "                  tries to stop a possible running instance of noad\n"
+         "                  for this recording\n"
+         "nice              runs noad with nice(19)\n"
+         "\n"
+				 "<recording>       is the name of the directory where the recording\n"
+         "                  is stored\n\n"
          );
 	return 0;
 }
