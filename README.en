@@ -50,7 +50,7 @@ options:
 -j              --jumplogo
                 looks for vertikac drifted logos
 -O              --OSD
-                sends an OSD-Message to the running VDR-instance(localhost:2001) for Start and End
+                sends an OSD-Message to the running VDR-instance(localhost:6419) for Start and End
 -S              --savelogo
                 saves the detected logo for later usage
 -B              --backupmarks
@@ -65,7 +65,7 @@ options:
                  (default: localhost)
                --svdrpport=<tcp-port>
                  set the TCP-Port used for OSD Messages
-                 (default: 2001)\n"
+                 (default: 6419)\n"
 
                 --markfile=<markfilename>
                 set a different markfile-name

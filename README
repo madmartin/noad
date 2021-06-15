@@ -47,10 +47,10 @@ options:
 -j              --jumplogo
                 erkennt vertikal verschobene Senderlogos
 -O              --OSD
-                sendet eine OSD-Message an VDR(localhost:2001) für Start und Ende
+                sendet eine OSD-Message an VDR(localhost:6419) für Start und Ende
 -O,             --OSD\n"
                   sendet eine OSD-Message für Start und Ende
-                  (default: to localhost:2001)
+                  (default: to localhost:6419)
 -S              --savelogo
                 speichert das erkannte Logo
 -B              --backupmarks
@@ -65,7 +65,7 @@ options:
                 (default: localhost)
                 --svdrpport=<tcp-port>
                 setzt den TCP-Port für OSD-Nachrichten
-                (default: 2001)
+                (default: 6419)
                 
                 --markfile=<markfilename>
                 set a different markfile-name
