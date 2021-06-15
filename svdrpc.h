@@ -31,7 +31,7 @@ private:
 public:
   ~cSocket();
   bool Open(int Port);
-  int Connect(char *Host);
+  int Connect(char const *Host);
   void Close(void);
 };
 
@@ -41,7 +41,7 @@ public:
   bool Connected();
   bool CmdQuit();
   char name[22];
-  void Open(char *Host, int Port);
+  void Open(char const *Host, int Port);
   void Close(void);
   bool Send(const char *s, int length = -1);
   bool ReadReply();
@@ -54,7 +54,7 @@ private:
 };
 
 extern int SVDRPPort;
-extern char *SVDRPHost;
+extern char const *SVDRPHost;
 
 void VDRMessage(const char *s);
 void noadStartMessage( const char *s );

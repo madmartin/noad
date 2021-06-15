@@ -17,8 +17,8 @@
 //#define _GNU_SOURCE
 
 #include "svdrpc.h"
-int SVDRPPort = 2001;
-char *SVDRPHost = "127.0.0.1";
+int SVDRPPort = 6419;
+char const *SVDRPHost = "127.0.0.1";
 
 
 #include <arpa/inet.h>
@@ -86,7 +86,7 @@ bool cSocket::Open(int Port)
   return true;
 }
 
-int cSocket::Connect(char *Host)
+int cSocket::Connect(char const *Host)
 {
   dsyslog("cSocket::Connect to %s", Host );
   if (Open(port)) 
@@ -125,7 +125,7 @@ cSVDRPC::~cSVDRPC()
   Close();
 }
 
-void cSVDRPC::Open(char *Host ,int Port)
+void cSVDRPC::Open(char const *Host ,int Port)
 {
   dsyslog("cSVDRPC::Open port is %d",Port );
   name[0]=0;
