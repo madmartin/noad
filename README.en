@@ -1,4 +1,33 @@
-﻿INFORMATION about the online-mode is at the end of this file.
+﻿noad is a program for advertising-detection in vdr-recordings. It uses the 
+station-logos for the detection and produces cutting-marks for the recording.
+It is developed as an "addon" for the Video Disk Recorder (VDR).
+
+Written by:            'theNoad' (real-name not given)
+                        theNoad@ulmail.net
+Further maintenance:    Martin Dummer <martin.dummer@gmx.net>
+
+Project's homepage:     http://noad.net23.net/ (offline)
+                        https://github.com/madmartin/noad
+
+Latest version available at: https://github.com/madmartin/noad
+
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+INFORMATION about the online-mode is at the end of this file.
 
 noad is a program for advertising-detection in vdr-recordings. It uses the 
 station-logos for the detetction and produces cutting-marks for the recording.

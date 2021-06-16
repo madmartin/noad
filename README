@@ -1,7 +1,42 @@
-﻿noad ist ein Programm, daß an Hand der Senderlogos eine Erkennung von
+﻿noad is a program for advertising-detection in vdr-recordings. It uses the 
+station-logos for the detection and produces cutting-marks for the recording.
+It is developed as an "addon" for the Video Disk Recorder (VDR).
+
+Written by:            'theNoad' (real-name not given)
+                        theNoad@ulmail.net
+                        theNoad@SoftHome.net
+
+Further maintenance:    Martin Dummer <martin.dummer@gmx.net>
+
+Project's homepage:     http://noad.net23.net/ (offline)
+                        https://github.com/madmartin/noad
+
+Latest version available at: https://github.com/madmartin/noad
+
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+For more information in english, please see README.en
+
+
+noad ist ein Programm, daß an Hand der Senderlogos eine Erkennung von
 Werbeeinblendungen vornimmt und Schnittmarken zum entfernen der Werbung erzeugt.
 noad kann direkt aufgerufen werden oder als command für vdr eingebunden
 werden(option -r oder --recording in vdr).
+
 Die Logo-Erkennung basiert auf einem Programm von Thorsten Janke, das Original-
 programm und die dazugehörige Diplomarbeit sind hier zu
 finden: http://www.ktet.fh-muenster.de/ina/node1.html.
@@ -12,6 +47,7 @@ positionieren. Bei Aufnahmen ohne diese Balken wird eine genauere Positionierung
 der Marken durch Schwarzbilderkennung versucht. Optional werden Wiederholungen
 von Filmsequenzen nach einer Werbeeinblendung gesucht und die Marken bei gefundener
 Wiederholungssequenz angepasst.
+
 Ab Version 0.4.0 ist auch eine Werbeerkennung an Hand der Sound-Umschaltungen 
 möglich. Ist der Parameter --ac3 angegeben, wird zuerst untersucht, ob die Aufnahme 
 ac3-sound enthält. Ist dies der Fall, wird an Stelle des Logo-Scans ein Sound-Scan 
