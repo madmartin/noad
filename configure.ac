@@ -18,6 +18,7 @@ AC_CONFIG_HEADER([config.h])
 AC_DEFINE(_GNU_SOURCE, 1, [Define for setting a GNU environment])
 
 AC_DEFINE(FFMPEGDECODING,1,[Define for ffmpeg_using])
+AC_USE_SYSTEM_EXTENSIONS
 CPPFLAGS="-D__STDC_CONSTANT_MACROS $CPPFLAGS"
 
 dnl ---------------------------------------------------------------------------
@@ -25,6 +26,7 @@ dnl ---------------------------------------------------------------------------
 dnl ---------------------------------------------------------------------------
 AC_PROG_CXX
 AC_PROG_CC
+AM_PROG_AR
 AC_PROG_RANLIB
 PKG_PROG_PKG_CONFIG()
 AC_LANG(C++)
