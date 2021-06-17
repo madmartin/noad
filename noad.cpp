@@ -970,7 +970,7 @@ bool checkBlackFrameOnMark( cMarks *marks, cMark *m, bool bForward, int iCheckTi
 	decoder->setCallback(BlackframeCallback);
 	int flags = DEMUX_RESET;
 
-	dsyslog( "checkBlackFrameOnMark at %d %s (frames %d --> %d)",m->position, bForward ? "forward":"backward",index,end );
+	dsyslog( "checkBlackFrameOnMark at %d %s (frames %d --> %hhn)",m->position, bForward ? "forward":"backward",index,end );
 	while( index < iEnd )
 	{
 		iCurrentDecodedFrame = index;

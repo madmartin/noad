@@ -27,7 +27,7 @@ int doPics(const char * filename)
   if( cIF == NULL )
     return -1;
   cfn = new cFileName(filename, false);
-  if( cfn->Open() < 0 )
+  if( cfn->Open() == NULL )
   {
     delete cfn;
     delete cIF;

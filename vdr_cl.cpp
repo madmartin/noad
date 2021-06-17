@@ -331,7 +331,7 @@ cIndexFile::cIndexFile(const char *FileName, bool Record, bool IsPesRecording)
                 LOG_ERROR_STR(fileName);
             }
             else
-              esyslog("ERROR: can't allocate %d bytes for index '%s'", size * sizeof(tIndexTs), fileName);
+              esyslog("ERROR: can't allocate %ld bytes for index '%s'", size * sizeof(tIndexTs), fileName);
           }
         }
         else

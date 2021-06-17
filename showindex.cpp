@@ -62,7 +62,7 @@ int doShowIndex(const char * filename)
     {
       if( Independent/*PictureType == I_FRAME*/ )
       {
-        fprintf(stdout,"%s%06d %02d %10d %c %06d",
+        fprintf(stdout,"%s%06d %02d %10ld %c %06d",
           indents[0],iIndex, FileNumber, FileOffset, pictypes[0], Length);
         int nextIFrame = cIF->GetNextIFrame( iIndex, true, &FileNumber, &FileOffset, &Length, false);
         if( nextIFrame < 0 )
@@ -74,7 +74,7 @@ int doShowIndex(const char * filename)
     else
     {
       // check the index-entry
-      fprintf(stdout,"%s%06d %02d %10d %c %06d",
+      fprintf(stdout,"%s%06d %02d %10ld %c %06d",
         indents[1],iIndex, FileNumber, FileOffset, pictypes[1], Length);
       if( Length < 0 )
       {

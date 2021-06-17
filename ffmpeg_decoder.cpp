@@ -60,7 +60,7 @@ static int noad_read_packet(void *h, uint8_t *buf, int size)
     else
     {
       if( logReading )
-         dsyslog("noad_read read from file, ffmpegFileOffset = %d, length = %d",decoder->ffmpegFileOffset, decoder->ffmpegLength);
+         dsyslog("noad_read read from file, ffmpegFileOffset = %ld, length = %d",decoder->ffmpegFileOffset, decoder->ffmpegLength);
       if( decoder->ffmpegFileOffset == decoder->ffmpegLastFileOffset )
         return 0;
     }
@@ -113,7 +113,7 @@ static int64_t noad_seek(void *h, int64_t pos, int whence)
       if( doSeekPos )
          decoder->ffmpeg_index = cIF->getIndexForFilepos(pos);
       if( logSeeking )
-         dsyslog("noad-protocol seek to %lld --> index %d",pos,decoder->ffmpeg_index);
+         dsyslog("noad-protocol seek to %ld --> index %d",pos,decoder->ffmpeg_index);
 		decoder->__bufBytes = 0;
 	}
 	return pos;
