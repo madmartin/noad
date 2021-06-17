@@ -155,7 +155,7 @@ int main(int argc, char *argv[])
         break;
 
       default:
-        printf ("?? getopt returned character code 0%o ??(option_index %d)\n", c,option_index);
+        printf ("?? getopt returned character code 0%o ?? (option_index %d)\n", c, option_index);
     }
   }
 
