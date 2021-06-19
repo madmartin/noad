@@ -1587,7 +1587,7 @@ int scanRecord( int iNumFrames, cMarks *_marks )
   #ifndef VNOAD
   // open the record
   cfn = new cFileName(filename, false, false, isPES);
-  if( cfn->Open() < 0 )
+  if( cfn->Open() == NULL )
   {
     delete cfn;
     delete cIF;

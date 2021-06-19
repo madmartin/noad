@@ -361,7 +361,7 @@ void noadData::setYUVGreyCorners()
    int topend = m_nBorderYTop+m_nSizeY;
    int bottStart = m_nGrabHeight-m_nBorderYBot-m_nSizeY;
    int bottEnd = m_nGrabHeight-m_nBorderYBot;
-   register int linestart;
+   int linestart;
    int rightLogoOffset = m_nGrabWidth-m_nBorderX-m_nSizeX;
    uint8_t *bufstart = nyuvbuf->buf[0];
    int linewidth0 = nyuvbuf->linewidth[0];
@@ -1047,10 +1047,10 @@ void noadData::getHistogram(simpleHistogram &dest)
 {
    unsigned char *frame_ptr = (unsigned char *)nyuvbuf->buf[0];
   memset(dest, 0, sizeof(simpleHistogram));
-  for(register int y = 0; y < m_nGrabHeight; y += 2 )
+  for(int y = 0; y < m_nGrabHeight; y += 2 )
   {
       int linestart = y * nyuvbuf->linewidth[0];
-    for(register int x = 0; x < m_nGrabWidth; x += 2 )
+    for(int x = 0; x < m_nGrabWidth; x += 2 )
       dest[frame_ptr[linestart + x]]++;
   }
 }
@@ -1059,7 +1059,7 @@ bool noadData::areSimilar(simpleHistogram &hist1,simpleHistogram &hist2)
 {
   long similar = 0;
 
-  for(register int i = 0; i < 256; i++)
+  for(int i = 0; i < 256; i++)
   {
     if (hist1[i] < hist2[i])
       similar += hist1[i];

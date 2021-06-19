@@ -173,7 +173,7 @@ cUnbufferedFile *cFileName::SetOffset(int Number, off_t Offset)
            }
         // found a non existing file suffix
         }
-     if (Open() >= 0) {
+     if (Open() != NULL) {
         if (!record && Offset >= 0 && file && file->Seek(Offset, SEEK_SET) != Offset) {
            LOG_ERROR_STR(fileName);
            return NULL;
@@ -663,7 +663,7 @@ cNoadIndexFile::~cNoadIndexFile()
 
 bool cNoadIndexFile::Get(int Index, uint16_t *FileNumber, off_t *FileOffset, bool *Independent, int *Length)
 {
-  if (index >= 0)
+  if (index != NULL)
   {
      if (Index >= 0 && Index < last) 
 	  {
@@ -2128,7 +2128,7 @@ char *cReadLine::Read(FILE *f)
 {
   static char buffer[MAXPARSEBUFFER];
   char *cp = fgets(buffer, sizeof(buffer), f);
-  if (cp > 0) 
+  if (cp != NULL)
   {
      int n = strlen(cp);
      if (buffer[n] == '\n') 

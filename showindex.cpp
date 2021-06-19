@@ -33,7 +33,7 @@ int doShowIndex(const char * filename)
   cfn = new cFileName(filename, false, false, isPES);
   //cfn = new cFileName(filename, false);
   fprintf(stdout,"try to open %s\n",cfn->Name());
-  if( cfn->Open() < 0 )
+  if( cfn->Open() == NULL )
   {
     fprintf(stdout,"opening %s failed\n",cfn->Name());
     delete cIF;
