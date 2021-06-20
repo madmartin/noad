@@ -49,9 +49,9 @@ int doShowIndex(const char * filename)
   uchar PictureType;        // current picture-type
   bool Independent;
   int Length;               // frame-lenght of current frame
-  char pictypes[]= { 'U','I','P','B' };
-  char *indents[]= { "","","  ","    " };
-  char *indents2[]= { "","    ","  ","" };
+  const char pictypes[]= { 'U','I','P','B' };
+  const char *indents[]= { "","","  ","    " };
+  const char *indents2[]= { "","    ","  ","" };
   int lastFile=0;
   int lastOffset = 0;
   unsigned char readBuffer[BYTES_TO_READ+1];
