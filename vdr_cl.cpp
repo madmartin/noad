@@ -776,39 +776,6 @@ bool cNoadIndexFile::setIndexEx( int _index, int _isLogo, int _blackTop, int _bl
   return bRet;
 }
 
-void cNoadIndexFile::logIndexEx()
-{
-   int fLog = -1;
-   char *logFileName = new char[strlen(fileNameEx) + 4 + 1];
-   strcpy(logFileName, fileNameEx);
-   char *pFileExt = logFileName + strlen(logFileName);
-   strcpy(pFileExt, ".log");
-
-   dsyslog( "cNoadIndexFile::logIndexEx() to file %s last is %d", logFileName, Last());
-
-   if ((fLog = open(logFileName, O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)) >= 0)
-   {
-     //dsyslog( "cNoadIndexFile::logIndexEx() fLog is %d", fLog);
-     for( int i = 0; i < Last(); i++)
-     {
-       char *buffer;
-       tIndexEx *ti = &indexEx[i];
-       asprintf(&buffer, "%06d %2d %3d %3d\n",i,ti->isLogo,ti->blackTop, ti->blackBottom);
-       if (safe_write(fLog, buffer, strlen(buffer)) < 0)
-       {
-         LOG_ERROR_STR(logFileName);
-       }
-       //dsyslog( "cNoadIndexFile::save %p %d %d %d %d --> %s",ti, i,ti->isLogo,ti->blackTop, ti->blackBottom, buffer);
-       delete buffer;
-     }
-     close(fLog);
-   }
-   else
-     LOG_ERROR_STR(logFileName);
-   dsyslog( "cNoadIndexFile::logIndexEx() fLog is %d", fLog);
-   delete logFileName;
-}
-
 //#ifdef VNOAD
 bool cNoadIndexFile::CatchUp(int Index)
 {

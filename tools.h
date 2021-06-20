@@ -81,7 +81,6 @@ char *strreplace(char *s, const char *s1, const char *s2); // re-allocates 's' a
 char *skipspace(const char *s);
 char *stripspace(char *s);
 char *compactspace(char *s);
-const char *strescape(const char *s, const char *chars); // returns a statically allocated string!
 bool startswith(const char *s, const char *p);
 bool endswith(const char *s, const char *p);
 bool isempty(const char *s);
@@ -93,7 +92,6 @@ const char *AddDirectory(const char *DirName, const char *FileName); // returns 
 int FreeDiskSpaceMB(const char *Directory, int *UsedMB = NULL);
 bool DirectoryOk(const char *DirName, bool LogErrors = false);
 bool MakeDirs(const char *FileName, bool IsDirectory = false);
-bool RemoveFileOrDir(const char *FileName, bool FollowSymlinks = false);
 bool RemoveEmptyDirectories(const char *DirName, bool RemoveThis = false);
 char *ReadLink(const char *FileName);
 bool SpinUpDisk(const char *FileName);
@@ -103,27 +101,6 @@ int ReadFrame(int f, unsigned char *b, int Length, int Max);
 int getVStreamID(int f);
 int getTSPID(int f);
 int isHDTV(int f);
-
-/*
-class cFile {
-private:
-  static bool files[];
-  static int maxFiles;
-  int f;
-public:
-  cFile(void);
-  ~cFile();
-  operator int () { return f; }
-  bool Open(const char *FileName, int Flags, mode_t Mode = DEFFILEMODE);
-  bool Open(int FileDes);
-  void Close(void);
-  bool IsOpen(void) { return f >= 0; }
-  bool Ready(bool Wait = true);
-  static bool AnyFileReady(int FileDes = -1, int TimeoutMs = 1000);
-  static bool FileReady(int FileDes, int TimeoutMs = 1000);
-  static bool FileReadyForWriting(int FileDes, int TimeoutMs = 1000);
-  };
-*/
 
 /// cUnbufferedFile is used for large files that are mainly written or read
 /// in a streaming manner, and thus should not be cached.
