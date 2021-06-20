@@ -10,7 +10,7 @@ dnl ---------------------------------------------------------------------------
 dnl initialisation
 dnl ---------------------------------------------------------------------------
 AC_PREREQ(2.57)
-AC_INIT(noad, 0.8.6, theNoad@ulmail.net)
+AC_INIT(noad, 0.8.7, theNoad@ulmail.net)
 AM_INIT_AUTOMAKE(dist-bzip2)
 AM_SILENT_RULES([yes])
 AC_CONFIG_SRCDIR([cchecklogo.cpp])

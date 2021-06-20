@@ -1,4 +1,17 @@
-﻿Version 0.8.6
+﻿Version 0.8.7
+- re-compose a git repository and place it on GitHub
+- add support for LIBAVCODEC version 57 (>=ffmpeg-3.4)
+  found in patches from misc. linux distributions
+- change svdrp port used in vdr since 1.7.15 (>11 years...)
+- remove unused code to reduce compiler warnings
+- fix warnings and errors for clang-11/12 and gcc-11
+- fix compile errors with musl-libc
+- channels.h: fix file mode of channels.h
+- add autogen.sh for easy use of autoconf/automake
+- configure.ac: let "ar" be detected via AM_PROG_AR
+  (https://bugs.gentoo.org/469810)
+
+Version 0.8.6
 - fixes for ffmpeg 1.2
 
 Version 0.8.5
