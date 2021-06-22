@@ -20,10 +20,13 @@ using parts of stacktrace.h (c) 2008, Timo Bingmann from http://idlebox.net/
 #include <sys/vfs.h>
 #include <time.h>
 #include <unistd.h>
+#ifdef __GLIBC__
 #include <execinfo.h>
+#endif
 #include <signal.h>
 #include <stdarg.h>
 #include <cxxabi.h>
+#include <limits.h>
 
 extern int SysLogLevel;
 
@@ -1021,6 +1024,7 @@ void dump2log (unsigned char * buf, unsigned char * end )
   }
 }
 
+#ifdef __GLIBC__
 /** Print a demangled stack backtrace of the caller function to FILE* out. */
 static inline void print_stacktrace(FILE *out = stderr, unsigned int max_frames = 32)
 {
@@ -1101,9 +1105,11 @@ static inline void print_stacktrace(FILE *out = stderr, unsigned int max_frames 
     free(funcname);
     free(symbollist);
 }
+#endif //#ifdef __GLIBC__
 
 void show_stackframe(bool bFork)
 {
+  #ifdef __GLIBC__
   void *trace[32];
   char **messages = (char **)NULL;
   int i, trace_size = 0;
@@ -1187,6 +1193,7 @@ void show_stackframe(bool bFork)
     syslog(LOG_INFO, "[bt] %s\n", messages[i]);
   }
   */
+  #endif //#ifdef __GLIBC__
 }
 
 #define MAXSYSLOGBUF 256

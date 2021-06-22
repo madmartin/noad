@@ -25,7 +25,9 @@
 #include <sys/resource.h>
 #include <sys/wait.h>
 #include <signal.h>
+#ifdef __GLIBC__
 #include <execinfo.h>
+#endif
 #include "noad.h"
 #include "svdrpc.h"
 #include "tnoad.h"

@@ -52,6 +52,10 @@ template<class T> inline T min(T a, T b) { return a <= b ? a : b; }
 template<class T> inline T max(T a, T b) { return a >= b ? a : b; }
 template<class T> inline void swap(T &a, T &b) { T t = a; a = b; b = t; }
 
+/* From OpenBSD sys/stat.h; glibc io/sys/stat.h agrees */
+#ifndef DEFFILEMODE
+#define DEFFILEMODE 0000666
+#endif
 
 class cString {
 private:
