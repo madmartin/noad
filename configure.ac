@@ -99,7 +99,7 @@ AC_ARG_WITH([libmpeg2],
           
 if test "x$with_libmpeg2" != "xno" ; then
   PKG_CHECK_MODULES(LIBMPEG2, [libmpeg2 >= 0.3.1], PKG_LIBMPEG2=1, PKG_LIBMPEG2=0)
-  if test "$PKG_LIBMPEG2" == "1"; then
+  if test "$PKG_LIBMPEG2" = "1"; then
     LIBMPEG_VERSION="`pkg-config --modversion libmpeg2`"
     AC_MSG_NOTICE([found libmpeg2 Version $LIBMPEG_VERSION])
     AC_SUBST(LIBMPEGX,$LIBMPEG2_LIBS)
@@ -133,7 +133,7 @@ AC_ARG_WITH([ffmpeg],
           
 if test "x$with_ffmpeg" != "xno" ; then
   PKG_CHECK_MODULES(FFMPEG, libavutil libavformat [libavcodec >= 52.0.0], HAVE_FFMPEG=1, HAVE_FFMPEG=0)
-  if test "$HAVE_FFMPEG" == "1"; then
+  if test "$HAVE_FFMPEG" = "1"; then
     LIBAVCODEC_VERSION="`pkg-config --modversion libavcodec`"
     AC_MSG_NOTICE([found libavcodec Version $LIBAVCODEC_VERSION])
     OLDLDFLAGS="$LDFLAGS"
@@ -143,10 +143,10 @@ if test "x$with_ffmpeg" != "xno" ; then
     dnl LDFLAGS="$LDFLAGS $FFMPEG_LIBS"
     CXXFLAGS="$FFMPEG_CFLAGS $CXXFLAGS"
     AC_CHECK_MEMBER(AVIOContext.read_packet,HAVE_AVIOCONTEXT=1, HAVE_AVIOCONTEXT=0,[#include "libavformat/avformat.h"])
-    if test "$HAVE_AVIOCONTEXT" == "1"; then
+    if test "$HAVE_AVIOCONTEXT" = "1"; then
 	CPPFLAGS="-DUSE_AVIOCONTEXT $CPPFLAGS"
     fi
-    if test "$HAVE_AVIOCONTEXT" == "0" ; then
+    if test "$HAVE_AVIOCONTEXT" = "0" ; then
 	echo ffmpeg not usable
 	HAVE_FFMPEG=0
 	LDFLAGS="$OLDLDFLAGS"
@@ -157,7 +157,7 @@ if test "x$with_ffmpeg" != "xno" ; then
 	AC_SUBST(decoderok,1)
 	CXXFLAGS="-DUSE_FFMPEG $CXXFLAGS"
 	AC_CHECK_MEMBER(AVFrame.width,HAVE_AVFRAMEWIDTH=1, HAVE_AVFRAMEWIDTH=0,[#include "libavcodec/avcodec.h"])
-	if test "$HAVE_AVFRAMEWIDTH" == "0" ; then
+	if test "$HAVE_AVFRAMEWIDTH" = "0" ; then
 	   CXXFLAGS="-DFORCE_CODECWIDTH $CXXFLAGS"
 	fi
 	dnl AC_SUBST(LIBS,"$LIBS $FFMPEG_LIBS")
@@ -189,7 +189,7 @@ if test "x$with_magick" != "xno" ; then
     ],[mpp_defined="1"],[mpp_defined="0"]
   )
   CXXFLAGS=$ac_save_CXXFLAGS
-  if test $mpp_defined -eq 1 && test $havemagick -eq 1; then
+  if test $mpp_defined -eq 1 && test $havemagick -eq 1 ; then
     PICSRC="markpics"
     markpiccxxflags="$IMAGEMAGICK_CFLAGS"
     markpics_ldadd="$IMAGEMAGICK_LIBS"
@@ -215,8 +215,7 @@ dnl CXXFLAGS="-v -g -O3 $CXXFLAGS"
 CFLAGS="$CFLAGS -DFFMPEGDECODING"
 CPPFLAGS="$CPPFLAGS -DFFMPEGDECODING "
 
-if test "$decoderok" != "1"; 
-then
+if test "$decoderok" != "1" ; then
   echo
   echo
   echo "can't find useable video-decoder"
@@ -233,20 +232,20 @@ else
     echo
     echo
     echo " this is noad Version $VERSION"
-    if test "$libmpeg2ok" == "1" ; then
+    if test "$libmpeg2ok" = "1" ; then
        echo " configured with libmpeg2 Version $LIBMPEG_VERSION"
     else
        echo " libmpeg2-support not configured"
     fi
-    if test "$ffmpegok" == "1" ; then
+    if test "$ffmpegok" = "1" ; then
        echo " configured with libavcodec Version $LIBAVCODEC_VERSION"
     else
        echo " ffmpeg-support not configured"
     fi
-    if test "$libmagickok" == "1" ; then
+    if test "$libmagickok" = "1" ; then
        echo " configured with Magick++ Version $LIBMAGICK_VERSION"
     fi
-    if test "$with_tools" == "yes" ; then
+    if test "$with_tools" = "yes" ; then
       echo " compile with tools: $TOOLSRC"
     fi
     echo 
