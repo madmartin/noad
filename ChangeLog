@@ -1,4 +1,11 @@
-﻿Version 0.8.7
+﻿Version 0.8.8
+- configure.ac: change code to work with /bin/sh -> /bin/dash
+- remove mkinstalldirs (from old build system)
+- .gitignore: add more files
+- autogen.sh: add full version
+- replace COPYING with current version
+
+Version 0.8.7
 - re-compose a git repository and place it on GitHub
 - add support for LIBAVCODEC version 57 (>=ffmpeg-3.4)
   found in patches from misc. linux distributions
