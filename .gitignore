@@ -27,6 +27,8 @@
 *.lib
 
 # Executables
+checkMarks
+noad
 *.exe
 *.out
 *.app
@@ -48,6 +50,7 @@ depcomp
 install-sh
 lib*.a
 missing
+mkinstalldirs
 stamp-h1
 test-driver
 tags
