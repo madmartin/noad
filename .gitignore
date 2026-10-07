@@ -29,6 +29,8 @@
 # Executables
 checkMarks
 noad
+markpics
+showindex
 *.exe
 *.out
 *.app
