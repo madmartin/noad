@@ -67,7 +67,7 @@ static int noad_read_packet(void *h, uint8_t *buf, int size)
     cfn->SetOffset( decoder->ffmpegFileNumber, decoder->ffmpegFileOffset);
     ReadFrame (cfn->File(), readBuffer, decoder->ffmpegLength, MAXFRAMESIZE);
     decoder->__bufBytes = decoder->ffmpegLength;
-    decoder->__bufPos = readBuffer; 
+    decoder->__bufPos = readBuffer;
     decoder->ffmpegLastFileOffset = decoder->ffmpegFileOffset;
   }
   if( decoder->__bufBytes > 0 )
@@ -82,7 +82,7 @@ static int noad_read_packet(void *h, uint8_t *buf, int size)
 	return 0;
 }
 
-static int noad_write_packet(void */*h*/, uint8_t */*buf*/, int /*size*/)
+static int noad_write_packet(void */*h*/, const uint8_t */*buf*/, int /*size*/)
 {
   //FFMPegDecoder *decoder = (FFMPegDecoder*)(h->priv_data);
 	/*
@@ -149,8 +149,6 @@ FFMPegDecoder::~FFMPegDecoder()
 
 int FFMPegDecoder::decoder_init()
 {
-	// Register all formats and codecs
-	av_register_all();
 #ifdef USE_AVIOCONTEXT
 #define IOBUFSIZE (1024L*200L)
    iobuffer = (unsigned char*)av_malloc(IOBUFSIZE);
@@ -253,10 +251,9 @@ int FFMPegDecoder::openFile(cFileName *_cfn, cNoadIndexFile *_cIF)
    // Create CodecContext from Codec
    pCodecCtx= avcodec_alloc_context3(pCodec);
 
-	// Inform the codec that we can handle truncated bitstreams -- i.e.,
-	// bitstreams where frame boundaries can fall in the middle of packets
-	if(pCodec->capabilities & AV_CODEC_CAP_TRUNCATED)
-		pCodecCtx->flags|=AV_CODEC_FLAG_TRUNCATED;
+	// The modern FFmpeg API no longer exposes the legacy truncated-bitstream
+	// flag used by older versions. The decoder handles packet boundaries
+	// through avcodec_send_packet()/avcodec_receive_frame().
 #endif
 
 	// Open codec
@@ -301,7 +298,12 @@ int FFMPegDecoder::decoder_exit()
 	// Close the codec
 	if( pCodecCtx )
 	{
-		//avcodec_close(pCodecCtx);
+#if LIBAVCODEC_VERSION_MAJOR >= 58
+		avcodec_free_context(&pCodecCtx);
+#else
+		avcodec_close(pCodecCtx);
+		av_free(pCodecCtx);
+#endif
 		pCodecCtx = NULL;
 	}
 #ifdef USE_AVIOCONTEXT
@@ -360,7 +362,7 @@ bool FFMPegDecoder::GetVideoFrame(bool restart)
       {
           esyslog("Error while decoding frame");
 		    //Mpeg1Context *s1 = pCodecCtx->priv_data;
-			 //MpegEncContext *s = &s1->mpeg_enc_ctx; 
+			 //MpegEncContext *s = &s1->mpeg_enc_ctx;
 			 av_free_packet(&packet);
           packet.data=NULL;
           bytesRemaining=0;
@@ -400,7 +402,7 @@ bool FFMPegDecoder::GetVideoFrame(bool restart)
     } while(packet.stream_index!=videoStream);
 
     //dsyslog("found packet with %d bytes of data", packet.size);
-		  
+
     bytesRemaining=packet.size;
     rawData=packet.data;
   }
@@ -514,7 +516,7 @@ bool FFMPegDecoder::getNextPicture(int startIndex, int flags )
             esyslog("ERROR: faulty width (%d) or height(%d)",FRAMEWIDTH,FRAMEHEIGHT);
       }
 	}
-	startIndex = ffmpeg_index; 
+	startIndex = ffmpeg_index;
 	return bRet;
 }
 
@@ -551,7 +553,7 @@ bool FFMPegDecoder::getPictures(int &startIndex, int flags, stopFunction stop )
             esyslog("ERROR: faulty width (%d) or height(%d)",FRAMEWIDTH,FRAMEHEIGHT);
       }
 	}
-	startIndex = ffmpeg_index; 
+	startIndex = ffmpeg_index;
 	return bRet;
 }
 
@@ -561,7 +563,7 @@ bool FFMPegDecoder::getGOP(int &startIndex )
 	uint16_t FileNumber;
 	off_t FileOffset;
 	bool Independent;
-	int gopStartFrame = startIndex; 
+	int gopStartFrame = startIndex;
 	cIF->Get(startIndex, &FileNumber, &FileOffset, &Independent);
 	if( !Independent )
 		gopStartFrame = cIF->GetNextIFrame( startIndex, false, NULL, NULL, NULL, true);
@@ -600,7 +602,7 @@ bool FFMPegDecoder::getGOP(int &startIndex )
 		int offset = startIndex - gopStartFrame;
         callBackFunc(&GOP_Buffer.gop_buf[offset]);
 	}
-	startIndex = ffmpeg_index; 
+	startIndex = ffmpeg_index;
 	return bRet;
 }
 
@@ -610,10 +612,7 @@ void FFMPegDecoder::resetDecoder()
 	//if( pFormatCtx )
 	//	av_read_frame_flush(pFormatCtx);
 	if( pCodecCtx )
-	{
-		pCodecCtx->codec->flush(pCodecCtx);
 		avcodec_flush_buffers(pCodecCtx);
-	}
 	if( pFrame )
 		av_free(pFrame);
 #if LIBAVCODEC_VERSION_MAJOR < 57

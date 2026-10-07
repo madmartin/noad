@@ -10,14 +10,14 @@ extern "C"
 }
 
 #if LIBAVCODEC_VERSION_MAJOR > 54
-#define AVCODEC_MAX_AUDIO_FRAME_SIZE 192000 // 1 second of 48khz 32bit audio 
+#define AVCODEC_MAX_AUDIO_FRAME_SIZE 192000 // 1 second of 48khz 32bit audio
 #endif
 
 // from libavutil/intreadwrite.h:
 #define AV_RB32(x)  ((((const uint8_t*)(x))[0] << 24) | \
                      (((const uint8_t*)(x))[1] << 16) | \
                      (((const uint8_t*)(x))[2] <<  8) | \
-                      ((const uint8_t*)(x))[3]) 
+                      ((const uint8_t*)(x))[3])
 //...
 // from libavcodec/mpegaudio.h:
 /* fast header check for resync */
@@ -35,7 +35,7 @@ static inline int ff_mpa_check_header(uint32_t header){
     if ((header & (3<<10)) == 3<<10)
         return -1;
     return 0;
-} 
+}
 //...
 #define MIN_LOWVALS 3
 #define CUT_VAL 10
@@ -48,7 +48,7 @@ AudioInfo *ai=&_ai;
 int pr = 1;
 
 uint8_t *outbuf=NULL;
-AVCodec *codec=NULL;
+const AVCodec *codec=NULL;
 AVCodecContext *codecContext= NULL;
 #if LIBAVCODEC_VERSION_MAJOR > 54
 AVDictionary *avDictionary = NULL;                // "create" an empty dictionary
@@ -96,8 +96,10 @@ void initAVCodec()
   av_log_set_callback(my_av_dolog);
   /* register all the codecs (you can also register only the codec
      you wish to have smaller code */
+#if LIBAVCODEC_VERSION_MAJOR < 58
   avcodec_register_all();
-    
+#endif
+
   /* find the mpeg audio decoder */
 #if LIBAVCODEC_VERSION_MAJOR < 57
   codec = avcodec_find_decoder(CODEC_ID_MP3);
@@ -105,10 +107,9 @@ void initAVCodec()
   codec = avcodec_find_decoder(AV_CODEC_ID_MP3);
 #endif
 
-  if (!codec) 
-  {
-    fprintf(stdout, "codec not found\n");
-  }
+if (!codec) {
+  fprintf(stdout, "codec not found\n");
+}
 
 #if (LIBAVCODEC_VERSION_MAJOR < 53)
   codecContext = avcodec_alloc_context();
@@ -136,11 +137,14 @@ void initAVCodec()
 void exitAVCodec()
 {
   free(outbuf);
+
+#if LIBAVCODEC_VERSION_MAJOR >= 58
+  avcodec_free_context(&codecContext);
+#else
   avcodec_close(codecContext);
-#if LIBAVCODEC_VERSION_MAJOR > 54
-  av_dict_free(&avDictionary);
-#endif
   av_free(codecContext);
+#endif
+
   av_codec_initialised = false;
 }
 
@@ -161,7 +165,7 @@ int scan_audio_stream_0(unsigned char *mbuf, int count)
   int copyright = 0;
   int original_home = 0;
   int emphasis = 0;
-*/  
+*/
   int16_t chan1 = 0;
   int16_t chan2 = 0;
 //  int16_t chan1t = 0;
@@ -170,11 +174,11 @@ int scan_audio_stream_0(unsigned char *mbuf, int count)
   uint32_t header;
   if( in_buf_count == 0 )
   {
-	 header = AV_RB32(buf); 
+	 header = AV_RB32(buf);
 	 while( count-- && ff_mpa_check_header(header) < 0 )
 	 {
 		 buf++;
-		 header = AV_RB32(buf); 
+		 header = AV_RB32(buf);
 	 }
 	 if( count <= 0 )
 		 return -1;
@@ -184,7 +188,7 @@ int scan_audio_stream_0(unsigned char *mbuf, int count)
   long size = in_buf_count;
   inbuf_ptr = audio_in_buffer;
 
-  while (size > 0) 
+  while (size > 0)
   {
     out_size = AVCODEC_MAX_AUDIO_FRAME_SIZE;
 #if (LIBAVCODEC_VERSION_MAJOR < 53)
@@ -197,7 +201,7 @@ int scan_audio_stream_0(unsigned char *mbuf, int count)
     p.size = 576;
     len = avcodec_decode_audio3(codecContext, (short *)outbuf,
                          &out_size, &p);
-#else
+/* else
     AVPacket p;
     av_init_packet(&p);
     p.data = inbuf_ptr;
@@ -255,7 +259,7 @@ int scan_audio_stream_0(unsigned char *mbuf, int count)
 		}
 		while (ret == 0);
 
-		av_frame_free(&frame);
+		av_frame_free(&frame); */
 #endif
 
     if (len < 0)
@@ -333,7 +337,7 @@ int scan_audio_stream_0(unsigned char *mbuf, int count)
 //        SDL_PauseAudio(0);
         while( audioRingBuffer->Available() > 12000 )
           SDL_Delay(10);
-#endif      
+#endif
 		 /*
       if( (audio_len+out_size) > AUDIO_BUF_SIZE )
       {
@@ -379,13 +383,13 @@ int scan_audio_stream_0(unsigned char *mbuf, int count)
     //fprintf(stderr,"found %4d low values within %4d total values at %8.2f sampleofset %8.2f (%0.2d:%0.2d) diff %0.2d:%0.2d %c\n",lowvalcount,out_size/4,videooffset,sampleoffset,min,sec,min2,sec2, ((min2*60+sec2)>=60)?'<':' ');
     //fprintf(stderr,"current audio_pts is %lld\n",audiopts);
   }
-  
-  
+
+
   uint8_t *headr;
   int found = 0;
   int c = 0;
   int fr =0;
-  
+
   while (!found && c < count)
   {
     uint8_t *b = mbuf+c;
@@ -395,7 +399,7 @@ int scan_audio_stream_0(unsigned char *mbuf, int count)
     else {
             c++;
     }
-  }	
+  }
 
   if (!found) return -1;
 
@@ -423,14 +427,14 @@ int scan_audio_stream_0(unsigned char *mbuf, int count)
   */
   fr = (headr[2] & 0x0c ) >> 2;
   ai->frequency = freq[fr]*100;
-  
+
   /*
   if (pr)
   {
     if (ai->frequency == 3)
       fprintf (stderr, "  Freq: reserved\n");
     else
-      fprintf (stderr,"  Freq: %2.1f kHz\n", 
+      fprintf (stderr,"  Freq: %2.1f kHz\n",
                 ai->frequency/1000.);
   }
   */

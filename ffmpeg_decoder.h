@@ -24,7 +24,7 @@ class FFMPegDecoder : public MPEGDecoder
 #if LIBAVCODEC_VERSION_MAJOR > 56
 	AVCodecParameters *pCodecPar;
 #endif
-	AVCodec         *pCodec;
+	const AVCodec   *pCodec;
 #if LIBAVCODEC_VERSION_MAJOR > 54
    AVDictionary    *avDictionary;
 #endif
