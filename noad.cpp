@@ -46,7 +46,7 @@ MPEGDecoder *decoder;
 
 extern "C"
 {
-  static const char *VERSIONSTRING = "0.8.8";
+  static const char *VERSIONSTRING = "0.8.9";
 }
 
 #ifdef VNOAD
@@ -175,7 +175,7 @@ bool StdCallBack( noadYUVBuf* yuvbuf )
 
    if( ndata && yuvbuf)
    {
-      // bei Änderung der Bildgrösse daten zurücksetzen
+      // bei ï¿½nderung der Bildgrï¿½sse daten zurï¿½cksetzen
       if( yuvbuf->width != ndata->m_nGrabWidth || yuvbuf->height != ndata->m_nGrabHeight )
       {
          delete cctrl;
@@ -465,7 +465,7 @@ bool detectLogo( const char* logoname, int iStartFrame )
         end = time(NULL);
         secsForLogoDetection = (int)(end - start);
         decodedFramesForLogoDetection = totalDecodedFrames;
-        dsyslog("logo detected %s", 
+        dsyslog("logo detected %s",
            ndata->m_nLogoCorner == TOP_LEFT ? "top left ":
            ndata->m_nLogoCorner == TOP_RIGHT ? "top right ":
            ndata->m_nLogoCorner == BOT_LEFT ? "bottom left ":
@@ -738,8 +738,8 @@ bool checkBlacklineOnMark( cMarks *marks, cMark *m, bool bForward, int iCheckTim
 #define PRE_POS_OK (ndata->m_nBlackLinesTop >= iTopLines && ndata->m_nBlackLinesBottom >= iBottomLines)
 #define PRE_POS_RESET (ndata->m_nBlackLinesTop + ndata->m_nBlackLinesBottom < (iTopLines+iBottomLines)-(((iTopLines+iBottomLines)*20)/100))
 	// MAX_BEST_POS_RESET_COUNT - Anzahl Frames mit POS_NOT_OK == true,
-	// nach denen iBestPos zurückgesetzt wird
-	// 20.9.03: geändert auf 25 (vorher 3) wegen RTL/The 6th Day
+	// nach denen iBestPos zurï¿½ckgesetzt wird
+	// 20.9.03: geï¿½ndert auf 25 (vorher 3) wegen RTL/The 6th Day
 #define MAX_BEST_POS_RESET_COUNT 90
 
 	dsyslog( "checkBlacklineOnMark at %d %s %d %d for %d frames",m->position, bForward ? "forward":"backward",iTopLines, iBottomLines, iCheckTime );
@@ -1076,7 +1076,7 @@ bool detectBlacklines(cMarks *marks, int& iTopLines, int& iBottomLines)
 
 	// Startposition finden
 	cMark *m = marks->GetNext(-1);
-	// erste Unterbrechung überspringen
+	// erste Unterbrechung ï¿½berspringen
 	// wenn mehrere Unterbrechungen vorhanden sind...
 	if( marks->Count() > 2 )
 	{
@@ -1087,13 +1087,13 @@ bool detectBlacklines(cMarks *marks, int& iTopLines, int& iBottomLines)
 	}
 	while( !bStartpos && m != NULL )
 	{
-		// zum nächsten I-Frame
+		// zum nï¿½chsten I-Frame
 		index = cIF->GetNextIFrame( m->position, true, &FileNumber, &FileOffset, &Length, true);
 		// 5 Minuten weiter
 		index += 5*FRAMESPERMIN;
 		if( m != NULL )
 			m = marks->GetNext(m->position);
-		// prüfen, ob mind. 2000 Frames verfügbar sind
+		// prï¿½fen, ob mind. 2000 Frames verfï¿½gbar sind
 		if( m != NULL )
 		{
 			if( index + 2000 < m->position )
@@ -1118,7 +1118,7 @@ bool detectBlacklines(cMarks *marks, int& iTopLines, int& iBottomLines)
 
 	while( !bOk )
 	{
-		// Abbruch bei der nächsten Unterbrechung
+		// Abbruch bei der nï¿½chsten Unterbrechung
 		if( index > m->position )
 		{
 			dsyslog( "detectBlacklines out of range" );
@@ -1141,7 +1141,7 @@ bool detectBlacklines(cMarks *marks, int& iTopLines, int& iBottomLines)
 		//    dsyslog( "detectBlacklines (%d) TopBlackLines = %3d, BotBlackLines = %3d (%4d) %d",index,ndata->m_nBlackLinesTop, ndata->m_nBlackLinesBottom,ndata->m_nBlackLinesTop+ndata->m_nBlackLinesBottom,checkedFrames );
 		// Reset-Bedingungen:
 		// - Anzahl der Blacklines oben oder unten < MINBLACKLINES
-		// - Anzahl der Blacklines oben oder unten > 1/3 der Bildhöhe
+		// - Anzahl der Blacklines oben oder unten > 1/3 der Bildhï¿½he
 		// - Differenz Top- und BottomBlacklines > 50
 		if( ndata->m_nBlackLinesTop < MINBLACKLINES ||
 			ndata->m_nBlackLinesBottom < MINBLACKLINES )
@@ -1211,7 +1211,7 @@ bool detectBlacklines(int _index, int iFramesToCheck, int& iTopLines, int& iBott
 	  dsyslog( "detectBlacklines (%d) TopBlackLines = %3d, BotBlackLines = %3d (%4d) %d",index,ndata->m_nBlackLinesTop, ndata->m_nBlackLinesBottom,ndata->m_nBlackLinesTop+ndata->m_nBlackLinesBottom,checkedFrames );
 	  // Reset-Bedingungen:
 	  // - Anzahl der Blacklines oben oder unten < MINBLACKLINES
-	  // - Anzahl der Blacklines oben oder unten > 1/3 der Bildhöhe
+	  // - Anzahl der Blacklines oben oder unten > 1/3 der Bildhï¿½he
 	  // - Differenz Top- und BottomBlacklines > 50
 	  if( ndata->m_nBlackLinesTop < MINBLACKLINES ||
 		  ndata->m_nBlackLinesBottom < MINBLACKLINES )
@@ -1245,20 +1245,20 @@ bool detectBlacklines(int _index, int iFramesToCheck, int& iTopLines, int& iBott
 
 /*
 *  checkBlacklineOnMarks
-*  prüft, ob die Aufnahme schwarze Ränder oben und unten hat
+*  prï¿½ft, ob die Aufnahme schwarze Rï¿½nder oben und unten hat
 *  ist dies der Fall, werden die Einschaltmarken nach Untersuchung
 *  der umliegenden Bilder ggf. angepasst
 *  im Normalfall wird das Senderlogo erst einige sekunden nach
-*  Filmbeginn eingeblendet, daher wird zuerst rückwärts gesucht
-*  ist die rückwärtssuche erfolglos, wird vorwärts gesucht
-*  wg. RTL wird vorher von der Schnittmarke+3min rückwärts gesucht
+*  Filmbeginn eingeblendet, daher wird zuerst rï¿½ckwï¿½rts gesucht
+*  ist die rï¿½ckwï¿½rtssuche erfolglos, wird vorwï¿½rts gesucht
+*  wg. RTL wird vorher von der Schnittmarke+3min rï¿½ckwï¿½rts gesucht
 */
 bool checkBlacklineOnMarks(cMarks *marks)
 {
    INFO("checkBlacklineOnMarks",NULL);
    int iTopLines = 0;
    int iBottomLines = 0;
-   // prüfen auf Ränder
+   // prï¿½fen auf Rï¿½nder
    detectBlacklines(marks, iTopLines, iBottomLines);
    if( iTopLines < MINBLACKLINES || iBottomLines < MINBLACKLINES )
    {
@@ -1275,9 +1275,9 @@ bool checkBlacklineOnMarks(cMarks *marks)
    while( m != NULL )
    {
       int iPos = m->position;
-      int iBackFrames = 60*framespersec;      // Anzahl Frames für normale rückwärtssuche
-      int iForwardFrames = 200*framespersec;  // Anzahl Frames für vorwärtssuche
-      // rückwärtssuche bis max zur vorherigen Schnittmarke
+      int iBackFrames = 60*framespersec;      // Anzahl Frames fï¿½r normale rï¿½ckwï¿½rtssuche
+      int iForwardFrames = 200*framespersec;  // Anzahl Frames fï¿½r vorwï¿½rtssuche
+      // rï¿½ckwï¿½rtssuche bis max zur vorherigen Schnittmarke
       cMark *m2 = marks->GetPrev(iPos);
       if( m2 != NULL )
       {
@@ -1286,7 +1286,7 @@ bool checkBlacklineOnMarks(cMarks *marks)
          if( iBackFrames < 0 )
             iBackFrames = 0;
       }
-      // vorwärtssuche bis max zur nächsten Schnittmarke
+      // vorwï¿½rtssuche bis max zur nï¿½chsten Schnittmarke
       m2 = marks->GetNext(iPos);
       if( m2 != NULL )
       {
@@ -1736,7 +1736,7 @@ int scanRecord( int iNumFrames, cMarks *_marks )
             }
           }
         }
-        
+
         if( iState != iOldState && iState != -1 )
         {
           iCurrentFrame -= (BIGSTEP*2);
@@ -1782,7 +1782,7 @@ int scanRecord( int iNumFrames, cMarks *_marks )
 
   if( doPass2 )
     MarkCleanup(pmarks);
-  
+
   dsyslog( "Marks before Save:" );
   listMarks(pmarks);
   pmarks->Save();
@@ -1904,7 +1904,7 @@ int checkScenecheckOnMark( cMarks *marks, cMark *m )
   int sceneChangesAfter = 0;
   bTSFoundPayload = false;
   int flags = DEMUX_RESET;
-  
+
   if( iEnd > cIF->Last() )
       return 0;
   if( marks )
@@ -1995,7 +1995,7 @@ int checkScenecheckOnMark( cMarks *marks, cMark *m )
       iFirst10SecBlock = 0;
   }
   dsyslog("iFirst10SecBlock %d (%d) --> %d",iFirst10SecBlock, iFirst10SecBlock*FRAMESPERSEC+iStart,iFirst10SecBlockBlackBack);
-  
+
   int sOfMark = (m->position-iStart)/FRAMESPERSEC;
   int iBackBlack = 0;
   while(iBackBlack == 0 && sOfMark >= 0)
@@ -2007,7 +2007,7 @@ int checkScenecheckOnMark( cMarks *marks, cMark *m )
     iForwardBlack = ChangeFreq[sOfMark++].lastblack;
   if(iFirst5SecBlock > 0 )
   {
-    
+
     for(int i = iFirst5SecBlock; i > 0 && iMarkpos == 0; i-- )
       iMarkpos = ChangeFreq[i].lastblack;
   }
@@ -2102,7 +2102,7 @@ int getPicInfo(pic_info *info, int iStartFrame, int framesToRead,
    }
    return iCount;
 }
-  
+
 bool doOverlapDetection(pic_info *picsbefore, int numPicsBefore, pic_info *picsafter, int numPicsAfter, cMark **m, cMarks *pmarks)
 {
    dsyslog("doOverlapDetection with %d pics before and %d pics after mark", numPicsBefore, numPicsAfter);
@@ -2311,7 +2311,7 @@ int checkScenecheckOnMark( cMarks *marks, cMark *m, pic_info *picsafter, int iPi
   }
   dsyslog("iScPos %d iFirst5SecBlock %d iBackBlack %d iForwardBlack %d",iScPos, iFirst5SecBlock, iBackBlack,iForwardBlack);
   dsyslog("iMarkpos %d ",iMarkpos);
-  
+
   delete [] ChangeFreq;
   if( marks && iMarkpos )
   {
@@ -2502,7 +2502,7 @@ void checkMarkPair(cMark **m_org, cMarks *marks)
 
 void pass2a(cMarks *marks)
 {
-  // prüfen auf Ränder
+  // prï¿½fen auf Rï¿½nder
   detectBlacklines(marks, iTopLines, iBottomLines);
   if( iTopLines < MINBLACKLINES || iBottomLines < MINBLACKLINES )
   {
@@ -2579,9 +2579,9 @@ void calcSaving(cMarks * /*marks*/)
 }
 
 #ifdef VNOAD
-void setInfoCallback(infocbfunc infocb) 
-{ 
-	info_callback = infocb; 
+void setInfoCallback(infocbfunc infocb)
+{
+	info_callback = infocb;
 }
 void info(const char*info1, const char *info2)
 {
@@ -2603,7 +2603,7 @@ void checkMarkByAudio(cMark **m_org, cMarks *marks)
   int iLastSilenceFrame = 0;
   int numsilence = 0;
   int flags = DEMUX_RESET;
-  
+
   resetAudioBuffer();
   cMark *mnext = marks->GetNext(m->position);
   if( mnext && iEndFrame > mnext->position )

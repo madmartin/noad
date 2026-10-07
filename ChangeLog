@@ -1,4 +1,7 @@
-﻿Version 0.8.8
+﻿Version 0.8.9
+- Update FFmpeg API compatibility
+
+Version 0.8.8
 - configure.ac: change code to work with /bin/sh -> /bin/dash
 - remove mkinstalldirs (from old build system)
 - .gitignore: add more files
@@ -64,13 +67,13 @@ Version 0.6.0
 Version 0.5.3
 - change the way to find the mpeg2-headers in configure
   look for pkg-config
-  else try /usr/include 
+  else try /usr/include
   else try /usr/local/include
 - fixed a bug in restart scan after searching for a new logo in online mode
 - changed umask for create mark-files
-  
+
 Version 0.5.2
-- little speedup in blackline-detection 
+- little speedup in blackline-detection
 - change configure to avoid automatic compiling of toolies
 - add overlap-detection in online-mode
 
@@ -80,7 +83,7 @@ Version 0.5.1
 
 Version 0.5.0
 - some code-cleanups
-- add Parameter --markfile to set a different markfile-name 
+- add Parameter --markfile to set a different markfile-name
 - do logo redetection if no logo found after 12 minutes (Sea of Love, Kabel 1, 6.6.04)
 - fixed a bug in cSVDRPC::ReadCompleteReply()
 - fixed a bug in checkBlackFrameOnMark (Nuhr vom Feinsten, ProSieben, 28.06.04)
@@ -98,7 +101,7 @@ Version 0.4.2:
 
 
 Version 0.4.1:
-- Fehlerbereinigung configure.ac 
+- Fehlerbereinigung configure.ac
 - start als Hintergrundprozess verbessert
 - pid-file zur Vermeidung von Doppelaufrufen eingefï¿½hrt
 - Schrittweite für ac3-scan verringert

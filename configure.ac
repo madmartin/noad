@@ -10,7 +10,7 @@ dnl ---------------------------------------------------------------------------
 dnl initialisation
 dnl ---------------------------------------------------------------------------
 AC_PREREQ(2.57)
-AC_INIT(noad, 0.8.8, theNoad@ulmail.net)
+AC_INIT(noad, 0.8.9, theNoad@ulmail.net)
 AM_INIT_AUTOMAKE(dist-bzip2)
 AM_SILENT_RULES([yes])
 AC_CONFIG_SRCDIR([cchecklogo.cpp])
@@ -77,7 +77,7 @@ AC_CHECK_FUNCS([strsignal])
 dnl CXXFLAGS='-v -g -O3'
 
 dnl ---------------------------------------------------------------------------
-dnl check for posix_fadvise 
+dnl check for posix_fadvise
 dnl can posix_fadvise be used
 dnl ---------------------------------------------------------------------------
 AC_CHECK_DECLS(posix_fadvise, [], [], [
@@ -96,7 +96,7 @@ AC_ARG_WITH([libmpeg2],
               [disable support for libmpeg2])],
             [],
             [with_libmpeg2=yes])
-          
+
 if test "x$with_libmpeg2" != "xno" ; then
   PKG_CHECK_MODULES(LIBMPEG2, [libmpeg2 >= 0.3.1], PKG_LIBMPEG2=1, PKG_LIBMPEG2=0)
   if test "$PKG_LIBMPEG2" = "1"; then
@@ -104,7 +104,7 @@ if test "x$with_libmpeg2" != "xno" ; then
     AC_MSG_NOTICE([found libmpeg2 Version $LIBMPEG_VERSION])
     AC_SUBST(LIBMPEGX,$LIBMPEG2_LIBS)
     AC_MSG_NOTICE([LIBMPEG2_LIBS=$LIBMPEG2_LIBS])
-    
+
     dnl ---------------------------------------------------------------------------
     dnl setup for forcing static linking of libmpeg2
     dnl ---------------------------------------------------------------------------
@@ -113,7 +113,7 @@ if test "x$with_libmpeg2" != "xno" ; then
 	[AC_SUBST(LIBMPEGX,["-Wl,--trace -Xlinker -Bstatic $LIBMPEG2_LIBS -lmpeg2convert -Xlinker -Bdynamic"])])
     CPPFLAGS=" $CPPFLAGS -DUSE_LIBMPGE2 $LIBMPEG2_CFLAGS"
     AC_SUBST(LIBS,"$LIBS $LIBMPEGX ")
-    AC_SUBST(HAVE_LIBMPEG2,1) 
+    AC_SUBST(HAVE_LIBMPEG2,1)
     AC_SUBST(libmpeg2ok,1)
     AC_SUBST(decoderok,1)
   fi
@@ -130,7 +130,7 @@ AC_ARG_WITH([ffmpeg],
               [disable support for ffmpeg])],
             [],
             [with_ffmpeg=yes])
-          
+
 if test "x$with_ffmpeg" != "xno" ; then
   PKG_CHECK_MODULES(FFMPEG, libavutil libavformat [libavcodec >= 52.0.0], HAVE_FFMPEG=1, HAVE_FFMPEG=0)
   if test "$HAVE_FFMPEG" = "1"; then
@@ -164,7 +164,7 @@ if test "x$with_ffmpeg" != "xno" ; then
 	AC_DEFINE(HAVE_LIBAVCODEC,1,[have libavcodec for audio])
     fi
   fi
-fi   
+fi
 
 dnl ---------------------------------------------------------------------------
 dnl check for feature ImageMagick++
@@ -248,7 +248,7 @@ else
     if test "$with_tools" = "yes" ; then
       echo " compile with tools: $TOOLSRC"
     fi
-    echo 
+    echo
     echo "now start \"make\" to build noad"
     echo " and \"make install\" to install noad"
 fi
