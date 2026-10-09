@@ -171,7 +171,7 @@ bool StdCallBack( noadYUVBuf* yuvbuf )
 
    if( ndata && yuvbuf)
    {
-      // bei �nderung der Bildgr�sse daten zur�cksetzen
+      // bei Änderung der Bildgrösse daten zurücksetzen
       if( yuvbuf->width != ndata->m_nGrabWidth || yuvbuf->height != ndata->m_nGrabHeight )
       {
          delete cctrl;
@@ -733,8 +733,8 @@ bool checkBlacklineOnMark( cMarks *marks, cMark *m, bool bForward, int iCheckTim
 #define PRE_POS_OK (ndata->m_nBlackLinesTop >= iTopLines && ndata->m_nBlackLinesBottom >= iBottomLines)
 #define PRE_POS_RESET (ndata->m_nBlackLinesTop + ndata->m_nBlackLinesBottom < (iTopLines+iBottomLines)-(((iTopLines+iBottomLines)*20)/100))
 	// MAX_BEST_POS_RESET_COUNT - Anzahl Frames mit POS_NOT_OK == true,
-	// nach denen iBestPos zur�ckgesetzt wird
-	// 20.9.03: ge�ndert auf 25 (vorher 3) wegen RTL/The 6th Day
+	// nach denen iBestPos zurückgesetzt wird
+	// 20.9.03: geändert auf 25 (vorher 3) wegen RTL/The 6th Day
 #define MAX_BEST_POS_RESET_COUNT 90
 
 	dsyslog( "checkBlacklineOnMark at %d %s %d %d for %d frames",m->position, bForward ? "forward":"backward",iTopLines, iBottomLines, iCheckTime );
@@ -1081,7 +1081,7 @@ bool detectBlacklines(cMarks *marks, int& iTopLines, int& iBottomLines)
 
 	// Startposition finden
 	cMark *m = marks->GetNext(-1);
-	// erste Unterbrechung �berspringen
+	// erste Unterbrechung überspringen
 	// wenn mehrere Unterbrechungen vorhanden sind...
 	if( marks->Count() > 2 )
 	{
@@ -1098,7 +1098,7 @@ bool detectBlacklines(cMarks *marks, int& iTopLines, int& iBottomLines)
 		index += 5*FRAMESPERMIN;
 		if( m != NULL )
 			m = marks->GetNext(m->position);
-		// pr�fen, ob mind. 2000 Frames verf�gbar sind
+		// prüfen, ob mind. 2000 Frames verfügbar sind
 		if( m != NULL )
 		{
 			if( index + 2000 < m->position )
@@ -1123,7 +1123,7 @@ bool detectBlacklines(cMarks *marks, int& iTopLines, int& iBottomLines)
 
 	while( !bOk )
 	{
-		// Abbruch bei der n�chsten Unterbrechung
+		// Abbruch bei der nächsten Unterbrechung
 		if( index > m->position )
 		{
 			dsyslog( "detectBlacklines out of range" );
@@ -1250,20 +1250,20 @@ bool detectBlacklines(int _index, int iFramesToCheck, int& iTopLines, int& iBott
 
 /*
 *  checkBlacklineOnMarks
-*  pr�ft, ob die Aufnahme schwarze R�nder oben und unten hat
+*  prüft, ob die Aufnahme schwarze Ränder oben und unten hat
 *  ist dies der Fall, werden die Einschaltmarken nach Untersuchung
 *  der umliegenden Bilder ggf. angepasst
 *  im Normalfall wird das Senderlogo erst einige sekunden nach
-*  Filmbeginn eingeblendet, daher wird zuerst r�ckw�rts gesucht
-*  ist die r�ckw�rtssuche erfolglos, wird vorw�rts gesucht
-*  wg. RTL wird vorher von der Schnittmarke+3min r�ckw�rts gesucht
+*  Filmbeginn eingeblendet, daher wird zuerst rückwärts gesucht
+*  ist die Rückwärtssuche erfolglos, wird vorwärts gesucht
+*  wg. RTL wird vorher von der Schnittmarke+3min rückwärts gesucht
 */
 bool checkBlacklineOnMarks(cMarks *marks)
 {
    INFO("checkBlacklineOnMarks",NULL);
    int iTopLines = 0;
    int iBottomLines = 0;
-   // pr�fen auf R�nder
+   // prüfen auf Ränder
    detectBlacklines(marks, iTopLines, iBottomLines);
    if( iTopLines < MINBLACKLINES || iBottomLines < MINBLACKLINES )
    {
@@ -1280,9 +1280,9 @@ bool checkBlacklineOnMarks(cMarks *marks)
    while( m != NULL )
    {
       int iPos = m->position;
-      int iBackFrames = 60*framespersec;      // Anzahl Frames f�r normale r�ckw�rtssuche
-      int iForwardFrames = 200*framespersec;  // Anzahl Frames f�r vorw�rtssuche
-      // r�ckw�rtssuche bis max zur vorherigen Schnittmarke
+      int iBackFrames = 60*framespersec;      // Anzahl Frames für normale rückwärts suche
+      int iForwardFrames = 200*framespersec;  // Anzahl Frames für vorwärts suche
+      // rückwärtssuche bis max zur vorherigen Schnittmarke
       cMark *m2 = marks->GetPrev(iPos);
       if( m2 != NULL )
       {
@@ -1291,7 +1291,7 @@ bool checkBlacklineOnMarks(cMarks *marks)
          if( iBackFrames < 0 )
             iBackFrames = 0;
       }
-      // vorw�rtssuche bis max zur n�chsten Schnittmarke
+      // vorwärtssuche bis max zur nächsten Schnittmarke
       m2 = marks->GetNext(iPos);
       if( m2 != NULL )
       {
