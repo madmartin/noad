@@ -224,7 +224,7 @@ int main(int argc, char *argv[], char * /*envp*/[])
       {"asd",0,0,6},
       {"pass3only",0,0,7},
       {"svdrphost",1,0,8},
-      {"svdrpport",1,0,9},      
+      {"svdrpport",1,0,9},
       {"decoder",1,0,13},
       {0, 0, 0, 0}
     };
@@ -232,7 +232,7 @@ int main(int argc, char *argv[], char * /*envp*/[])
     c = getopt_long  (argc, argv, "s:l:vbp:cjoaOSBCV",
       long_options, &option_index);
     if (c == -1)
-    break;
+      break;
 
     switch (c)
     {
@@ -328,12 +328,12 @@ int main(int argc, char *argv[], char * /*envp*/[])
       case 2:
         if (isnumber(optarg))
           verbosity = atoi(optarg);
-      break; 
-      
+      break;
+
       case 3:
         bTestMode = true;
       break;
-      
+
       case 4:
         bOnline = true;
         if( optarg )
@@ -341,14 +341,14 @@ int main(int argc, char *argv[], char * /*envp*/[])
           if (isnumber(optarg))
             onlinemode = atoi(optarg);
           if( onlinemode != 1 && onlinemode != 2 )
-            onlinemode = 1; 
+            onlinemode = 1;
         }
       break;
-      
+
       case 5:
         bNoPid = true;
       break;
-      
+
       case 6:
       #ifdef HAVE_LIBAVCODEC
         doPass3 = true;
@@ -358,7 +358,7 @@ int main(int argc, char *argv[], char * /*envp*/[])
         esyslog("--asd will be ignored");
       #endif
       break;
-      
+
       case 7:
       #ifdef HAVE_LIBAVCODEC
         pass3only = true;
@@ -368,7 +368,7 @@ int main(int argc, char *argv[], char * /*envp*/[])
         esyslog("--pass3only will be ignored");
       #endif
       break;
-      
+
       case 8:
           SVDRPHost = optarg;
       break;
@@ -383,12 +383,13 @@ int main(int argc, char *argv[], char * /*envp*/[])
         }
       break;
       case 13:
-        if( strcmp(optarg, "ffmpeg") == 0 )
-			  default_Decoder = FFMPEG_DECODER;
-        else if( strcmp(optarg, "libmpeg2") == 0 )
-			  default_Decoder = LIBMPEG2_DECODER;
-		  else 
-			  fprintf(stderr, "noad: unknown decoder %s, use %s instead\n", optarg, default_Decoder==FFMPEG_DECODER? "ffmpeg" : "libmepg2");
+        if (strcmp(optarg, "ffmpeg") == 0)
+          default_Decoder = FFMPEG_DECODER;
+        else if (strcmp(optarg, "libmpeg2") == 0)
+          default_Decoder = LIBMPEG2_DECODER;
+        else
+          fprintf(stderr, "noad: unknown decoder %s, use %s instead\n", optarg,
+                  default_Decoder == FFMPEG_DECODER ? "ffmpeg" : "libmepg2");
         break;
 
       default:
@@ -559,7 +560,7 @@ int main(int argc, char *argv[], char * /*envp*/[])
           errno = 0;
       }
       int f;
-      
+
       f = open("/dev/null", O_RDONLY);
       if (f == -1)
       {
@@ -575,7 +576,7 @@ int main(int argc, char *argv[], char * /*envp*/[])
           }
           (void)close(f);
       }
-      
+
       f = open("/dev/null", O_WRONLY);
       if (f == -1)
       {
@@ -629,10 +630,10 @@ int main(int argc, char *argv[], char * /*envp*/[])
     signal(SIGABRT, signal_handler);
     signal(SIGSEGV, signal_handler);
     signal(SIGUSR1, signal_handler);
-    
+
     // do cleanup at exit...
     atexit(cleanUp);
-    
+
     // now do the work..,
     doNoad(bBefore, recDir);
 

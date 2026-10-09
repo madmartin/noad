@@ -194,7 +194,7 @@ int scan_audio_stream_0(unsigned char *mbuf, int count)
 #if (LIBAVCODEC_VERSION_MAJOR < 53)
     len = avcodec_decode_audio2(codecContext, (short *)outbuf, &out_size,
                                   inbuf_ptr, 576/*size*/);
-#elseif (LIBAVCODEC_VERSION_MAJOR < 57)
+#elif (LIBAVCODEC_VERSION_MAJOR < 57)
     AVPacket p;
     av_init_packet(&p);
     p.data = inbuf_ptr;

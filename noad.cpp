@@ -32,12 +32,10 @@ bool bOnMarksOnly = false;
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 #include <getopt.h>
 #include <time.h>
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
-#include <signal.h>
 #endif
 #include <inttypes.h>
 #include "svdrpc.h"
@@ -66,12 +64,10 @@ extern "C"
 #include <stdlib.h>
 #include <string.h>
 #include <dirent.h>
-#include <errno.h>
 #include <fcntl.h>
 
 #include "vdr_cl.h"
 #include "tools.h"
-#include "videodir.h"
 #include "noaddata.h"
 #include "ccontrol.h"
 #ifdef VNOAD
@@ -383,10 +379,9 @@ bool doLogoDetection(int startIndex)
 		{
 			decoder->setCallback(oldCallback);
 			return false;
-		}
-      else
-         if(Independent)
-           iLastIFrame = curIndex;
+		} else
+      if(Independent)
+        iLastIFrame = curIndex;
   }
    decoder->setCallback(oldCallback);
   return ndata->m_bFound;
@@ -1646,17 +1641,17 @@ int scanRecord( int iNumFrames, cMarks *_marks )
 
 #ifdef USE_FFMPEG
     if( default_Decoder == FFMPEG_DECODER )
-		 decoder = new FFMPegDecoder();
+		  decoder = new FFMPegDecoder();
     else
 #endif
 #ifdef USE_LIBMPGE2
-       if( default_Decoder == LIBMPEG2_DECODER )
-         decoder = new LibMPeg2Decoder();
+      if( default_Decoder == LIBMPEG2_DECODER )
+        decoder = new LibMPeg2Decoder();
 #endif
-    syslog(LOG_INFO, "noad is using %s for video-decoding", default_Decoder == FFMPEG_DECODER ? "ffmpeg" : "libmpeg2" );
+  syslog(LOG_INFO, "noad is using %s for video-decoding", default_Decoder == FFMPEG_DECODER ? "ffmpeg" : "libmpeg2" );
 
-	 decoder->decoder_init();
-	 decoder->openFile(cfn,cIF);
+	decoder->decoder_init();
+	decoder->openFile(cfn,cIF);
 
 	INFO("scan the video for ad's","");
 #ifdef HAVE_LIBAVCODEC
