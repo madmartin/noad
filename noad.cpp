@@ -939,7 +939,9 @@ bool checkBlacklineOffMark( cMarks *marks, cMark *m, int iCheckTime, int iTopLin
 #define MONOFRAME_CUTOFF 65
 bool checkBlackFrameOnMark( cMarks *marks, cMark *m, bool bForward, int iCheckTime )
 {
-	INFO(NULL,  "checkBlackFrameOnMark");
+  INFO(NULL,  "checkBlackFrameOnMark");
+  if( m == NULL || cIF == NULL || m->position < 0 || m->position >= cIF->getLast() )
+    return false;
 	int iOffset = 0;
 	int iBestPos = 0;
 	int iEnd = m->position;
@@ -961,7 +963,9 @@ bool checkBlackFrameOnMark( cMarks *marks, cMark *m, bool bForward, int iCheckTi
 		iOffset = iCheckTime*framespersec;
 		iOffset *= -1;
 	}
-	int index = getIFrameFor(cIF, m->position+iOffset-1);
+  int index = getIFrameFor(cIF, m->position+iOffset-1);
+  if( index < 0 )
+    return false;
 	ulTopBlackLines = 0;
 	ulBotBlackLines = 0;
 	checkedFrames = 0;
@@ -970,13 +974,17 @@ bool checkBlackFrameOnMark( cMarks *marks, cMark *m, bool bForward, int iCheckTi
 	decoder->setCallback(BlackframeCallback);
 	int flags = DEMUX_RESET;
 
-	dsyslog( "checkBlackFrameOnMark at %d %s (frames %d --> %hhn)",m->position, bForward ? "forward":"backward",index,end );
+  dsyslog( "checkBlackFrameOnMark at %d %s (frames %d --> %p)",m->position, bForward ? "forward":"backward",index,(void *)end );
 	while( index < iEnd )
 	{
 		iCurrentDecodedFrame = index;
 		ulTopBlackLines = 0;
 		ulBotBlackLines = 0;
-		decoder->getNextPicture(index, flags );
+    if( !decoder->getNextPicture(index, flags ) )
+    {
+      decoder->setCallback(oldCallback);
+      return false;
+    }
 		flags = 0;
 		if( bPosReset && ndata->isBlankFrame() )
 		{
@@ -1040,8 +1048,9 @@ bool checkBlackFramesOnMarks(cMarks *marks)
 			doBlackFrameDetection = iHow == 0;
 			if( iHow == 2 )
 			{
-				m = marks->GetNext(iPos);
-				iPos = m->position;
+        m = marks->GetNext(iPos);
+        if( m != NULL )
+          iPos = m->position;
 			}
 		}
 
@@ -1050,8 +1059,9 @@ bool checkBlackFramesOnMarks(cMarks *marks)
 			if( !checkBlackFrameOnMark( marks, m, false, 45 ) )
 				if( checkBlackFrameOnMark( marks, m, true, 120 ) ) // reset this!
 				{
-					m = marks->GetNext(iPos);
-					iPos = m->position;
+          m = marks->GetNext(iPos);
+          if( m != NULL )
+            iPos = m->position;
 				}
 		}
 		m = marks->GetNext(iPos);
