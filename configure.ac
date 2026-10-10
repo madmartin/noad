@@ -14,7 +14,7 @@ AC_INIT(noad, 0.8.9, theNoad@ulmail.net)
 AM_INIT_AUTOMAKE(dist-bzip2)
 AM_SILENT_RULES([yes])
 AC_CONFIG_SRCDIR([cchecklogo.cpp])
-AC_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADERS([config.h])
 AC_DEFINE(_GNU_SOURCE, 1, [Define for setting a GNU environment])
 
 AC_DEFINE(FFMPEGDECODING,1,[Define for ffmpeg_using])
@@ -32,12 +32,7 @@ PKG_PROG_PKG_CONFIG()
 AC_LANG(C++)
 
 
-dnl ---------------------------------------------------------------------------
-dnl always set _GNU_SOURCE
-dnl because it's not set automatic on all systems
-dnl ---------------------------------------------------------------------------
 CPPFLAGS="$CPPFLAGS -D_GNU_SOURCE"
-AC_GNU_SOURCE
 
 AC_SUBST(defprefix,$prefix)
 test "$defprefix" = NONE && defprefix=$ac_default_prefix
@@ -46,7 +41,6 @@ dnl ---------------------------------------------------------------------------
 # Checks for header files.
 dnl ---------------------------------------------------------------------------
 AC_HEADER_DIRENT
-AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h netinet/in.h stdlib.h string.h sys/ioctl.h sys/socket.h sys/time.h sys/vfs.h syslog.h unistd.h])
 
@@ -59,7 +53,6 @@ AC_C_INLINE
 AC_TYPE_MODE_T
 AC_TYPE_PID_T
 AC_TYPE_SIZE_T
-AC_HEADER_TIME
 AC_STRUCT_TM
 
 dnl ---------------------------------------------------------------------------
@@ -109,7 +102,7 @@ if test "x$with_libmpeg2" != "xno" ; then
     dnl setup for forcing static linking of libmpeg2
     dnl ---------------------------------------------------------------------------
     AC_ARG_WITH(libmpeg2-static,
-	AC_HELP_STRING([--with-libmpeg2-static],[force linking of static version of libmpeg2]),
+      AS_HELP_STRING([--with-libmpeg2-static],[force linking of static version of libmpeg2]),
 	[AC_SUBST(LIBMPEGX,["-Wl,--trace -Xlinker -Bstatic $LIBMPEG2_LIBS -lmpeg2convert -Xlinker -Bdynamic"])])
     CPPFLAGS=" $CPPFLAGS -DUSE_LIBMPGE2 $LIBMPEG2_CFLAGS"
     AC_SUBST(LIBS,"$LIBS $LIBMPEGX ")
@@ -170,7 +163,7 @@ dnl ---------------------------------------------------------------------------
 dnl check for feature ImageMagick++
 dnl ---------------------------------------------------------------------------
 AC_ARG_WITH([magick],
-   AC_HELP_STRING([--with-magick],[compile with ImageMagick++ support]),
+  AS_HELP_STRING([--with-magick],[compile with ImageMagick++ support]),
    [],
    [with_magick=no])
 
@@ -204,7 +197,7 @@ dnl check for request to compile toolies
 dnl ---------------------------------------------------------------------------
 AC_SUBST(TOOLSRC,"")
 AC_ARG_WITH([tools],
-   AC_HELP_STRING([--with-tools],[compile with tools]),
+  AS_HELP_STRING([--with-tools],[compile with tools]),
    [],
    [with_tools=no])
 test "x$with_tools" != xno && TOOLSRC="showindex"
