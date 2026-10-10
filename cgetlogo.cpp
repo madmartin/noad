@@ -1,9 +1,9 @@
 /***************************************************************************
-                          cgetlogo.cpp  -  description                              
-                             -------------------                                         
-    begin                : Fri Aug 6 1999                                           
-    copyright            : (C) 1999 by Thorsten Janke                         
-    email                : janke@studST.fh-muenster.de                                     
+                          cgetlogo.cpp  -  description
+                             -------------------
+    begin                : Fri Aug 6 1999
+    copyright            : (C) 1999 by Thorsten Janke
+    email                : janke@studST.fh-muenster.de
  ***************************************************************************/
 
 /***************************************************************************
@@ -11,7 +11,7 @@
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
  *   the Free Software Foundation; either version 2 of the License, or     *
- *   (at your option) any later version.                                   * 
+ *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
 
@@ -59,10 +59,10 @@ void CGetLogo::newData()
 {
   CToolBox tool;
 
-  // check if new corner is accepted 
+  // check if new corner is accepted
   if ( checkBlock( m_chRunData, m_chRefPicture ) )
   {
-      // check if there are enough filtered corners 
+      // check if there are enough filtered corners
       if ( m_nFilteredCorner < m_pData->m_nFilterFrames )
       {
          tool.filter_tp( m_chFilterData, m_chRefPicture, m_pData->m_nSizeX*m_pData->m_nSizeY );
@@ -71,10 +71,10 @@ void CGetLogo::newData()
       else
       {
          m_nCheckedCorner++;
-         // first time set testlines 
+         // first time set testlines
          if ( m_nCheckedCorner == 1 )
-            setDiversions( m_chFilterData );	
-         // check testlines 
+            setDiversions( m_chFilterData );
+         // check testlines
          if ( m_nCheckedCorner <= m_pData->m_nCheckFrames )
          {
             m_nPointsLeft = updateDiversions( m_chFilterData, m_chRefPicture );
@@ -82,7 +82,7 @@ void CGetLogo::newData()
                reset();  // not enough -> once again
          }
          if ( m_nPointsLeft > 20 && m_nCheckedCorner == m_pData->m_nCheckFrames )
-         { 
+         {
              if ( setTestlines( m_chFilterData ) < 10 )
              {
                  reset();  // not enough -> once again
@@ -98,17 +98,19 @@ void CGetLogo::newData()
         //sprintf( m_pView->m_strHeadline, "found %d couples", nCouples );
         //m_pView->update();
         char *buffer = NULL;
-        asprintf(&buffer,"checked %d corners", m_nCheckedCorner);
-        logocb(CornerID,buffer,m_chTestViewData,m_pData->m_nSizeX,m_pData->m_nSizeY);
-        delete buffer;
+            if( asprintf(&buffer,"checked %d corners", m_nCheckedCorner) >= 0 )
+            {
+               logocb(CornerID,buffer,m_chTestViewData,m_pData->m_nSizeX,m_pData->m_nSizeY);
+               free(buffer);
+            }
       }
   }
 }
 
-// reset all buffers for a new run 
+// reset all buffers for a new run
 void CGetLogo::reset( bool /*bFirst*/ )
 {
-  // set the buffers to init values 
+  // set the buffers to init values
   memcpy( m_chRefPicture, m_chRunData, m_pData->m_nSizeX*m_pData->m_nSizeY );
   memset( m_chFilterData, m_pData->m_nFilterInit, m_pData->m_nSizeX*m_pData->m_nSizeY );
   memcpy( m_chTestViewData, m_chFilterData, m_pData->m_nSizeX*m_pData->m_nSizeY );
@@ -123,21 +125,21 @@ void CGetLogo::reset( bool /*bFirst*/ )
   m_linehook = NULL;
 }
 
-// returns true if user condition for picture change ok 
+// returns true if user condition for picture change ok
 bool CGetLogo::checkBlock( char* chNew, char* chRef )
 {
   int i, nAverage;
   float fTemp = 0;
   CToolBox tool;
 
-  // get Average of new picture 
+  // get Average of new picture
   nAverage = tool.getAverage( chNew, m_pData->m_nSizeX*m_pData->m_nSizeY );
-	
-  // check maximum average ( dont set very bright blocks ) 
+
+  // check maximum average ( dont set very bright blocks )
   if ( nAverage > m_pData->m_nMaxAverage )
     return false;
 
-  // check minimum average ( dont set to dark blocks ) 
+  // check minimum average ( dont set to dark blocks )
   if ( nAverage < m_pData->m_nMinAverage )
     return false;
 
@@ -149,22 +151,22 @@ bool CGetLogo::checkBlock( char* chNew, char* chRef )
   if ( fTemp <= m_pData->m_nSizeX * m_pData->m_nSizeY * 2.55 * m_pData->m_nDif2Pictures )
      return false;
 
-  // this block is ok 
+  // this block is ok
   memcpy( chRef, chNew, m_pData->m_nSizeX*m_pData->m_nSizeY );
-	
+
   return true;
 }
 
 
 
-// set the testlines of mask data to testline struct 
+// set the testlines of mask data to testline struct
 int CGetLogo::setTestlines( char* chMask )
 {
   testlines* templine=NULL;
   testlines* newline=NULL;
   testpair*  newpair=NULL;
   testpair*  temppair=NULL;
-  // get the size of corner 
+  // get the size of corner
   int sizeY = m_pData->m_nSizeY;
   int sizeX = m_pData->m_nSizeX;
 
@@ -184,7 +186,7 @@ int CGetLogo::setTestlines( char* chMask )
        if ( chMask[y*sizeX+x] == 1 ) // check this
        {
             xpos = x; xneg = 0;
-            // get next negative diversion 
+            // get next negative diversion
             while ( l2r < sizeX-1 && !bFound )
             {
                  if ( chMask[y*sizeX+l2r] == 2 )
@@ -203,16 +205,16 @@ int CGetLogo::setTestlines( char* chMask )
            nCouples++;
            if ( !newline )
               newline = new_testline( y );
-           // set the struct of found test pair 
+           // set the struct of found test pair
            newpair = new testpair[sizeof(struct testpair)];
            newpair->next = NULL;
            newpair->x_pos = xpos;
-           newpair->x_neg = xneg; 	
+           newpair->x_neg = xneg;
 
            // keep this line
            templine = newline;
            // check the first pair of line
-           if ( !templine->pair )	
+           if ( !templine->pair )
                 templine->pair = newpair;
            else {
               temppair = templine->pair;
@@ -221,8 +223,8 @@ int CGetLogo::setTestlines( char* chMask )
                   temppair = temppair->next;
               // set the new pair to the end
               temppair->next = newpair;
-           }					
-       }				
+           }
+       }
   	}
     // the first line including pairs ??
     if ( !m_linehook && newline )
@@ -247,7 +249,7 @@ int CGetLogo::setTestlines( char* chMask )
   return nCouples;
 }
 
-// called to calculate the numerate diversions of two neighb. points 
+// called to calculate the numerate diversions of two neighb. points
 void CGetLogo::setDiversions( char* chSrc )
 {
   int x, y;
@@ -269,13 +271,13 @@ void CGetLogo::setDiversions( char* chSrc )
          if ( fTemp < 0 )
             chSrc[offset+x] = 2;
          if ( fTemp == 0 )
-            chSrc[offset+x] = 0;	
+            chSrc[offset+x] = 0;
      }
   }
 
 }
 
-// called to check the diversions in updated picture and to update the mask 
+// called to check the diversions in updated picture and to update the mask
 int CGetLogo::updateDiversions( char* chMask, char* chSrc )
 {
   int x,y,nPointsLeft = 0;
@@ -284,7 +286,7 @@ int CGetLogo::updateDiversions( char* chMask, char* chSrc )
   float fTemp;
   int mask;
 
-  // copy updated picture to the view data 
+  // copy updated picture to the view data
   memcpy( m_chTestViewData, chSrc, sizeX*sizeY );
 
   for ( y=0; y<sizeY; y++ )
@@ -322,7 +324,7 @@ int CGetLogo::updateDiversions( char* chMask, char* chSrc )
      }
   }
 
-  // set the testpoints to the view 
+  // set the testpoints to the view
   for ( y=0; y<sizeY; y++ )
   {
      for ( x=0; x<sizeX-2; x++ ) {
@@ -333,11 +335,11 @@ int CGetLogo::updateDiversions( char* chMask, char* chSrc )
   return nPointsLeft;
 }
 
-// called to get a new allocated testine 
+// called to get a new allocated testine
 testlines* CGetLogo::new_testline( int line )
 {
   testlines* temp = new testlines[sizeof(struct testlines)];
-	
+
   temp->line = line;
   temp->next = NULL;
   temp->pair = NULL;

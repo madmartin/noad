@@ -45,7 +45,7 @@ cSocket::~cSocket()
 
 void cSocket::Close(void)
 {
-  if (sock >= 0) 
+  if (sock >= 0)
   {
     close(sock);
     sock = -1;
@@ -57,11 +57,11 @@ bool cSocket::Open(int Port)
   dsyslog( "cSocket::Open, port = %d",Port );
   port = Port;
   sock = -1;
-  if (sock < 0) 
+  if (sock < 0)
   {
      // create socket:
      sock = socket(PF_INET, SOCK_STREAM, 0);
-     if (sock < 0) 
+     if (sock < 0)
      {
         esyslog("cSocket::Open (socket) %s",strerror(errno));
         port = 0;
@@ -69,13 +69,13 @@ bool cSocket::Open(int Port)
      }
      // make it non-blocking:
      int oldflags = fcntl(sock, F_GETFL, 0);
-     if (oldflags < 0) 
+     if (oldflags < 0)
      {
         esyslog("cSocket::Open (fcntl-GET): %s",strerror(errno));
         return false;
      }
      oldflags |= O_NONBLOCK;
-     if (fcntl(sock, F_SETFL, oldflags) < 0) 
+     if (fcntl(sock, F_SETFL, oldflags) < 0)
      {
         esyslog("cSocket::Open (fcntl-SET): %s",strerror(errno));
         return false;
@@ -89,7 +89,7 @@ bool cSocket::Open(int Port)
 int cSocket::Connect(char const *Host)
 {
   dsyslog("cSocket::Connect to %s", Host );
-  if (Open(port)) 
+  if (Open(port))
   {
      struct sockaddr_in name;
      name.sin_family = AF_INET;
@@ -151,7 +151,7 @@ bool cSVDRPC::Send(const char *s, int length)
   int ret=0;
   if(filedes>0)
   {
-    if (length < 0) 
+    if (length < 0)
       length = strlen(s);
     outstandingReply++;
     {
@@ -202,7 +202,7 @@ bool cSVDRPC::ReadReply()
     {
       select(1, &set, NULL, NULL, &timeout);
       n = read(filedes, buf + rbytes, 1);
-      if(n<0) 
+      if(n<0)
       {
         filedes=-1;
         break;
@@ -244,10 +244,11 @@ bool cSVDRPC::CmdQuit()
 {
   dsyslog("cSVDRPC::CmdQuit" );
   char *Option=NULL;
-  asprintf(&Option,"Quit\r\n");
+  if (asprintf(&Option,"Quit\r\n") < 0)
+    return false;
   bool result=Send(Option);
   ReadReply();
-  delete Option;
+  free(Option);
   return result;
 }
 
@@ -274,15 +275,25 @@ void noadMsg(const char *msg, const char *filename)
   if( vend )
     vend = strchr(vend+1,'/');
   if( vend )
-    asprintf(&baseName,"mesg %s %s",msg,vend+1);
+  {
+    if (asprintf(&baseName,"mesg %s %s",msg,vend+1) < 0)
+      return;
+  }
   else
-    asprintf(&baseName,"mesg %s %s",msg, filename);
+  {
+    if (asprintf(&baseName,"mesg %s %s",msg, filename) < 0)
+      return;
+  }
   if( baseName[strlen(baseName)-1] == '/' )
     baseName[strlen(baseName)-1] = '\0';
   char *vend1 = strrchr(baseName, '/');
   if( vend1 )
     *vend1 = '\0';
-  asprintf(&cp,"%s\r\n",baseName);
+  if (asprintf(&cp,"%s\r\n",baseName) < 0)
+  {
+    free(baseName);
+    return;
+  }
 
   VDRMessage(cp);
 

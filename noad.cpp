@@ -648,11 +648,12 @@ void MarkToggle(cMarks *marks, int index, const char *Comment)
 
 void moveMark( cMarks *marks, cMark *m, int iNewPos, const char *Comment)
 {
-  char *cpOldPos, *cpNewPos, *newComment;
-  asprintf(&cpOldPos, "%s",(const char *)m->ToText(false,true));
-  asprintf(&cpNewPos, "%s",(const char *)IndexToHMSF(iNewPos, false));
-  asprintf(&newComment, Comment?Comment:"(%s)",(const char *)m->ToText(false,true) );
-  dsyslog( "moveMark from %d to %d (%s-->%s)",m->position, iNewPos, cpOldPos, cpNewPos );
+  cString oldPosition = m->ToText(false,true);
+  cString newPosition = IndexToHMSF(iNewPos, false);
+  char *newComment = NULL;
+  if( markComments && asprintf(&newComment, Comment?Comment:"(%s)",(const char *)oldPosition ) < 0 )
+    newComment = NULL;
+  dsyslog( "moveMark from %d to %d (%s-->%s)",m->position, iNewPos, (const char *)oldPosition, (const char *)newPosition );
   marks->Del(m);
   marks->Add(iNewPos);
   cMark *mNew = marks->Get(iNewPos);
@@ -661,8 +662,6 @@ void moveMark( cMarks *marks, cMark *m, int iNewPos, const char *Comment)
   marks->Save();
   bMarkChanged = true;
 
-  free(cpOldPos);
-  free(cpNewPos);
   free(newComment);
 }
 
@@ -1332,8 +1331,6 @@ void listMarks(cMarks *marks)
 	dsyslog( "current Marks:" );
 	int iDiff;
 	int iLastPos = 0;
-	char *cpos = NULL;
-	char *cdiff = NULL;
 
 	cMark *m = marks->GetNext(-1);
 	//  cMark *mprev = NULL;
@@ -1341,9 +1338,9 @@ void listMarks(cMarks *marks)
 	while( m != NULL )
 	{
 		iDiff = m->position - iLastPos;
-		asprintf(&cpos, "%s", (const char *)m->ToText(false));
-		asprintf(&cdiff, "%s", (const char *)IndexToHMSF(iDiff, false));
-		dsyslog( "Mark: %6d %s #frames %6d duration %s", m->position, cpos, iDiff, cdiff);
+    cString position = m->ToText(false);
+    cString duration = IndexToHMSF(iDiff, false);
+    dsyslog( "Mark: %6d %s #frames %6d duration %s", m->position, (const char *)position, iDiff, (const char *)duration);
 		iLastPos = m->position;
 		m = marks->GetNext(m->position);
 	}
@@ -1388,8 +1385,6 @@ void cleanActiveMarks(cMarks *marks)
 {
 	int iDiff;
 	int iLastPos = 0;
-	char *cpos = NULL;
-	char *cdiff = NULL;
 	cMark *m = marks->GetNext(-1);
 	if( m == NULL )
 		return;
@@ -1403,9 +1398,9 @@ void cleanActiveMarks(cMarks *marks)
 	while( m != NULL )
 	{
 		iDiff = m->position - iLastPos;
-		asprintf(&cpos, "%s", (const char *)m->ToText(false));
-		asprintf(&cdiff, "%s", (const char *)IndexToHMSF(iDiff, false));
-		dsyslog( "Mark: %d %s #frames %d duration %s", m->position, cpos, iDiff, cdiff);
+    cString position = m->ToText(false);
+    cString duration = IndexToHMSF(iDiff, false);
+    dsyslog( "Mark: %d %s #frames %d duration %s", m->position, (const char *)position, iDiff, (const char *)duration);
 		iLastPos = m->position;
 		if( iDiff > 0 && iDiff < ACTIVEMINMARKDURATION )
 		{
@@ -1442,8 +1437,6 @@ void MarkCleanup(cMarks *marks)
 	dsyslog( "MarkCleanup: %p %p (totalDecodedFrames=%d)", (void *)marks, (void *)cfn, totalDecodedFrames );
 	int iDiff;
 	int iLastPos = 0;
-	char *cpos = NULL;
-	char *cdiff = NULL;
 
 	listMarks( marks);
 	cMark *m = marks->GetNext(-1);
@@ -1472,9 +1465,9 @@ void MarkCleanup(cMarks *marks)
 		while( m != NULL )
 		{
 			iDiff = m->position - iLastPos;
-			asprintf(&cpos, "%s", (const char *)m->ToText(false));
-			asprintf(&cdiff, "%s", (const char *)IndexToHMSF(iDiff, false));
-			dsyslog( "Mark: %d %s #frames %d duration %s", m->position, cpos, iDiff, cdiff);
+      cString position = m->ToText(false);
+      cString duration = IndexToHMSF(iDiff, false);
+      dsyslog( "Mark: %d %s #frames %d duration %s", m->position, (const char *)position, iDiff, (const char *)duration);
 			iLastPos = m->position;
 			if( iDiff > 0 && iDiff < ACTIVEMINMARKDURATION )
 			{
@@ -1507,9 +1500,9 @@ void MarkCleanup(cMarks *marks)
 		while( m != NULL )
 		{
 			iDiff = m->position - iLastPos;
-			asprintf(&cpos, "%s", (const char*)m->ToText(false));
-			asprintf(&cdiff, "%s", (const char *)IndexToHMSF(iDiff, false));
-			dsyslog( "Mark: %d %s #frames %d duration %s", m->position, cpos, iDiff, cdiff);
+      cString position = m->ToText(false);
+      cString duration = IndexToHMSF(iDiff, false);
+      dsyslog( "Mark: %d %s #frames %d duration %s", m->position, (const char *)position, iDiff, (const char *)duration);
 			iLastPos = m->position;
 			if( iDiff > 0 && iDiff < MINMARKDURATION )
 			{
@@ -2175,11 +2168,7 @@ bool doOverlapDetection(pic_info *picsbefore, int numPicsBefore, pic_info *picsa
       if( newIndex > 0 && newIndex != (*m)->position)
       {
          dsyslog( "do moveMark from %d to %d",(*m)->position, newIndex );
-         char *nComment = NULL;
-         asprintf(&nComment,"%s (%d)","moved from (%s) by doOverlapDetection",mostOk);
-
-         moveMark( pmarks, *m, newIndex, nComment);
-         free(nComment);
+        moveMark( pmarks, *m, newIndex, "moved from [%s] by doOverlapDetection");
 
          *m = pmarks->Get(newIndex);
          m2=pmarks->GetNext(newIndex);
@@ -2536,16 +2525,14 @@ void pass2a(cMarks *marks)
 
   int iDiff;
   int iLastPos = 0;
-  char *cpos = NULL;
-  char *cdiff = NULL;
   m = marks->GetNext(-1);
   cMark *mprev = NULL;
   while( m != NULL )
   {
     iDiff = m->position - iLastPos;
-    asprintf(&cpos, "%s", (const char *)m->ToText(false));
-    asprintf(&cdiff, "%s", (const char *)IndexToHMSF(iDiff, false));
-    dsyslog( "Mark: %d %s #frames %d duration %s", m->position, cpos, iDiff, cdiff);
+    cString position = m->ToText(false);
+    cString duration = IndexToHMSF(iDiff, false);
+    dsyslog( "Mark: %d %s #frames %d duration %s", m->position, (const char *)position, iDiff, (const char *)duration);
     iLastPos = m->position;
     if( iDiff > 0 && iDiff < MINMARKDURATION )
     {

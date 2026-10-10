@@ -245,8 +245,10 @@ bool isnumber(const char *s)
 const char *AddDirectory(const char *DirName, const char *FileName)
 {
   static char *buf = NULL;
-  delete buf;
-  asprintf(&buf, "%s/%s", DirName && *DirName ? DirName : ".", FileName);
+  free(buf);
+  buf = NULL;
+  if (asprintf(&buf, "%s/%s", DirName && *DirName ? DirName : ".", FileName) < 0)
+    return NULL;
   return buf;
 }
 
@@ -315,7 +317,7 @@ bool MakeDirs(const char *FileName, bool IsDirectory)
     else
       break;
   }
-  delete s;
+  free(s);
   return result;
 }
 
@@ -330,8 +332,12 @@ bool RemoveEmptyDirectories(const char *DirName, bool RemoveThis)
     {
       if (strcmp(e->d_name, ".") && strcmp(e->d_name, "..") && strcmp(e->d_name, "lost+found"))
       {
-        char *buffer;
-        asprintf(&buffer, "%s/%s", DirName, e->d_name);
+        char *buffer = NULL;
+        if (asprintf(&buffer, "%s/%s", DirName, e->d_name) < 0)
+        {
+          closedir(d);
+          return false;
+        }
         struct stat st;
         if (stat(buffer, &st) == 0)
         {
@@ -346,10 +352,11 @@ bool RemoveEmptyDirectories(const char *DirName, bool RemoveThis)
         else
         {
           LOG_ERROR_STR(buffer);
-          delete buffer;
+          free(buffer);
+          closedir(d);
           return false;
         }
-        delete buffer;
+        free(buffer);
       }
     }
     closedir(d);
@@ -393,14 +400,13 @@ char *ReadLink(const char *FileName)
 
 bool SpinUpDisk(const char *FileName)
 {
-  static char *buf = NULL;
   for (int n = 0; n < 10; n++)
   {
-    delete buf;
-    if (DirectoryOk(FileName))
-      asprintf(&buf, "%s/vdr-%06d", *FileName ? FileName : ".", n);
-    else
-      asprintf(&buf, "%s.vdr-%06d", FileName, n);
+    bool isDirectory = DirectoryOk(FileName);
+    const char *directory = isDirectory && !*FileName ? "." : FileName;
+    char *buf = NULL;
+    if (asprintf(&buf, isDirectory ? "%s/vdr-%06d" : "%s.vdr-%06d", directory, n) < 0)
+      return false;
     if (access(buf, F_OK) != 0)
     { // the file does not exist
       timeval tp1, tp2;
@@ -416,11 +422,13 @@ bool SpinUpDisk(const char *FileName)
         double seconds = (((long long)tp2.tv_sec * 1000000 + tp2.tv_usec) - ((long long)tp1.tv_sec * 1000000 + tp1.tv_usec)) / 1000000.0;
         if (seconds > 0.5)
           dsyslog( "SpinUpDisk took %.2f seconds\n", seconds);
+        free(buf);
         return true;
       }
       else
         LOG_ERROR_STR(buf);
     }
+    free(buf);
   }
   esyslog( "ERROR: SpinUpDisk failed");
   return false;
@@ -849,7 +857,7 @@ int getTSPID(int f)
   int iRet = 0;
   while( i < r )
   {
-		if (buf[i] != 0x47) 
+		if (buf[i] != 0x47)
 		{
 			fprintf (stderr, "bad sync byte\n");
 			i++;
@@ -876,7 +884,7 @@ int isHDTV(int f)
           if( buf[i] == 0 )
             found++;
 	break;
-	
+
         case 1:
           if( buf[i] == 0 )
             found++;
@@ -887,7 +895,7 @@ int isHDTV(int f)
         case 2:
           if( buf[i] == 1 )
             found++;
-	  else 
+	  else
 	    found = 0;
         break;
 
@@ -970,20 +978,22 @@ pid_t processInfo(const char *dirname)
     pidRet = atol(buffer);
     buffer[br] = 0;
     char *cmd=NULL;
-    asprintf(&cmd,"ps -p %s -o start,time,cmd --no-heading",buffer);
-    FILE *p = popen(cmd, "r");
-    if (p)
+    if (asprintf(&cmd,"ps -p %s -o start,time,cmd --no-heading",buffer) >= 0)
     {
-      char *s;
-      if ((s = readline(p)) != NULL)
+      FILE *p = popen(cmd, "r");
+      if (p)
       {
-        esyslog("pid info for %s: %s",buffer,s);
+        char *s;
+        if ((s = readline(p)) != NULL)
+        {
+          esyslog("pid info for %s: %s",buffer,s);
+        }
+        pclose(p);
       }
-      pclose(p);
+      else
+        esyslog( "Error while opening pipe (%s)",cmd);
+      free(cmd);
     }
-    else
-      esyslog( "Error while opening pipe (%s)",cmd);
-    free(cmd);
   }
   delete [] pidfilename;
   return pidRet;

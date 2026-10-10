@@ -1,9 +1,9 @@
 /***************************************************************************
-                          cchecklogo.cpp  -  description                              
-                             -------------------                                         
-    begin                : Sat Aug 7 1999                                           
-    copyright            : (C) 1999 by Thorsten Janke                         
-    email                : janke@studST.fh-muenster.de                                     
+                          cchecklogo.cpp  -  description
+                             -------------------
+    begin                : Sat Aug 7 1999
+    copyright            : (C) 1999 by Thorsten Janke
+    email                : janke@studST.fh-muenster.de
  ***************************************************************************/
 
 /***************************************************************************
@@ -11,7 +11,7 @@
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
  *   the Free Software Foundation; either version 2 of the License, or     *
- *   (at your option) any later version.                                   * 
+ *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
 
@@ -31,7 +31,7 @@ CCheckLogo::CCheckLogo( noadData* data ){
   m_pData = data;
 
   #ifdef VNOAD
-  // allocate and set memory of view analyse data 
+  // allocate and set memory of view analyse data
   m_chAnalyseDataSize = m_pData->m_nSizeX*m_pData->m_nSizeY;
   m_chAnalyseData = new unsigned char[m_chAnalyseDataSize];
   memset(m_chAnalyseData, 0, m_chAnalyseDataSize);
@@ -144,7 +144,7 @@ int CCheckLogo::checkTestlines( char* chSrc, struct testlines* tl, int yoffset, 
 	bool bUnknown = false, bLogo = false, bNoLogo = false;
 	testpair* pair = NULL;
 	float fTempPos, fTempNeg;
-	while ( tl ) 
+	while ( tl )
 	{
 		line = tl->line;
 		pair = tl->pair;
@@ -173,11 +173,11 @@ int CCheckLogo::checkTestlines( char* chSrc, struct testlines* tl, int yoffset, 
 			- (unsigned char)chSrc[lineOffset+xneg]);
 			if ( fTempPos >= MIN_DIFF && fTempNeg <= -MIN_DIFF )
 			{
-				// the considered pair is ok 
+				// the considered pair is ok
 				nRestPair++;
 
 #ifdef VNOAD
-				// set them to the view 
+				// set them to the view
 				m_chAnalyseData[aLineOffset+xpos] = 255;
 				m_chAnalyseData[aLineOffset+xneg] = 255;
 				m_chAnalyseData2[aLineOffset+xpos] = 0;
@@ -185,8 +185,8 @@ int CCheckLogo::checkTestlines( char* chSrc, struct testlines* tl, int yoffset, 
 #endif
 			}
 			else {
-				// check if the area is to dark or to bright 
-				// check both points of pos and neg positions 
+				// check if the area is to dark or to bright
+				// check both points of pos and neg positions
 				if ( (unsigned char)chSrc[lineOffset+xpos] >   200 ||
 					(unsigned char)chSrc[lineOffset+xpos+1] > 200 ||
 					(unsigned char)chSrc[lineOffset+xneg] >   200 ||
@@ -202,13 +202,14 @@ int CCheckLogo::checkTestlines( char* chSrc, struct testlines* tl, int yoffset, 
 	{
 #ifdef VNOAD
 		// set the views headline string
-		char *buffer = NULL;
-		asprintf( &buffer, " %d/%d - %d unknown ",
-			nRestPair, nSumPair, nUnknown );
+    char *buffer = NULL;
+    if( asprintf( &buffer, " %d/%d - %d unknown ",
+                  nRestPair, nSumPair, nUnknown ) < 0 )
+      return nRestPair;
 		// update the view
 		//m_pView->update();
 		logocb(0,buffer,m_chAnalyseData,sizeX,sizeY);
-		delete buffer;
+    free(buffer);
 		logocb(1,0,m_chAnalyseData2,sizeX,sizeY);
 		logocb(2,0,m_chAnalyseData3,sizeX,sizeY);
 #endif
@@ -220,13 +221,13 @@ int CCheckLogo::checkTestlines( char* chSrc, struct testlines* tl, int yoffset, 
 		CutOff = (nSumPair*8)/10;
 	}
 	// decide the logo status
-	if ( nRestPair >= CutOff ) 
+	if ( nRestPair >= CutOff )
 	{
 		bLogo=true;
 	}
 	// dont check the unknown sum if logo is
 	// always detected
-	else 
+	else
 	{
 		if ( nUnknown > CutOff )
 			bUnknown = true;
@@ -246,23 +247,23 @@ int CCheckLogo::checkTestlines( char* chSrc, struct testlines* tl, int yoffset, 
 		if ( bUnknown )
 		{
 		}
-		else 
+		else
 		{
-			if ( bLogo ) 
+			if ( bLogo )
 		 {
 			 m_nLogo++;
 			 // threshold of iTreshold times
-			 if ( m_nLogo > iTreshold ) 
+			 if ( m_nLogo > iTreshold )
 			 {
 				 isLogo = true;
 				 m_nNoLogo = 0;
 			 }
 			}
-			if ( bNoLogo ) 
+			if ( bNoLogo )
 		 {
 			 m_nNoLogo++;
 			 // threshold of iTreshold times
-			 if ( m_nNoLogo > iTreshold ) 
+			 if ( m_nNoLogo > iTreshold )
 			 {
 				 isLogo = false;
 				 m_nLogo = 0;
@@ -270,7 +271,7 @@ int CCheckLogo::checkTestlines( char* chSrc, struct testlines* tl, int yoffset, 
 			}
 		}
 	}
-	return nRestPair;		
+	return nRestPair;
 }
 
 // void CCheckLogo::reset()
@@ -410,12 +411,12 @@ void CCheckLogo::getLogoRect(int &left, int &top, int &right, int &bottom)
   }
 }
 
-// called to get a new allocated testine 
+// called to get a new allocated testine
 testlines* CCheckLogo::new_testline( int line )
 {
   // allocate new memory for a testline
   testlines* temp = new testlines[sizeof(struct testlines)];
-	
+
   temp->line = line;
   temp->next = NULL;
   temp->pair = NULL;
@@ -464,7 +465,7 @@ void CCheckLogo::load( FILE *fd )
 			pair->next = NULL;
 			readInt( fd, "pair_x_pos", &pair->x_pos );
 			readInt( fd, "pair_x_neg", &pair->x_neg );
-		}		
+		}
 	}
   iLineOffset = 0;
 }

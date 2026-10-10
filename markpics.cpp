@@ -141,7 +141,12 @@ int doMarkPic(const char * filename)
   }
   char *picname = NULL;
   char *picFullname = NULL;
-  asprintf(&picFullname,"%s/marks.jpg",filename);
+  if (asprintf(&picFullname,"%s/marks.jpg",filename) < 0)
+  {
+    delete cIF;
+    delete pmarks;
+    return -1;
+  }
   char *pos = ::strchr(picFullname,'/');
   while(pos)
   {
@@ -149,7 +154,13 @@ int doMarkPic(const char * filename)
     pos = ::strchr(picFullname,'/');
   }
   //asprintf(&picname,"%s/marks.jpg",filename);
-  asprintf(&picname,"%s/%s",odir!=NULL?odir:filename,picFullname);
+  if (asprintf(&picname,"%s/%s",odir!=NULL?odir:filename,picFullname) < 0)
+  {
+    free(picFullname);
+    delete cIF;
+    delete pmarks;
+    return -1;
+  }
   /*
   char *cp = strchr(picname,'/');
   while( cp )
@@ -162,8 +173,8 @@ int doMarkPic(const char * filename)
   fprintf(stdout, "%s\n",picname);
   */
   image.write(picname);
-  delete picname;
-  delete picFullname;
+  free(picname);
+  free(picFullname);
   delete cIF;
   delete pmarks;
 }
@@ -224,13 +235,22 @@ int main(int argc, char *argv[])
         break;
 
         case 4:
-        asprintf(&odir,"%s/",optarg);
+        {
+          char *newOdir = NULL;
+          if (asprintf(&newOdir,"%s/",optarg) < 0)
+          {
+            fprintf(stderr, "markpics: could not allocate output directory path\n");
+            return 2;
+          }
+          free(odir);
+          odir = newOdir;
+        }
         break;
 
         case 5:
         withAudioMarks=true;
         break;
-        
+
         default:
         printf ("?? getopt returned character code 0%o ?? (option_index %d)\n", c,option_index);
     }

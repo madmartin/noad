@@ -30,7 +30,7 @@ const char *VideoDirectory = VIDEODIR;
 
 double framespersec = 25.0;
 char MarksfileSuffix[256] = MARKSFILESUFFIX;
-const tChannelID tChannelID::InvalidID;  
+const tChannelID tChannelID::InvalidID;
 bool setMarkfileSuffix(bool bIsPESFile)
 {
 	if( strcmp(MarksfileSuffix,MARKSFILESUFFIX) == 0 )
@@ -87,7 +87,7 @@ cFileName::cFileName(const char *FileName, bool Record, bool Blocking, bool IsPe
     return;
   }
   strcpy(fileName, FileName);
-  
+
   dirname = new char[strlen(FileName) + 1];
   if (!dirname)
   {
@@ -108,7 +108,7 @@ cFileName::~cFileName()
 
 cUnbufferedFile *cFileName::Open(void)
 {
-  if (!file) 
+  if (!file)
   {
     int BlockingFlag = blocking ? 0 : O_NONBLOCK;
 	  BlockingFlag |= O_LARGEFILE;
@@ -370,7 +370,7 @@ cIndexFile::~cIndexFile()
 void cIndexFile::ConvertFromPes(tIndexTs *IndexTs, int Count)
 {
 	tIndexPes IndexPes;
-	//while (Count-- > 0) 
+	//while (Count-- > 0)
 	for(int i = 0; i < Count; i++ )
 	{
 		memcpy(&IndexPes, IndexTs, sizeof(IndexPes));
@@ -385,7 +385,7 @@ void cIndexFile::ConvertFromPes(tIndexTs *IndexTs, int Count)
 void cIndexFile::ConvertToPes(tIndexTs *IndexTs, int Count)
 {
 	tIndexPes IndexPes;
-	while (Count-- > 0) 
+	while (Count-- > 0)
 	{
 		IndexPes.offset = uint32_t(IndexTs->offset);
 		IndexPes.type = IndexTs->independent ? 1 : 2; // I_FRAME : "not I_FRAME" (exact frame type doesn't matter)
@@ -665,13 +665,13 @@ bool cNoadIndexFile::Get(int Index, uint16_t *FileNumber, off_t *FileOffset, boo
 {
   if (index != NULL)
   {
-     if (Index >= 0 && Index < last) 
+     if (Index >= 0 && Index < last)
 	  {
         *FileNumber = index[Index].number;
         *FileOffset = index[Index].offset;
         if (Independent)
            *Independent = index[Index].independent;
-        if (Length) 
+        if (Length)
 		  {
            int fn = index[Index + 1].number;
            int fo = index[Index + 1].offset;
@@ -689,13 +689,13 @@ bool cNoadIndexFile::Get(int Index, uint16_t *FileNumber, off_t *FileOffset, boo
 }
 
 //#ifdef VNOAD
-int cNoadIndexFile::getLast() 
-{ 
+int cNoadIndexFile::getLast()
+{
   if( interval )
   {
     return lastGetValue;
   }
-  return( last ); 
+  return( last );
 }
 //#endif
 
@@ -868,7 +868,7 @@ bool cMark::Parse(const char *s)
   framesPerSecond = MarkFramesPerSecond;
   position = HMSFToIndex(s, framesPerSecond);
   const char *p = strchr(s, ' ');
-  if (p) 
+  if (p)
   {
      p = skipspace(p);
      if (*p)
@@ -896,8 +896,8 @@ bool cMarks::Load(const char *RecordingFileName, double FramesPerSecond, bool Is
 //  cMutexLock MutexLock(&MutexMarkFramesPerSecond);
   framesPerSecond = FramesPerSecond;
   MarkFramesPerSecond = framesPerSecond;
-  
-  //if (cConfig<cMark>::Load(AddDirectory(RecordingFileName, IsPesRecording ? MARKSFILESUFFIX ".vdr" : MARKSFILESUFFIX).c_str())) 
+
+  //if (cConfig<cMark>::Load(AddDirectory(RecordingFileName, IsPesRecording ? MARKSFILESUFFIX ".vdr" : MARKSFILESUFFIX).c_str()))
   if (cConfig<cMark>::Load(AddDirectory(RecordingFileName, MarksfileSuffix)))
   {
      Sort();
@@ -908,7 +908,7 @@ bool cMarks::Load(const char *RecordingFileName, double FramesPerSecond, bool Is
 
 bool cMarks::ReLoad()
 {
-	if (cConfig<cMark>::Load()) 
+	if (cConfig<cMark>::Load())
 	{
 		Sort();
 		return true;
@@ -921,25 +921,30 @@ bool cMarks::Backup(const char *RecordingFileName)
 {
   const char *MarksFile = AddDirectory(RecordingFileName, MarksfileSuffix);
   char *oldname = NULL;
-  asprintf(&oldname,"%s",MarksFile);
+  if (!MarksFile || asprintf(&oldname,"%s",MarksFile) < 0)
+     return false;
   const char *BackupMarksFile = AddDirectory(RecordingFileName, "/marks0.vdr");
-  if (rename(oldname, BackupMarksFile) == -1) {
-     LOG_ERROR_STR(oldname);
-     delete oldname;
+  if (!BackupMarksFile) {
+     free(oldname);
      return false;
      }
-  delete oldname;
+  if (rename(oldname, BackupMarksFile) == -1) {
+     LOG_ERROR_STR(oldname);
+     free(oldname);
+     return false;
+     }
+  free(oldname);
   bMarksBackupDone = true;
   return true;
 }
 
 void cMarks::Sort(void)
 {
-  for (cMark *m1 = First(); m1; m1 = Next(m1)) 
+  for (cMark *m1 = First(); m1; m1 = Next(m1))
   {
-      for (cMark *m2 = Next(m1); m2; m2 = Next(m2)) 
+      for (cMark *m2 = Next(m1); m2; m2 = Next(m2))
 		{
-          if (m2->position < m1->position) 
+          if (m2->position < m1->position)
 			 {
              swap(m1->position, m2->position);
              swap(m1->comment, m2->comment);
@@ -951,7 +956,7 @@ void cMarks::Sort(void)
 cMark *cMarks::Add(int Position)
 {
   cMark *m = Get(Position);
-  if (!m) 
+  if (!m)
   {
      cConfig<cMark>::Add(m = new cMark(Position, NULL, framesPerSecond));
      cString s = m->ToText();
@@ -1251,7 +1256,7 @@ bool cRecordingInfo::Write(void) const
         LOG_ERROR_STR(fileName);
      }
   return Result;
-} 
+}
 
 // --- cRecording ------------------------------------------------------------
 
@@ -1433,37 +1438,39 @@ cRecording::cRecording(const char *FileName)
      else
         return;      // read an optional summary file:
      char *SummaryFileName = NULL;
-     asprintf(&SummaryFileName, "%s%s", fileName, SUMMARYFILESUFFIX);
-     int f = open(SummaryFileName, O_RDONLY);
-     if (f >= 0) {
-        struct stat buf;
-        if (fstat(f, &buf) == 0) {
-           int size = buf.st_size;
-           summary = MALLOC(char, size + 1); // +1 for terminating 0
-           if (summary) {
+      if (asprintf(&SummaryFileName, "%s%s", fileName, SUMMARYFILESUFFIX) >= 0) {
+        int f = open(SummaryFileName, O_RDONLY);
+        if (f >= 0) {
+          struct stat buf;
+          if (fstat(f, &buf) == 0) {
+            int size = buf.st_size;
+            summary = MALLOC(char, size + 1); // +1 for terminating 0
+            if (summary) {
               int rbytes = safe_read(f, summary, size);
               if (rbytes >= 0) {
-                 summary[rbytes] = 0;
-                 if (rbytes != size)
-                    esyslog("%s: expected %d bytes but read %d", SummaryFileName, size, rbytes);
-                 }
+                summary[rbytes] = 0;
+                if (rbytes != size)
+                  esyslog("%s: expected %d bytes but read %d", SummaryFileName, size, rbytes);
+                }
               else {
-                 LOG_ERROR_STR(SummaryFileName);
-                 free(summary);
-                 summary = NULL;
-                 }
-
+                LOG_ERROR_STR(SummaryFileName);
+                free(summary);
+                summary = NULL;
+                }
               }
-           else
+            else
               esyslog("can't allocate %d byte of memory for summary file '%s'", size + 1, SummaryFileName);
-           close(f);
-           }
-        else
-           LOG_ERROR_STR(SummaryFileName);
+            }
+          else
+            LOG_ERROR_STR(SummaryFileName);
+          close(f);
+          }
+        else if (errno != ENOENT)
+          LOG_ERROR_STR(SummaryFileName);
+        free(SummaryFileName);
         }
-     else if (errno != ENOENT)
-        LOG_ERROR_STR(SummaryFileName);
-     free(SummaryFileName);
+      else
+        esyslog("can't allocate summary file name for '%s'", fileName);
      }
 }
 
@@ -1530,7 +1537,8 @@ const char *cRecording::FileName(void) const
      struct tm tm_r;
      struct tm *t = localtime_r(&start, &tm_r);
      name = ExchangeChars(name, true);
-     asprintf(&fileName, NAMEFORMAT, VideoDirectory, name, t->tm_year + 1900, t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, priority, lifetime);
+        if (asprintf(&fileName, NAMEFORMAT, VideoDirectory, name, t->tm_year + 1900, t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, priority, lifetime) < 0)
+        fileName = NULL;
      name = ExchangeChars(name, false);
      }
   return fileName;
@@ -1549,7 +1557,7 @@ const char *cRecording::Title(char Delimiter, bool NewIndicator, int Level) cons
         s++;
      else
         s = name;
-     asprintf(&titleBuffer, "%02d.%02d%c%02d:%02d%c%c%s",
+      if (asprintf(&titleBuffer, "%02d.%02d%c%02d:%02d%c%c%s",
                             t->tm_mday,
                             t->tm_mon + 1,
                             Delimiter,
@@ -1557,7 +1565,10 @@ const char *cRecording::Title(char Delimiter, bool NewIndicator, int Level) cons
                             t->tm_min,
                             New,
                             Delimiter,
-                            s);
+                     s) < 0) {
+        name = ExchangeChars(name, false);
+        return name;
+      }
      // let's not display a trailing '~':
      stripspace(titleBuffer);
      s = &titleBuffer[strlen(titleBuffer) - 1];
@@ -1642,7 +1653,8 @@ bool cRecording::WriteSummary(void)
 {
   if (summary) {
      char *SummaryFileName = NULL;
-     asprintf(&SummaryFileName, "%s%s", fileName, SUMMARYFILESUFFIX);
+     if (asprintf(&SummaryFileName, "%s%s", fileName, SUMMARYFILESUFFIX) < 0)
+        return false;
      FILE *f = fopen(SummaryFileName, "w");
      if (f) {
         if (fputs(summary, f) < 0)
@@ -1716,7 +1728,8 @@ bool cRecordings::Load(bool Deleted)
   Clear();
   bool result = false;
   char *cmd = NULL;
-  asprintf(&cmd, FINDCMD, VideoDirectory, VideoDirectory, Deleted ? "*" DELEXT : "*" RECEXT);
+  if (asprintf(&cmd, FINDCMD, VideoDirectory, VideoDirectory, Deleted ? "*" DELEXT : "*" RECEXT) < 0)
+     return false;
   FILE *p = popen(cmd, "r");
   if (p) {
      char *s;
@@ -1759,7 +1772,7 @@ bool isPESRecording(const char *FileName)
   }
 #endif
   const char *p = strrchr(fileName , DIR_DELIMC );
-  if (p) 
+  if (p)
   {
      time_t now = time(NULL);
 #ifdef _MSC_VER
@@ -1774,7 +1787,7 @@ bool isPESRecording(const char *FileName)
 	  int instanceId = -1;
 	  int lifetime = -1;
      if (7 == sscanf(p + 1, DATAFORMATTS, &t.tm_year, &t.tm_mon, &t.tm_mday, &t.tm_hour, &t.tm_min, &channel, &instanceId)
-      || 7 == sscanf(p + 1, DATAFORMATPES, &t.tm_year, &t.tm_mon, &t.tm_mday, &t.tm_hour, &t.tm_min, &priority, &lifetime)) 
+      || 7 == sscanf(p + 1, DATAFORMATPES, &t.tm_year, &t.tm_mon, &t.tm_mday, &t.tm_hour, &t.tm_min, &priority, &lifetime))
 	  {
         t.tm_year -= 1900;
         t.tm_mon--;
@@ -2098,10 +2111,10 @@ char *cReadLine::Read(FILE *f)
   if (cp != NULL)
   {
      int n = strlen(cp);
-     if (buffer[n] == '\n') 
+     if (buffer[n] == '\n')
 	  {
         buffer[n] = 0;
-        if (n > 0) 
+        if (n > 0)
 		  {
            n--;
            if (buffer[n] == '\r')
@@ -2112,7 +2125,7 @@ char *cReadLine::Read(FILE *f)
   }
   return NULL;
 }
- 
+
 // --- cString ---------------------------------------------------------------
 
 cString::cString(const char *S, bool TakePointer)
@@ -2154,7 +2167,7 @@ cString cString::sprintf(const char *fmt, ...)
 	va_list ap;
 	va_start(ap, fmt);
 	char *buffer;
-	if (!fmt || vasprintf(&buffer, fmt, ap) < 0) 
+	if (!fmt || vasprintf(&buffer, fmt, ap) < 0)
 	{
 		esyslog("error in vasprintf('%s', ...)", fmt);
 		buffer = strdup("???");
@@ -2166,7 +2179,7 @@ cString cString::sprintf(const char *fmt, ...)
 cString cString::sprintf(const char *fmt, va_list &ap)
 {
 	char *buffer;
-	if (!fmt || vasprintf(&buffer, fmt, ap) < 0) 
+	if (!fmt || vasprintf(&buffer, fmt, ap) < 0)
 	{
 		esyslog("error in vasprintf('%s', ...)", fmt);
 		buffer = strdup("???");
