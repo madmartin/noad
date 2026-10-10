@@ -44,7 +44,7 @@ MPEGDecoder *decoder;
 
 extern "C"
 {
-  static const char *VERSIONSTRING = "0.8.9";
+  static const char *VERSIONSTRING = "0.8.10";
 }
 
 #ifdef VNOAD

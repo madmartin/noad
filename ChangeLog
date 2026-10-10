@@ -1,4 +1,10 @@
-﻿Version 0.8.9
+﻿Version 0.8.10
+- fix function checkBlackFrameOnMark to avoid program abort
+- fix vscode problem findings like indentation, not necessary includes
+- noad.cpp: change umlaut chars in comments to UTF-8
+- fix autoconf warnings
+
+Version 0.8.9
 - Update FFmpeg API compatibility
 
 Version 0.8.8
